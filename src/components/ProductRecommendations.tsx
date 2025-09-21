@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
+import { getProductsByCollection } from '@/lib/shopify'
 
-// Import product images
+// Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg'
 import earringsImage from '@/assets/earrings-placeholder.jpg'
 import ringImage from '@/assets/ring-placeholder.jpg'
@@ -16,21 +17,7 @@ interface Product {
   price: string
   image: string
   category: string
-}
-
-const allProducts: Record<string, Product> = {
-  'n1': { id: 'n1', title: 'Růžové okvětí', price: '2 890 Kč', image: necklaceImage, category: 'Náhrdelníky' },
-  'n2': { id: 'n2', title: 'Lesní kapradina', price: '3 200 Kč', image: necklaceImage, category: 'Náhrdelníky' },
-  'n3': { id: 'n3', title: 'Loučka v létě', price: '2 650 Kč', image: necklaceImage, category: 'Náhrdelníky' },
-  'e1': { id: 'e1', title: 'Pomněnkové kapky', price: '1 890 Kč', image: earringsImage, category: 'Náušnice' },
-  'e2': { id: 'e2', title: 'Zlaté slunce', price: '2 100 Kč', image: earringsImage, category: 'Náušnice' },
-  'e3': { id: 'e3', title: 'Bílá čistota', price: '1 750 Kč', image: earringsImage, category: 'Náušnice' },
-  'r1': { id: 'r1', title: 'Věčná láska', price: '3 500 Kč', image: ringImage, category: 'Prsteny' },
-  'r2': { id: 'r2', title: 'Přírodní elegance', price: '2 900 Kč', image: ringImage, category: 'Prsteny' },
-  'r3': { id: 'r3', title: 'Ranní rosa', price: '3 200 Kč', image: ringImage, category: 'Prsteny' },
-  'b1': { id: 'b1', title: 'Zahradní sen', price: '2 400 Kč', image: braceletImage, category: 'Náramky' },
-  'b2': { id: 'b2', title: 'Lesní stezka', price: '2 100 Kč', image: braceletImage, category: 'Náramky' },
-  'b3': { id: 'b3', title: 'Levandulové pole', price: '2 650 Kč', image: braceletImage, category: 'Náramky' },
+  handle?: string
 }
 
 interface ProductRecommendationsProps {
@@ -41,18 +28,90 @@ interface ProductRecommendationsProps {
 export function ProductRecommendations({ currentProductId, currentCategory }: ProductRecommendationsProps) {
   const { addToCart } = useCart()
   const { toast } = useToast()
+  const [recommendations, setRecommendations] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Get recommendations (same category first, then others, excluding current product)
-  const getRecommendations = () => {
-    const products = Object.values(allProducts).filter(p => p.id !== currentProductId)
-    const sameCategory = products.filter(p => p.category === currentCategory)
-    const otherCategories = products.filter(p => p.category !== currentCategory)
-    
-    const recommendations = [...sameCategory, ...otherCategories].slice(0, 3)
-    return recommendations
+  // Collection mapping for Shopify
+  const collectionMapping = {
+    'Náhrdelníky': 'necklaces',
+    'Náušnice': 'earrings', 
+    'Prsteny': 'rings',
+    'Náramky': 'bracelets'
   }
 
-  const recommendations = getRecommendations()
+  // Helper function to get fallback image
+  const getFallbackImage = (category: string) => {
+    switch (category) {
+      case 'Náhrdelníky': return necklaceImage;
+      case 'Náušnice': return earringsImage;
+      case 'Prsteny': return ringImage;
+      case 'Náramky': return braceletImage;
+      default: return necklaceImage;
+    }
+  }
+
+  // Fetch recommendations from Shopify
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Get all collections
+        const collections = Object.values(collectionMapping)
+        const allProducts: Product[] = []
+
+        // Fetch products from each collection
+        for (const collectionHandle of collections) {
+          try {
+            const collection = await getProductsByCollection(collectionHandle, 5)
+            
+            if (collection && collection.products?.edges) {
+              const products = collection.products.edges.map(edge => {
+                const product = edge.node
+                const firstImage = product.images?.edges?.[0]?.node
+                const firstVariant = product.variants?.edges?.[0]?.node
+                
+                // Map collection handle back to Czech category name
+                const czechCategory = Object.keys(collectionMapping).find(
+                  key => collectionMapping[key as keyof typeof collectionMapping] === collectionHandle
+                ) || 'Náhrdelníky'
+                
+                return {
+                  id: product.id,
+                  title: product.title,
+                  price: firstVariant?.price ? 
+                    `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
+                    'Cena na vyžádání',
+                  image: firstImage?.url || getFallbackImage(czechCategory),
+                  category: czechCategory,
+                  handle: product.handle
+                }
+              })
+              
+              allProducts.push(...products)
+            }
+          } catch (error) {
+            console.error(`Error fetching ${collectionHandle}:`, error)
+          }
+        }
+
+        // Filter out current product and get recommendations
+        const filteredProducts = allProducts.filter(p => p.id !== currentProductId)
+        const sameCategory = filteredProducts.filter(p => p.category === currentCategory)
+        const otherCategories = filteredProducts.filter(p => p.category !== currentCategory)
+        
+        const finalRecommendations = [...sameCategory, ...otherCategories].slice(0, 3)
+        setRecommendations(finalRecommendations)
+      } catch (error) {
+        console.error('Error fetching recommendations:', error)
+        setRecommendations([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchRecommendations()
+  }, [currentProductId, currentCategory])
 
   const handleAddToCart = (product: Product, event: React.MouseEvent) => {
     event.preventDefault() // Prevent Link navigation
@@ -73,6 +132,23 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
     })
   }
 
+  if (isLoading) {
+    return (
+      <div className="mt-16 pt-16 border-t border-border">
+        <div className="max-w-7xl mx-auto px-6">
+          <h2 className="text-3xl font-serif font-bold text-luxury mb-8 text-center">
+            Mohlo by se vám líbit
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-muted rounded-2xl h-96 animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (recommendations.length === 0) return null
 
   return (
@@ -86,7 +162,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
           {recommendations.map((product) => (
             <Link
               key={product.id}
-              to={`/product/${product.id}`}
+              to={product.handle ? `/product-shopify/${product.handle}` : `/product/${product.id}`}
               className="group block"
             >
               <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform group-hover:-translate-y-2">

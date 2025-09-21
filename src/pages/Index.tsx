@@ -4,7 +4,7 @@ import Hero from '@/components/Hero';
 import ProductSection from '@/components/ProductSection';
 import Slideshow from '@/components/Slideshow';
 import Footer from '@/components/Footer';
-import { getCollectionsWithProducts } from '@/lib/shopify';
+import { getProductsByCollection } from '@/lib/shopify';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -17,128 +17,23 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Fallback static product data
-  const fallbackProductCategories = [
-    {
-      id: 'náhrdelníky',
-      title: 'Náhrdelníky',
-      subtitle: 'Elegantní náhrdelníky s květinami zachycenými v čase',
-      products: [
-        {
-          id: 'n1',
-          title: 'Růžové okvětí',
-          price: '2 890 Kč',
-          image: necklaceImage,
-          description: 'Jemný náhrdelník s růžovými okvětními lístky v průzračné pryskyřici.'
-        },
-        {
-          id: 'n2',
-          title: 'Lesní kapradina',
-          price: '3 200 Kč',
-          image: necklaceImage,
-          description: 'Minimalistický design s jemnou kapradinou z českých lesů.'
-        },
-        {
-          id: 'n3',
-          title: 'Loučka v létě',
-          price: '2 650 Kč',
-          image: necklaceImage,
-          description: 'Barevná směs lučních květů zachycená v elegantním náhrdelníku.'
-        }
-      ]
-    },
-    {
-      id: 'náušnice',
-      title: 'Náušnice',
-      subtitle: 'Jemné náušnice pro každodenní eleganci',
-      products: [
-        {
-          id: 'e1',
-          title: 'Pomněnkové kapky',
-          price: '1 890 Kč',
-          image: earringsImage,
-          description: 'Drobné náušnice s modrými pomněnkami v kapkovitém tvaru.'
-        },
-        {
-          id: 'e2',
-          title: 'Zlaté slunce',
-          price: '2 100 Kč',
-          image: earringsImage,
-          description: 'Kruhové náušnice se žlutými květy a zlatými akcenty.'
-        },
-        {
-          id: 'e3',
-          title: 'Bílá čistota',
-          price: '1 750 Kč',
-          image: earringsImage,
-          description: 'Minimalistické náušnice s drobnými bílými květy.'
-        }
-      ]
-    },
-    {
-      id: 'prsteny',
-      title: 'Prsteny',
-      subtitle: 'Jedinečné prsteny pro výjimečné okamžiky',
-      products: [
-        {
-          id: 'r1',
-          title: 'Věčná láska',
-          price: '3 500 Kč',
-          image: ringImage,
-          description: 'Romantický prsten s červenými růžemi a zlatým rámem.'
-        },
-        {
-          id: 'r2',
-          title: 'Přírodní elegance',
-          price: '2 900 Kč',
-          image: ringImage,
-          description: 'Široký prsten s mozaikou drobných polních květů.'
-        },
-        {
-          id: 'r3',
-          title: 'Ranní rosa',
-          price: '3 200 Kč',
-          image: ringImage,
-          description: 'Jemný prsten s bílými květy a perleťovými akcenty.'
-        }
-      ]
-    },
-    {
-      id: 'náramky',
-      title: 'Náramky',
-      subtitle: 'Stylové náramky plné přírodní krásy',
-      products: [
-        {
-          id: 'b1',
-          title: 'Zahradní sen',
-          price: '2 400 Kč',
-          image: braceletImage,
-          description: 'Široký náramek s různobarevnými zahradními květy.'
-        },
-        {
-          id: 'b2',
-          title: 'Lesní stezka',
-          price: '2 100 Kč',
-          image: braceletImage,
-          description: 'Náramek inspirovaný procházkou lesem s kapradinami a mechem.'
-        },
-        {
-          id: 'b3',
-          title: 'Levandulové pole',
-          price: '2 650 Kč',
-          image: braceletImage,
-          description: 'Elegantní náramek s levandulí a stříbrnými detaily.'
-        }
-      ]
-    }
-  ];
-
   // Collection mapping for Shopify
   const collectionMapping = {
     'náhrdelníky': 'necklaces',
     'náušnice': 'earrings', 
     'prsteny': 'rings',
     'náramky': 'bracelets'
+  };
+
+  // Helper function to get fallback image
+  const getFallbackImage = (category: string) => {
+    switch (category) {
+      case 'náhrdelníky': return necklaceImage;
+      case 'náušnice': return earringsImage;
+      case 'prsteny': return ringImage;
+      case 'náramky': return braceletImage;
+      default: return necklaceImage;
+    }
   };
 
   // Fetch products from Shopify
@@ -148,56 +43,72 @@ const Index = () => {
         setIsLoading(true);
         setHasError(false);
 
-        // Get collection handles for Shopify
-        const collectionHandles = Object.values(collectionMapping);
-        
-        // Fetch collections with products from Shopify
-        const shopifyCollections = await getCollectionsWithProducts(collectionHandles, 3);
-        
-        // Transform Shopify data to match our component structure
-        const transformedCategories = Object.keys(collectionMapping).map((czechKey, index) => {
-          const shopifyCollection = shopifyCollections[index];
+        // Fetch each collection individually
+        const categories = Object.keys(collectionMapping);
+        const transformedCategories = [];
+
+        for (const czechKey of categories) {
+          const shopifyHandle = collectionMapping[czechKey as keyof typeof collectionMapping];
           
-          if (!shopifyCollection || !shopifyCollection.products?.edges) {
-            // Fallback to static data if collection not found
-            return fallbackProductCategories.find(cat => cat.id === czechKey);
-          }
-
-          const products = shopifyCollection.products.edges.map(edge => {
-            const product = edge.node;
-            const firstImage = product.images?.edges?.[0]?.node;
-            const firstVariant = product.variants?.edges?.[0]?.node;
+          try {
+            const collection = await getProductsByCollection(shopifyHandle, 3);
             
-            return {
-              id: product.id,
-              title: product.title,
-              price: firstVariant?.price ? 
-                `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
-                'Cena na vyžádání',
-              image: firstImage?.url || (czechKey === 'náhrdelníky' ? necklaceImage : 
-                     czechKey === 'náušnice' ? earringsImage :
-                     czechKey === 'prsteny' ? ringImage : braceletImage),
-              description: product.description || 'Elegantní šperk z naší kolekce'
-            };
-          });
+            if (collection && collection.products?.edges) {
+              const products = collection.products.edges.map(edge => {
+                const product = edge.node;
+                const firstImage = product.images?.edges?.[0]?.node;
+                const firstVariant = product.variants?.edges?.[0]?.node;
+                
+                return {
+                  id: product.id,
+                  title: product.title,
+                  price: firstVariant?.price ? 
+                    `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
+                    'Cena na vyžádání',
+                  image: firstImage?.url || getFallbackImage(czechKey),
+                  description: product.description || 'Elegantní šperk z naší kolekce',
+                  handle: product.handle
+                };
+              });
 
-            return {
+              transformedCategories.push({
+                id: czechKey,
+                title: collection.title || czechKey,
+                subtitle: collection.description || `Elegantní ${czechKey} z naší kolekce`,
+                products: products
+              });
+            } else {
+              // If no products found, create empty category
+              transformedCategories.push({
+                id: czechKey,
+                title: czechKey,
+                subtitle: `Elegantní ${czechKey} z naší kolekce`,
+                products: []
+              });
+            }
+          } catch (error) {
+            console.error(`Error fetching ${czechKey}:`, error);
+            // Create empty category on error
+            transformedCategories.push({
               id: czechKey,
-              title: shopifyCollection.title || fallbackProductCategories.find(cat => cat.id === czechKey)?.title,
-              subtitle: shopifyCollection.description || fallbackProductCategories.find(cat => cat.id === czechKey)?.subtitle,
-              products: products.length > 0 ? products.map(product => ({
-                ...product,
-                handle: product.id // Use Shopify product ID as handle for dynamic routing
-              })) : fallbackProductCategories.find(cat => cat.id === czechKey)?.products
-            };
-        });
+              title: czechKey,
+              subtitle: `Elegantní ${czechKey} z naší kolekce`,
+              products: []
+            });
+          }
+        }
 
         setProductCategories(transformedCategories);
       } catch (error) {
         console.error('Error fetching Shopify products:', error);
         setHasError(true);
-        // Fallback to static data
-        setProductCategories(fallbackProductCategories);
+        // Create empty categories on error
+        setProductCategories(Object.keys(collectionMapping).map(key => ({
+          id: key,
+          title: key,
+          subtitle: `Elegantní ${key} z naší kolekce`,
+          products: []
+        })));
       } finally {
         setIsLoading(false);
       }
@@ -267,7 +178,7 @@ const Index = () => {
             <div className="flex">
               <div className="ml-3">
                 <p className="text-sm text-yellow-700">
-                  Některé produkty nemohly být načteny z obchodu. Zobrazujeme statické produkty.
+                  Některé produkty nemohly být načteny z obchodu. Zkontrolujte prosím připojení k internetu.
                 </p>
               </div>
             </div>

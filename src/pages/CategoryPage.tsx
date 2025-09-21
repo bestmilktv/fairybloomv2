@@ -94,174 +94,33 @@ const CategoryPage = () => {
     }
   };
 
-  // All products data
-  const allProducts = {
+  // Category titles and subtitles
+  const categoryInfo = {
     'náhrdelníky': {
       title: 'Náhrdelníky',
       subtitle: 'Elegantní náhrdelníky s květinami zachycenými v čase',
-      image: necklaceImage,
-      products: [
-        {
-          id: 'n1',
-          title: 'Růžové okvětí',
-          price: '2 890 Kč',
-          image: necklaceImage,
-          description: 'Jemný náhrdelník s růžovými okvětními lístky v průzračné pryskyřici.'
-        },
-        {
-          id: 'n2',
-          title: 'Lesní kapradina',
-          price: '3 200 Kč',
-          image: necklaceImage,
-          description: 'Minimalistický design s jemnou kapradinou z českých lesů.'
-        },
-        {
-          id: 'n3',
-          title: 'Loučka v létě',
-          price: '2 650 Kč',
-          image: necklaceImage,
-          description: 'Barevná směs lučních květů zachycená v elegantním náhrdelníku.'
-        },
-        {
-          id: 'n4',
-          title: 'Zimní kouzlo',
-          price: '3 100 Kč',
-          image: necklaceImage,
-          description: 'Křehké zimní větvičky s drobnými krystalky.'
-        },
-        {
-          id: 'n5',
-          title: 'Jarní probuzení',
-          price: '2 750 Kč',
-          image: necklaceImage,
-          description: 'Mladé lístky a první jarní květy v jemném náhrdelníku.'
-        },
-        {
-          id: 'n6',
-          title: 'Podzimní symfonie',
-          price: '3 000 Kč',
-          image: necklaceImage,
-          description: 'Teplé podzimní barvy listů zachycené v elegantním tvaru.'
-        }
-      ]
+      image: necklaceImage
     },
     'náušnice': {
       title: 'Náušnice',
       subtitle: 'Jemné náušnice pro každodenní eleganci',
-      image: earringsImage,
-      products: [
-        {
-          id: 'e1',
-          title: 'Pomněnkové kapky',
-          price: '1 890 Kč',
-          image: earringsImage,
-          description: 'Drobné náušnice s modrými pomněnkami v kapkovitém tvaru.'
-        },
-        {
-          id: 'e2',
-          title: 'Zlaté slunce',
-          price: '2 100 Kč',
-          image: earringsImage,
-          description: 'Kruhové náušnice se žlutými květy a zlatými akcenty.'
-        },
-        {
-          id: 'e3',
-          title: 'Bílá čistota',
-          price: '1 750 Kč',
-          image: earringsImage,
-          description: 'Minimalistické náušnice s drobnými bílými květy.'
-        },
-        {
-          id: 'e4',
-          title: 'Levandulové sny',
-          price: '1 950 Kč',
-          image: earringsImage,
-          description: 'Dlouhé náušnice s větvičkami levandule.'
-        },
-        {
-          id: 'e5',
-          title: 'Růžový úsvit',
-          price: '2 200 Kč',
-          image: earringsImage,
-          description: 'Jemné náušnice s růžovými květy sakury.'
-        }
-      ]
+      image: earringsImage
     },
     'prsteny': {
       title: 'Prsteny',
       subtitle: 'Jedinečné prsteny pro výjimečné okamžiky',
-      image: ringImage,
-      products: [
-        {
-          id: 'r1',
-          title: 'Věčná láska',
-          price: '3 500 Kč',
-          image: ringImage,
-          description: 'Romantický prsten s červenými růžemi a zlatým rámem.'
-        },
-        {
-          id: 'r2',
-          title: 'Přírodní elegance',
-          price: '2 900 Kč',
-          image: ringImage,
-          description: 'Široký prsten s mozaikou drobných polních květů.'
-        },
-        {
-          id: 'r3',
-          title: 'Ranní rosa',
-          price: '3 200 Kč',
-          image: ringImage,
-          description: 'Jemný prsten s bílými květy a perleťovými akcenty.'
-        },
-        {
-          id: 'r4',
-          title: 'Tajemný les',
-          price: '3 800 Kč',
-          image: ringImage,
-          description: 'Masivní prsten s kapradinami a mechem.'
-        }
-      ]
+      image: ringImage
     },
     'náramky': {
       title: 'Náramky',
       subtitle: 'Stylové náramky plné přírodní krásy',
-      image: braceletImage,
-      products: [
-        {
-          id: 'b1',
-          title: 'Zahradní sen',
-          price: '2 400 Kč',
-          image: braceletImage,
-          description: 'Široký náramek s různobarevnými zahradními květy.'
-        },
-        {
-          id: 'b2',
-          title: 'Lesní stezka',
-          price: '2 100 Kč',
-          image: braceletImage,
-          description: 'Náramek inspirovaný procházkou lesem s kapradinami a mechem.'
-        },
-        {
-          id: 'b3',
-          title: 'Levandulové pole',
-          price: '2 650 Kč',
-          image: braceletImage,
-          description: 'Elegantní náramek s levandulí a stříbrnými detaily.'
-        },
-        {
-          id: 'b4',
-          title: 'Mořská bříza',
-          price: '2 300 Kč',
-          image: braceletImage,
-          description: 'Jemný náramek s mořskými řasami a perletí.'
-        }
-      ]
+      image: braceletImage
     }
   };
 
   // URL decode the category name to handle Czech characters properly
   const decodedCategory = category ? decodeURIComponent(category) : null;
-  const categoryData = decodedCategory ? allProducts[decodedCategory as keyof typeof allProducts] : null;
+  const categoryData = decodedCategory ? categoryInfo[decodedCategory as keyof typeof categoryInfo] : null;
 
   if (!categoryData) {
     return (
@@ -275,8 +134,8 @@ const CategoryPage = () => {
     );
   }
 
-  // Use Shopify products if available, otherwise fallback to static data
-  const displayProducts = shopifyProducts.length > 0 ? shopifyProducts : categoryData.products;
+  // Use Shopify products
+  const displayProducts = shopifyProducts;
 
   return (
     <div className="min-h-screen bg-background">
@@ -311,11 +170,19 @@ const CategoryPage = () => {
             </div>
           ) : hasError ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground mb-6">Nepodařilo se načíst produkty z obchodu. Zobrazujeme statické produkty.</p>
-              <CategoryProductSection 
-                category={decodedCategory || ''}
-                initialProducts={categoryData.products}
-              />
+              <p className="text-muted-foreground mb-6">Nepodařilo se načíst produkty z obchodu. Zkontrolujte prosím připojení k internetu.</p>
+              <div className="text-center">
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Zkusit znovu
+                </button>
+              </div>
+            </div>
+          ) : displayProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground mb-6">V této kategorii zatím nejsou žádné produkty.</p>
             </div>
           ) : (
             <CategoryProductSection 
