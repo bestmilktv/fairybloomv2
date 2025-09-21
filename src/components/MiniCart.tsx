@@ -3,7 +3,7 @@ import { X, Plus, Minus, ShoppingBag, Loader2, ExternalLink } from 'lucide-react
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
-import { createCart, addToCart } from '@/lib/shopify.js'
+import { createCart, addToCart } from '@/lib/shopify'
 import { Link } from 'react-router-dom'
 
 interface MiniCartProps {
