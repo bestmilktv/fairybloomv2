@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
-import { getProductByHandle, createCart } from '@/lib/shopify';
+import { getProductByHandle, createCart } from '@/lib/shopify.js';
 import { useCart } from '@/contexts/CartContext';
 
 // Import fallback images

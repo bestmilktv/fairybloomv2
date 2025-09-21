@@ -4,7 +4,7 @@ import Hero from '@/components/Hero';
 import ProductSection from '@/components/ProductSection';
 import Slideshow from '@/components/Slideshow';
 import Footer from '@/components/Footer';
-import { getCollectionsWithProducts } from '@/lib/shopify';
+import { getCollectionsWithProducts } from '@/lib/shopify.js';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
