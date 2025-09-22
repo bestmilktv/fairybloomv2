@@ -7,35 +7,24 @@
 export interface ShopifyProduct {
   id: string;
   title: string;
-  handle: string;
   description: string;
+  handle: string;
   availableForSale: boolean;
   totalInventory: number;
-  variants: {
-    edges: Array<{
-      node: {
-        id: string;
-        price: {
-          amount: string;
-          currencyCode: string;
-        };
-      };
-    }>;
-  };
-  images: {
-    edges: Array<{
-      node: {
-        url: string;
-        altText?: string;
-      };
-    }>;
+  featuredImage: {
+    url: string;
+    altText?: string;
+  } | null;
+  priceRange: {
+    minVariantPrice: {
+      amount: string;
+      currencyCode: string;
+    };
   };
 }
 
 export interface ShopifyCollection {
-  id: string;
   title: string;
-  description: string;
   products: {
     edges: Array<{
       node: ShopifyProduct;
@@ -55,7 +44,13 @@ export interface ShopifyResponse<T> {
 }
 
 /**
- * Sends a GraphQL query to Shopify's Storefront API
+ * Initialize Shopify client with environment variables
+ */
+const domain = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN;
+const token = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN;
+
+/**
+ * Helper function to send GraphQL requests to Shopify Storefront API
  * @param query - The GraphQL query string
  * @param variables - Variables for the GraphQL query (optional)
  * @returns Promise with the parsed JSON response
@@ -65,21 +60,18 @@ export async function fetchShopify<T>(
   query: string,
   variables: Record<string, any> = {}
 ): Promise<ShopifyResponse<T>> {
-  const storeDomain = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN;
-  const accessToken = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN;
-
-  if (!storeDomain || !accessToken) {
+  if (!domain || !token) {
     throw new Error('Missing required environment variables: VITE_SHOPIFY_STORE_DOMAIN and VITE_SHOPIFY_STOREFRONT_TOKEN');
   }
 
-  const url = `https://${storeDomain}/api/2025-07/graphql.json`;
+  const url = `https://${domain}/api/2023-10/graphql.json`;
 
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Shopify-Storefront-Access-Token': accessToken,
+        'X-Shopify-Storefront-Access-Token': token,
       },
       body: JSON.stringify({
         query,
@@ -109,47 +101,32 @@ export async function fetchShopify<T>(
 }
 
 /**
- * GraphQL query to get products by collection handle
+ * Get products from a specific collection by handle
  * @param handle - The collection handle (e.g., "necklaces", "earrings")
- * @param first - Number of products to fetch
  * @returns Promise with collection data including products
  */
-export async function getProductsByCollection(
-  handle: string,
-  first: number = 20
-): Promise<ShopifyCollection | null> {
+export async function getProductsByCollection(handle: string) {
   const query = `
-    query getProductsByCollection($handle: String!, $first: Int!) {
-      collection(handle: $handle) {
-        id
+    query GetProducts($handle: String!) {
+      collectionByHandle(handle: $handle) {
         title
-        description
-        products(first: $first) {
+        products(first: 20) {
           edges {
             node {
               id
               title
-              handle
               description
+              handle
               availableForSale
               totalInventory
-              variants(first: 1) {
-                edges {
-                  node {
-                    id
-                    price {
-                      amount
-                      currencyCode
-                    }
-                  }
-                }
+              featuredImage {
+                url
+                altText
               }
-              images(first: 1) {
-                edges {
-                  node {
-                    url
-                    altText
-                  }
+              priceRange {
+                minVariantPrice {
+                  amount
+                  currencyCode
                 }
               }
             }
@@ -160,12 +137,11 @@ export async function getProductsByCollection(
   `;
 
   try {
-    const response = await fetchShopify<{ collection: ShopifyCollection | null }>(query, {
+    const response = await fetchShopify<{ collectionByHandle: ShopifyCollection | null }>(query, {
       handle,
-      first,
     });
 
-    return response.data.collection;
+    return response.data.collectionByHandle;
   } catch (error) {
     console.error(`Error fetching products for collection "${handle}":`, error);
     return null;
@@ -173,84 +149,11 @@ export async function getProductsByCollection(
 }
 
 /**
- * GraphQL query to get multiple collections with products
- * @param handles - Array of collection handles
- * @param first - Number of products per collection
- * @returns Promise with array of collection data
- */
-export async function getCollectionsWithProducts(
-  handles: string[],
-  first: number = 3
-): Promise<ShopifyCollection[]> {
-  const query = `
-    query getCollectionsWithProducts($handles: [String!]!, $first: Int!) {
-      collections(first: 10, query: $handles) {
-        edges {
-          node {
-            id
-            title
-            description
-            handle
-            products(first: $first) {
-              edges {
-                node {
-                  id
-                  title
-                  handle
-                  description
-                  availableForSale
-                  totalInventory
-                  variants(first: 1) {
-                    edges {
-                      node {
-                        id
-                        price {
-                          amount
-                          currencyCode
-                        }
-                      }
-                    }
-                  }
-                  images(first: 1) {
-                    edges {
-                      node {
-                        url
-                        altText
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  `;
-
-  try {
-    const response = await fetchShopify<{ 
-      collections: { 
-        edges: Array<{ node: ShopifyCollection }> 
-      } 
-    }>(query, {
-      handles: handles.join(' OR '),
-      first,
-    });
-
-    return response.data.collections.edges.map(edge => edge.node);
-  } catch (error) {
-    console.error('Error fetching collections with products:', error);
-    return [];
-  }
-}
-
-/**
- * GraphQL query to get a single product by handle
+ * Get a single product by handle
  * @param handle - The product handle
  * @returns Promise with product data
  */
-export async function getProductByHandle(handle: string): Promise<ShopifyProduct | null> {
+export async function getProductByHandle(handle: string) {
   const query = `
     query getProductByHandle($handle: String!) {
       product(handle: $handle) {
@@ -260,23 +163,14 @@ export async function getProductByHandle(handle: string): Promise<ShopifyProduct
         description
         availableForSale
         totalInventory
-        variants(first: 5) {
-          edges {
-            node {
-              id
-              price {
-                amount
-                currencyCode
-              }
-            }
-          }
+        featuredImage {
+          url
+          altText
         }
-        images(first: 6) {
-          edges {
-            node {
-              url
-              altText
-            }
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
           }
         }
       }
