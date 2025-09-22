@@ -30,17 +30,18 @@ const Slideshow = () => {
         const slidesData: Slide[] = [];
         
         for (let i = 0; i < collections.length; i++) {
-          const collection = await getProductsByCollection(collections[i]);
+          const collection = await getProductsByCollection(collections[i], 1);
           
           if (collection && collection.products?.edges.length > 0) {
             const firstProduct = collection.products.edges[0].node;
+            const firstImage = firstProduct.images?.edges?.[0]?.node;
             
             slidesData.push({
               id: `${i + 1}`,
               title: collection.title || 'Nová kolekce',
               subtitle: firstProduct.title,
               description: firstProduct.description || 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
-              image: firstProduct.featuredImage?.url || '/api/placeholder/1200/600',
+              image: firstImage?.url || '/api/placeholder/1200/600',
               cta: 'Zobrazit kolekci'
             });
           }

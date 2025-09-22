@@ -63,11 +63,13 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
         // Fetch products from each collection
         for (const collectionHandle of collections) {
           try {
-            const collection = await getProductsByCollection(collectionHandle)
+            const collection = await getProductsByCollection(collectionHandle, 5)
             
             if (collection && collection.products?.edges) {
               const products = collection.products.edges.map(edge => {
                 const product = edge.node
+                const firstImage = product.images?.edges?.[0]?.node
+                const firstVariant = product.variants?.edges?.[0]?.node
                 
                 // Map collection handle back to Czech category name
                 const czechCategory = Object.keys(collectionMapping).find(
@@ -77,10 +79,10 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                 return {
                   id: product.id,
                   title: product.title,
-                  price: product.priceRange?.minVariantPrice ? 
-                    `${parseFloat(product.priceRange.minVariantPrice.amount).toLocaleString('cs-CZ')} ${product.priceRange.minVariantPrice.currencyCode}` : 
+                  price: firstVariant?.price ? 
+                    `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                     'Cena na vyžádání',
-                  image: product.featuredImage?.url || getFallbackImage(czechCategory),
+                  image: firstImage?.url || getFallbackImage(czechCategory),
                   category: czechCategory,
                   handle: product.handle
                 }

@@ -9,17 +9,24 @@ export interface ShopifyProduct {
   title: string;
   description: string;
   handle: string;
-  availableForSale: boolean;
-  totalInventory: number;
-  featuredImage: {
-    url: string;
-    altText?: string;
-  } | null;
-  priceRange: {
-    minVariantPrice: {
-      amount: string;
-      currencyCode: string;
-    };
+  images: {
+    edges: Array<{
+      node: {
+        url: string;
+        altText?: string;
+      };
+    }>;
+  };
+  variants: {
+    edges: Array<{
+      node: {
+        id: string;
+        price: {
+          amount: string;
+          currencyCode: string;
+        };
+      };
+    }>;
   };
 }
 
@@ -104,30 +111,39 @@ export async function fetchShopify<T>(
 /**
  * Get products from a specific collection by handle
  * @param handle - The collection handle (e.g., "necklaces", "earrings")
+ * @param first - Number of products to fetch (default: 20)
  * @returns Promise with collection data including products
  */
-export async function getProductsByCollection(handle: string) {
+export async function getProductsByCollection(handle: string, first: number = 20) {
   const query = `
-    query GetProducts($handle: String!) {
+    query GetProducts($handle: String!, $first: Int!) {
       collectionByHandle(handle: $handle) {
         title
-        products(first: 20) {
+        description
+        products(first: $first) {
           edges {
             node {
               id
               title
               description
               handle
-              availableForSale
-              totalInventory
-              featuredImage {
-                url
-                altText
+              images(first: 5) {
+                edges {
+                  node {
+                    url
+                    altText
+                  }
+                }
               }
-              priceRange {
-                minVariantPrice {
-                  amount
-                  currencyCode
+              variants(first: 5) {
+                edges {
+                  node {
+                    id
+                    price {
+                      amount
+                      currencyCode
+                    }
+                  }
                 }
               }
             }
@@ -140,6 +156,7 @@ export async function getProductsByCollection(handle: string) {
   try {
     const response = await fetchShopify<{ collectionByHandle: ShopifyCollection | null }>(query, {
       handle,
+      first,
     });
 
     return response.data.collectionByHandle;

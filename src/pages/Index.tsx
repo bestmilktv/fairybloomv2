@@ -51,19 +51,21 @@ const Index = () => {
           const shopifyHandle = collectionMapping[czechKey as keyof typeof collectionMapping];
           
           try {
-            const collection = await getProductsByCollection(shopifyHandle);
+            const collection = await getProductsByCollection(shopifyHandle, 3);
             
             if (collection && collection.products?.edges) {
               const products = collection.products.edges.map(edge => {
                 const product = edge.node;
+                const firstImage = product.images?.edges?.[0]?.node;
+                const firstVariant = product.variants?.edges?.[0]?.node;
                 
                 return {
                   id: product.id,
                   title: product.title,
-                  price: product.priceRange?.minVariantPrice ? 
-                    `${parseFloat(product.priceRange.minVariantPrice.amount).toLocaleString('cs-CZ')} ${product.priceRange.minVariantPrice.currencyCode}` : 
+                  price: firstVariant?.price ? 
+                    `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                     'Cena na vyžádání',
-                  image: product.featuredImage?.url || getFallbackImage(czechKey),
+                  image: firstImage?.url || getFallbackImage(czechKey),
                   description: product.description || 'Elegantní šperk z naší kolekce',
                   handle: product.handle
                 };
