@@ -41,7 +41,7 @@ const Slideshow = () => {
               title: collection.title || 'Nová kolekce',
               subtitle: firstProduct.title,
               description: firstProduct.description || 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
-              image: firstImage?.url || '/api/placeholder/1200/600',
+              image: firstImage?.url || '/placeholder.jpg',
               cta: 'Zobrazit kolekci'
             });
           }
@@ -55,7 +55,7 @@ const Slideshow = () => {
               title: 'Nová kolekce',
               subtitle: 'Elegantní šperky',
               description: 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
-              image: '/api/placeholder/1200/600',
+              image: '/placeholder.jpg',
               cta: 'Zobrazit kolekci'
             },
             {
@@ -63,7 +63,7 @@ const Slideshow = () => {
               title: 'Limitovaná edice',
               subtitle: 'Exkluzivní designy',
               description: 'Exkluzivní série s jedinečnými designy. Pouze omezené množství.',
-              image: '/api/placeholder/1200/600',
+              image: '/placeholder.jpg',
               cta: 'Koupit nyní'
             },
             {
@@ -71,7 +71,7 @@ const Slideshow = () => {
               title: 'Personalizace',
               subtitle: 'Váš jedinečný šperk',
               description: 'Vytvořte si šperk podle svých představ. Vyberte si design podle svého gusta.',
-              image: '/api/placeholder/1200/600',
+              image: '/placeholder.jpg',
               cta: 'Začít vytváření'
             }
           );
@@ -88,7 +88,7 @@ const Slideshow = () => {
             title: 'Nová kolekce',
             subtitle: 'Elegantní šperky',
             description: 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
-            image: '/api/placeholder/1200/600',
+            image: '/placeholder.jpg',
             cta: 'Zobrazit kolekci'
           },
           {
@@ -96,7 +96,7 @@ const Slideshow = () => {
             title: 'Limitovaná edice',
             subtitle: 'Exkluzivní designy',
             description: 'Exkluzivní série s jedinečnými designy. Pouze omezené množství.',
-            image: '/api/placeholder/1200/600',
+            image: '/placeholder.jpg',
             cta: 'Koupit nyní'
           },
           {
@@ -104,7 +104,7 @@ const Slideshow = () => {
             title: 'Personalizace',
             subtitle: 'Váš jedinečný šperk',
             description: 'Vytvořte si šperk podle svých představ. Vyberte si design podle svého gusta.',
-            image: '/api/placeholder/1200/600',
+            image: '/placeholder.jpg',
             cta: 'Začít vytváření'
           }
         ]);
