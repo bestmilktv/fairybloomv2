@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { User, Mail, UserCheck } from 'lucide-react'
 
 export default function ProfilePage() {
@@ -27,80 +27,105 @@ export default function ProfilePage() {
     )
   }
 
-  // If user exists but no profile, show a fallback with user's basic info
-  const displayData = profile || {
-    email: user.email || 'Neznámý email',
-    first_name: user.user_metadata?.first_name || 'Neznámé',
-    last_name: user.user_metadata?.last_name || 'jméno',
-    gender: user.user_metadata?.gender || 'other',
-    newsletter_consent: user.user_metadata?.newsletter_consent || false,
-    role: 'user'
-  }
-
-  const formatGender = (gender: string) => {
-    const genderMap = {
-      'male': 'Muž',
-      'female': 'Žena',
-      'other': 'Jiné'
-    }
-    return genderMap[gender as keyof typeof genderMap] || gender
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
-      <main className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto">
+      <div className="pt-24 px-6 py-12">
+        <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-light text-foreground mb-2">Váš profil</h1>
-            <p className="text-muted-foreground">Spravujte své osobní údaje</p>
+            <h1 className="text-4xl font-serif font-bold text-luxury mb-4">
+              Můj profil
+            </h1>
+            <p className="text-muted-foreground">
+              Spravujte své údaje a nastavení účtu
+            </p>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Profile Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Základní informace
+                </CardTitle>
+                <CardDescription>
+                  Vaše osobní údaje
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">E-mail</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user?.email || 'Není k dispozici'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Stav účtu</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user ? 'Aktivní' : 'Neaktivní'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-sm border-border/50">
+            {/* Account Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Nastavení účtu</CardTitle>
+                <CardDescription>
+                  Spravujte své předvolby
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold text-foreground mb-2">Shopify Integrace</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Všechny produkty a objednávky jsou nyní spravovány přes Shopify.
+                  </p>
+                  <Button variant="outline" size="sm" disabled>
+                    Nastavení není k dispozici
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Additional Information */}
+          <Card className="mt-8">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-medium">
-                <User className="h-5 w-5 text-primary" />
-                Osobní údaje
-              </CardTitle>
+              <CardTitle>O aplikaci</CardTitle>
               <CardDescription>
-                Detaily vašeho účtu a předvolby
+                Informace o Fairy Bloom
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Celé jméno</label>
-                  <p className="text-lg font-light text-foreground">
-                    {displayData.first_name} {displayData.last_name}
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold text-foreground mb-2">E-shop</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Fairy Bloom je e-shop s ručně vyráběnými šperky s květinami zachycenými v čase.
+                    Všechny produkty jsou spravovány přes Shopify platformu.
+                  </p>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold text-foreground mb-2">Kontakt</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Pro jakékoliv dotazy nebo podporu nás kontaktujte přes kontaktní formulář.
                   </p>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Emailová adresa
-                </label>
-                <p className="text-lg font-light text-foreground">{displayData.email}</p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <UserCheck className="h-4 w-4" />
-                  Pohlaví
-                </label>
-                <Badge variant="secondary" className="text-sm font-light">
-                  {formatGender(displayData.gender)}
-                </Badge>
-              </div>
-
             </CardContent>
           </Card>
         </div>
-      </main>
-
+      </div>
       <Footer />
     </div>
   )

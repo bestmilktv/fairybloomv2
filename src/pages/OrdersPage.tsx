@@ -27,76 +27,76 @@ export default function OrdersPage() {
     )
   }
 
-  // Mock orders data - in a real app, this would come from your database
-  const orders = []
-
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
-      <main className="container mx-auto px-4 py-16">
+      <div className="pt-24 px-6 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-light text-foreground mb-2">Moje objednávky</h1>
-            <p className="text-muted-foreground">Sledujte a zobrazte historii svých objednávek</p>
+            <h1 className="text-4xl font-serif font-bold text-luxury mb-4">
+              Moje objednávky
+            </h1>
+            <p className="text-muted-foreground">
+              Sledujte stav svých objednávek
+            </p>
           </div>
 
-          {orders.length === 0 ? (
-            <Card className="shadow-sm border-border/50">
-              <CardContent className="py-16">
-                <div className="text-center space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center">
-                    <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+          {/* Shopify Integration Notice */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5" />
+                Shopify Integrace
+              </CardTitle>
+              <CardDescription>
+                Objednávky jsou nyní spravovány přes Shopify
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h3 className="font-semibold text-foreground mb-2">Objednávky</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Všechny objednávky jsou nyní zpracovávány přes Shopify checkout systém.
+                  Pro sledování objednávek zkontrolujte svůj e-mail nebo se přihlaste do Shopify účtu.
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span>Objednávky se zpracovávají automaticky</span>
                   </div>
-                  <h3 className="text-xl font-medium text-foreground">Zatím nemáte žádné objednávky</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Zatím nemáte žádné objednávky. Začněte nakupovat a uvidíte je zde.
-                  </p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>Stav objednávek najdete v e-mailu</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <span>Platby jsou bezpečně zpracovávány Shopify</span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {orders.map((order) => (
-                <Card key={order.id} className="shadow-sm border-border/50">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2 text-lg font-medium">
-                        <Package className="h-5 w-5 text-primary" />
-                        Order #{order.orderNumber}
-                      </CardTitle>
-                      <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                    <CardDescription className="flex items-center gap-4">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {order.date}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <CreditCard className="h-4 w-4" />
-                        {order.total}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {order.items.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b border-border/50 last:border-b-0">
-                          <span className="font-light text-foreground">{item.name}</span>
-                          <span className="text-muted-foreground">{item.price}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+              </div>
+            </CardContent>
+          </Card>
 
+          {/* Empty State */}
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Žádné objednávky
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                Zatím jste neprovedli žádné objednávky. Prohlédněte si naše produkty a vytvořte svou první objednávku.
+              </p>
+              <a 
+                href="/" 
+                className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Prohlédnout produkty
+              </a>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
       <Footer />
     </div>
   )

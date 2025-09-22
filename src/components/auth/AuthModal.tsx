@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,391 +20,238 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const { signIn, signUp, user, session, loading: authLoading, profile } = useAuth()
+  const { signIn, signUp } = useAuth()
   const { toast } = useToast()
 
-  // Simple auto-close logic - close immediately when user is authenticated
-  useEffect(() => {
-    // Close modal when user and session are present
-    if (user && session && isOpen) {
-      console.log('AuthModal: User authenticated, closing modal')
-      setLoading(false)
-      onClose()
-    }
-  }, [user, session, isOpen, onClose])
-
-  // Reset loading state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setLoading(false)
-    }
-  }, [isOpen])
-
-  // Login form state
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: ''
-  })
-
-  // Registration form state
-  const [registerData, setRegisterData] = useState({
-    firstName: '',
-    lastName: '',
-    gender: undefined as 'male' | 'female' | 'other' | undefined,
+  const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
-    newsletterConsent: true
+    firstName: '',
+    lastName: '',
+    gender: 'other' as 'male' | 'female' | 'other',
+    newsletterConsent: false
   })
 
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  const validateLoginForm = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!loginData.email.trim()) newErrors.email = 'Email je povinný'
-    else if (!/\S+@\S+\.\S+/.test(loginData.email)) newErrors.email = 'Neplatný formát emailu'
-    
-    if (!loginData.password) newErrors.password = 'Heslo je povinné'
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const validateRegisterForm = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!registerData.firstName.trim()) newErrors.firstName = 'Jméno je povinné'
-    if (!registerData.lastName.trim()) newErrors.lastName = 'Příjmení je povinné'
-    if (!registerData.gender) newErrors.gender = 'Pohlaví je povinné'
-    if (!registerData.email.trim()) newErrors.email = 'Email je povinný'
-    else if (!/\S+@\S+\.\S+/.test(registerData.email)) newErrors.email = 'Neplatný formát emailu'
-    
-    if (!registerData.password) newErrors.password = 'Heslo je povinné'
-    else if (registerData.password.length < 6) newErrors.password = 'Heslo musí mít alespoň 6 znaků'
-    
-    if (!registerData.confirmPassword) newErrors.confirmPassword = 'Potvrďte prosím heslo'
-    else if (registerData.password !== registerData.confirmPassword) {
-      newErrors.confirmPassword = 'Hesla se neshodují'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateLoginForm()) return
-
     setLoading(true)
-    console.log('AuthModal: Starting login process')
-    
-    const { error } = await signIn(loginData.email, loginData.password)
-    
-    if (error) {
-      console.error('AuthModal: Login error:', error)
-      setLoading(false)
-      
-      // Provide user-friendly error messages in Czech
-      let errorMessage = 'Neplatný email nebo heslo'
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Neplatné přihlašovací údaje'
-      } else if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Email nebyl potvrzen'
-      } else if (error.message?.includes('Too many requests')) {
-        errorMessage = 'Příliš mnoho pokusů. Zkuste to později.'
+
+    try {
+      if (mode === 'login') {
+        const { error } = await signIn(formData.email, formData.password)
+        if (error) {
+          toast({
+            title: "Chyba při přihlášení",
+            description: "Přihlášení není momentálně k dispozici.",
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Přihlášení",
+            description: "Přihlášení není momentálně k dispozici.",
+          })
+          onClose()
+        }
+      } else {
+        if (formData.password !== formData.confirmPassword) {
+          toast({
+            title: "Chyba",
+            description: "Hesla se neshodují.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        const { error } = await signUp({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          gender: formData.gender,
+          newsletterConsent: formData.newsletterConsent
+        })
+
+        if (error) {
+          toast({
+            title: "Chyba při registraci",
+            description: "Registrace není momentálně k dispozici.",
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Registrace",
+            description: "Registrace není momentálně k dispozici.",
+          })
+          onClose()
+        }
       }
-      
+    } catch (error) {
       toast({
+        title: "Chyba",
+        description: "Nastala neočekávaná chyba.",
         variant: "destructive",
-        title: "Přihlášení selhalo",
-        description: errorMessage
       })
-    } else {
-      console.log('AuthModal: Login successful')
-      toast({
-        title: "Vítejte zpět!",
-        description: "Byly jste úspěšně přihlášeni."
-      })
-      // Modal will close automatically via useEffect when auth state is fully updated
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateRegisterForm()) return
-
-    setLoading(true)
-    console.log('AuthModal: Starting registration process')
-    
-    const { error } = await signUp({
-      email: registerData.email,
-      password: registerData.password,
-      firstName: registerData.firstName,
-      lastName: registerData.lastName,
-      gender: registerData.gender,
-      newsletterConsent: registerData.newsletterConsent
-    })
-
-    if (error) {
-      console.error('AuthModal: Registration error:', error)
-      setLoading(false)
-      
-      // Provide user-friendly error messages in Czech
-      let errorMessage = 'Chyba při registraci'
-      if (error.message?.includes('User already registered')) {
-        errorMessage = 'Uživatel s tímto emailem již existuje'
-      } else if (error.message?.includes('Password should be at least')) {
-        errorMessage = 'Heslo musí mít alespoň 6 znaků'
-      } else if (error.message?.includes('Unable to validate email')) {
-        errorMessage = 'Neplatný formát emailu'
-      }
-      
-      toast({
-        variant: "destructive",
-        title: "Registrace selhala",
-        description: errorMessage
-      })
-    } else {
-      console.log('AuthModal: Registration successful')
-      toast({
-        title: "Účet vytvořen!",
-        description: "Vítejte v Fairy Bloom!"
-      })
-      // Modal will close automatically via useEffect when auth state is fully updated
-    }
-  }
-
-  const resetForm = () => {
-    setLoginData({ email: '', password: '' })
-    setRegisterData({
-      firstName: '',
-      lastName: '',
-      gender: '' as any,
-      email: '',
-      password: '',
-      confirmPassword: '',
-      newsletterConsent: true
-    })
-    setErrors({})
-  }
-
-  const switchMode = (newMode: 'login' | 'register') => {
-    setMode(newMode)
-    resetForm()
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-background/95 backdrop-blur-xl border-gold/20">
-        <DialogHeader className="text-center">
-          <DialogTitle className="text-2xl font-light text-luxury tracking-wide">
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
             {mode === 'login' ? 'Přihlášení' : 'Registrace'}
           </DialogTitle>
         </DialogHeader>
 
-        {mode === 'login' ? (
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-foreground/80">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={loginData.email}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
-                  className={`mt-1 bg-background/50 border-gold/20 focus:border-gold ${errors.email ? 'border-destructive' : ''}`}
-                  placeholder="your@email.com"
-                />
-                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="password" className="text-foreground/80">Heslo</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={loginData.password}
-                    onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                    className={`mt-1 bg-background/50 border-gold/20 focus:border-gold pr-10 ${errors.password ? 'border-destructive' : ''}`}
-                    placeholder="••••••••"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-1 h-9 w-9 text-foreground/60 hover:text-foreground"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
-              </div>
-            </div>
-
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-gold/80 to-gold text-background hover:from-gold hover:to-gold/90 transition-all duration-300"
-            >
-              {loading ? 'Přihlašování...' : 'Přihlásit se'}
-            </Button>
-
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => switchMode('register')}
-                className="text-foreground/60 hover:text-gold"
-              >
-                Nemáte účet? Zaregistrujte se
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={handleRegister} className="space-y-6">
-            <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'register' && (
+            <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="firstName" className="text-foreground/80">Jméno</Label>
+                  <Label htmlFor="firstName">Jméno</Label>
                   <Input
                     id="firstName"
-                    value={registerData.firstName}
-                    onChange={(e) => setRegisterData(prev => ({ ...prev, firstName: e.target.value }))}
-                    className={`mt-1 bg-background/50 border-gold/20 focus:border-gold ${errors.firstName ? 'border-destructive' : ''}`}
-                    placeholder="Jméno"
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    required
                   />
-                  {errors.firstName && <p className="text-xs text-destructive mt-1">{errors.firstName}</p>}
                 </div>
-
                 <div>
-                  <Label htmlFor="lastName" className="text-foreground/80">Příjmení</Label>
+                  <Label htmlFor="lastName">Příjmení</Label>
                   <Input
                     id="lastName"
-                    value={registerData.lastName}
-                    onChange={(e) => setRegisterData(prev => ({ ...prev, lastName: e.target.value }))}
-                    className={`mt-1 bg-background/50 border-gold/20 focus:border-gold ${errors.lastName ? 'border-destructive' : ''}`}
-                    placeholder="Příjmení"
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    required
                   />
-                  {errors.lastName && <p className="text-xs text-destructive mt-1">{errors.lastName}</p>}
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="gender" className="text-foreground/80">Pohlaví</Label>
-                <Select value={registerData.gender} onValueChange={(value: 'male' | 'female' | 'other') => 
-                  setRegisterData(prev => ({ ...prev, gender: value }))
-                }>
-                  <SelectTrigger className={`mt-1 bg-background/50 border-gold/20 focus:border-gold ${errors.gender ? 'border-destructive' : ''}`}>
-                    <SelectValue placeholder="Vyberte pohlaví" />
+                <Label htmlFor="gender">Pohlaví</Label>
+                <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
+                  <SelectTrigger>
+                    <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-xl border-gold/20">
+                  <SelectContent>
                     <SelectItem value="male">Muž</SelectItem>
                     <SelectItem value="female">Žena</SelectItem>
                     <SelectItem value="other">Jiné</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.gender && <p className="text-xs text-destructive mt-1">{errors.gender}</p>}
               </div>
+            </>
+          )}
 
-              <div>
-                <Label htmlFor="registerEmail" className="text-foreground/80">Email</Label>
-                <Input
-                  id="registerEmail"
-                  type="email"
-                  value={registerData.email}
-                  onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
-                  className={`mt-1 bg-background/50 border-gold/20 focus:border-gold ${errors.email ? 'border-destructive' : ''}`}
-                  placeholder="your@email.com"
-                />
-                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
-              </div>
+          <div>
+            <Label htmlFor="email">E-mail</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              required
+            />
+          </div>
 
-              <div>
-                <Label htmlFor="registerPassword" className="text-foreground/80">Heslo</Label>
-                <div className="relative">
-                  <Input
-                    id="registerPassword"
-                    type={showPassword ? 'text' : 'password'}
-                    value={registerData.password}
-                    onChange={(e) => setRegisterData(prev => ({ ...prev, password: e.target.value }))}
-                    className={`mt-1 bg-background/50 border-gold/20 focus:border-gold pr-10 ${errors.password ? 'border-destructive' : ''}`}
-                    placeholder="••••••••"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-1 h-9 w-9 text-foreground/60 hover:text-foreground"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
-              </div>
+          <div>
+            <Label htmlFor="password">Heslo</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                required
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
 
+          {mode === 'register' && (
+            <>
               <div>
-                <Label htmlFor="confirmPassword" className="text-foreground/80">Potvrdit heslo</Label>
+                <Label htmlFor="confirmPassword">Potvrdit heslo</Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
-                    value={registerData.confirmPassword}
-                    onChange={(e) => setRegisterData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    className={`mt-1 bg-background/50 border-gold/20 focus:border-gold pr-10 ${errors.confirmPassword ? 'border-destructive' : ''}`}
-                    placeholder="••••••••"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    required
                   />
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-1 h-9 w-9 text-foreground/60 hover:text-foreground"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
-                {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword}</p>}
               </div>
 
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="newsletterConsent"
-                  checked={registerData.newsletterConsent}
-                  onCheckedChange={(checked) => 
-                    setRegisterData(prev => ({ ...prev, newsletterConsent: checked as boolean }))
-                  }
-                  className="border-gold/40 data-[state=checked]:bg-gold data-[state=checked]:border-gold"
+                  id="newsletter"
+                  checked={formData.newsletterConsent}
+                  onCheckedChange={(checked) => handleInputChange('newsletterConsent', checked)}
                 />
-                <Label htmlFor="newsletterConsent" className="text-sm text-foreground/70">
-                  Chci dostávat newsletter
+                <Label htmlFor="newsletter" className="text-sm">
+                  Chci dostávat newsletter s novinkami a nabídkami
                 </Label>
               </div>
-            </div>
+            </>
+          )}
 
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-gold/80 to-gold text-background hover:from-gold hover:to-gold/90 transition-all duration-300"
-            >
-              {loading ? 'Registrování...' : 'Zaregistrovat se'}
-            </Button>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Načítám...' : (mode === 'login' ? 'Přihlásit se' : 'Registrovat se')}
+          </Button>
+        </form>
 
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => switchMode('login')}
-                className="text-foreground/60 hover:text-gold"
-              >
-                Už máte účet? Přihlaste se
-              </Button>
-            </div>
-          </form>
-        )}
+        <div className="text-center">
+          <Button
+            variant="link"
+            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+            className="text-sm"
+          >
+            {mode === 'login' 
+              ? 'Nemáte účet? Zaregistrujte se' 
+              : 'Máte účet? Přihlaste se'
+            }
+          </Button>
+        </div>
+
+        <div className="text-center text-sm text-muted-foreground">
+          <p>Autentizace není momentálně k dispozici.</p>
+          <p>E-shop funguje bez registrace.</p>
+        </div>
       </DialogContent>
     </Dialog>
   )
