@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { getProductsByCollection } from '@/lib/shopify';
 
 interface Slide {
   id: string;
@@ -15,34 +16,104 @@ interface Slide {
 const Slideshow = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideshowRef, slideshowVisible] = useScrollAnimation();
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Placeholder slides - you can easily replace these
-  const slides: Slide[] = [
-    {
-      id: '1',
-      title: 'Nová kolekce jaro 2024',
-      subtitle: 'Růžové okvětí',
-      description: 'Objevte naši nejnovější kolekci s jemnými růžovými květy zachycenými v průzračné pryskyřici.',
-      image: '/api/placeholder/1200/600',
-      cta: 'Zobrazit kolekci'
-    },
-    {
-      id: '2',
-      title: 'Limitovaná edice',
-      subtitle: 'Divoké luční květy',
-      description: 'Exkluzivní série s divokými květinami z českých luk. Pouze 50 kusů každého designu.',
-      image: '/api/placeholder/1200/600',
-      cta: 'Koupit nyní'
-    },
-    {
-      id: '3',
-      title: 'Personalizace',
-      subtitle: 'Váš jedinečný šperk',
-      description: 'Vytvořte si šperk podle svých představ. Vyberte si květiny a tvar podle svého gusta.',
-      image: '/api/placeholder/1200/600',
-      cta: 'Začít vytváření'
-    }
-  ];
+  // Fetch featured products for slideshow
+  useEffect(() => {
+    const fetchSlideshowData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get featured products from different collections
+        const collections = ['necklaces', 'earrings', 'rings'];
+        const slidesData: Slide[] = [];
+        
+        for (let i = 0; i < collections.length; i++) {
+          const collection = await getProductsByCollection(collections[i]);
+          
+          if (collection && collection.products?.edges.length > 0) {
+            const firstProduct = collection.products.edges[0].node;
+            
+            slidesData.push({
+              id: `${i + 1}`,
+              title: collection.title || 'Nová kolekce',
+              subtitle: firstProduct.title,
+              description: firstProduct.description || 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
+              image: firstProduct.featuredImage?.url || '/api/placeholder/1200/600',
+              cta: 'Zobrazit kolekci'
+            });
+          }
+        }
+        
+        // Fallback slides if no products found
+        if (slidesData.length === 0) {
+          slidesData.push(
+            {
+              id: '1',
+              title: 'Nová kolekce',
+              subtitle: 'Elegantní šperky',
+              description: 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
+              image: '/api/placeholder/1200/600',
+              cta: 'Zobrazit kolekci'
+            },
+            {
+              id: '2',
+              title: 'Limitovaná edice',
+              subtitle: 'Exkluzivní designy',
+              description: 'Exkluzivní série s jedinečnými designy. Pouze omezené množství.',
+              image: '/api/placeholder/1200/600',
+              cta: 'Koupit nyní'
+            },
+            {
+              id: '3',
+              title: 'Personalizace',
+              subtitle: 'Váš jedinečný šperk',
+              description: 'Vytvořte si šperk podle svých představ. Vyberte si design podle svého gusta.',
+              image: '/api/placeholder/1200/600',
+              cta: 'Začít vytváření'
+            }
+          );
+        }
+        
+        setSlides(slidesData);
+      } catch (error) {
+        console.error('Error fetching slideshow data:', error);
+        
+        // Fallback slides on error
+        setSlides([
+          {
+            id: '1',
+            title: 'Nová kolekce',
+            subtitle: 'Elegantní šperky',
+            description: 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
+            image: '/api/placeholder/1200/600',
+            cta: 'Zobrazit kolekci'
+          },
+          {
+            id: '2',
+            title: 'Limitovaná edice',
+            subtitle: 'Exkluzivní designy',
+            description: 'Exkluzivní série s jedinečnými designy. Pouze omezené množství.',
+            image: '/api/placeholder/1200/600',
+            cta: 'Koupit nyní'
+          },
+          {
+            id: '3',
+            title: 'Personalizace',
+            subtitle: 'Váš jedinečný šperk',
+            description: 'Vytvořte si šperk podle svých představ. Vyberte si design podle svého gusta.',
+            image: '/api/placeholder/1200/600',
+            cta: 'Začít vytváření'
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSlideshowData();
+  }, []);
 
   // Auto-advance slides
   useEffect(() => {
@@ -60,6 +131,27 @@ const Slideshow = () => {
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
+
+  if (isLoading) {
+    return (
+      <section 
+        ref={slideshowRef}
+        className={`py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30 scroll-fade-in ${slideshowVisible ? 'visible' : ''}`}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="relative overflow-hidden rounded-3xl bg-card shadow-2xl">
+            <div className="h-96 md:h-[500px] flex items-center justify-center">
+              <div className="animate-pulse">
+                <div className="h-12 bg-muted rounded-lg mb-4 max-w-md mx-auto"></div>
+                <div className="h-6 bg-muted rounded-lg mb-8 max-w-2xl mx-auto"></div>
+                <div className="h-10 bg-muted rounded-lg max-w-32 mx-auto"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section 

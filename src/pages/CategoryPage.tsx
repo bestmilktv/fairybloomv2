@@ -42,21 +42,19 @@ const CategoryPage = () => {
         const shopifyHandle = decodedCategory ? collectionMapping[decodedCategory as keyof typeof collectionMapping] : null;
         
         if (shopifyHandle) {
-          const collection = await getProductsByCollection(shopifyHandle, 20);
+          const collection = await getProductsByCollection(shopifyHandle);
           
           if (collection && collection.products?.edges) {
             const products = collection.products.edges.map(edge => {
               const product = edge.node;
-              const firstImage = product.images?.edges?.[0]?.node;
-              const firstVariant = product.variants?.edges?.[0]?.node;
               
               return {
                 id: product.id,
                 title: product.title,
-                price: firstVariant?.price ? 
-                  `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
+                price: product.priceRange?.minVariantPrice ? 
+                  `${parseFloat(product.priceRange.minVariantPrice.amount).toLocaleString('cs-CZ')} ${product.priceRange.minVariantPrice.currencyCode}` : 
                   'Cena na vyžádání',
-                image: firstImage?.url || getFallbackImage(decodedCategory),
+                image: product.featuredImage?.url || getFallbackImage(decodedCategory),
                 description: product.description || 'Elegantní šperk z naší kolekce',
                 handle: product.handle
               };

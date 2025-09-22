@@ -25,6 +25,7 @@ export interface ShopifyProduct {
 
 export interface ShopifyCollection {
   title: string;
+  description?: string;
   products: {
     edges: Array<{
       node: ShopifyProduct;
