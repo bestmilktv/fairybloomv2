@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Heart } from 'lucide-react';
 import Navigation from '@/components/Navigation';
@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
+import { getProductByHandle } from '@/lib/shopify';
 
-// Import product images
+// Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
 import earringsImage from '@/assets/earrings-placeholder.jpg';
 import ringImage from '@/assets/ring-placeholder.jpg';
@@ -16,10 +17,14 @@ import braceletImage from '@/assets/bracelet-placeholder.jpg';
 
 const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { toast } = useToast();
   const [selectedImage, setSelectedImage] = useState(0);
   const [animatingToCart, setAnimatingToCart] = useState(false);
+  const [product, setProduct] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const productImageRef = useRef<HTMLImageElement>(null);
 
   // Scroll to top when page loads
@@ -27,135 +32,84 @@ const ProductDetailPage = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [productId]);
 
-  // All products data (this could be moved to a data file or context)
-  const allProducts = {
-    // Náhrdelníky
-    'n1': {
-      id: 'n1',
-      title: 'Růžové okvětí',
-      price: '2 890 Kč',
-      images: [necklaceImage, necklaceImage, necklaceImage],
-      category: 'Náhrdelníky',
-      categoryPath: '/nahrdelníky',
-      shortDescription: 'Jemný náhrdelník s růžovými okvětními lístky v průzračné pryskyřici.',
-      fullDescription: 'Tento jedinečný náhrdelník zachycuje křehkou krásu růžových okvětních lístků v průzračné pryskyřici nejvyšší kvality. Každý kousek je ručně vyráběn s láskou k detailu, přičemž skutečné květy jsou pečlivě vybírány a konzervovány v dokonalém stavu. Náhrdelník je dodáván s elegantním řetízkem z chirurgické oceli a je ideální pro každodenní nošení i speciální příležitosti.'
-    },
-    'n2': {
-      id: 'n2',
-      title: 'Lesní kapradina',
-      price: '3 200 Kč',
-      images: [necklaceImage, necklaceImage],
-      category: 'Náhrdelníky',
-      categoryPath: '/nahrdelníky',
-      shortDescription: 'Minimalistický design s jemnou kapradinou z českých lesů.',
-      fullDescription: 'Inspirovaný klidem českých lesů, tento náhrdelník obsahuje jemné listy kapradiny zachycené v čisté pryskyřici. Minimalistický design zdůrazňuje přírodní krásu a organické tvary rostliny. Perfektní volba pro milovníky přírody a jednoduché elegance.'
-    },
-    'n3': {
-      id: 'n3',
-      title: 'Loučka v létě',
-      price: '2 650 Kč',
-      images: [necklaceImage],
-      category: 'Náhrdelníky',
-      categoryPath: '/nahrdelníky',
-      shortDescription: 'Barevná směs lučních květů zachycená v elegantním náhrdelníku.',
-      fullDescription: 'Zachycuje podstatu letní louky s pestrou směsí drobných lučních květů. Každý náhrdelník je jedinečný díky přirozené variabilitě květů. Barvy se pohybují od jemných bílých a žlutých po sytější modré a fialové tóny.'
-    },
-    // Náušnice
-    'e1': {
-      id: 'e1',
-      title: 'Pomněnkové kapky',
-      price: '1 890 Kč',
-      images: [earringsImage, earringsImage],
-      category: 'Náušnice',
-      categoryPath: '/nausnice',
-      shortDescription: 'Drobné náušnice s modrými pomněnkami v kapkovitém tvaru.',
-      fullDescription: 'Tyto půvabné náušnice ve tvaru kapky obsahují skutečné modré pomněnky - symbol věrné lásky a vzpomínek. Kapkovitý tvar dokonale doplňuje jemnost květů a vytváří elegantní doplněk vhodný pro každý den.'
-    },
-    'e2': {
-      id: 'e2',
-      title: 'Zlaté slunce',
-      price: '2 100 Kč',
-      images: [earringsImage],
-      category: 'Náušnice',
-      categoryPath: '/nausnice',
-      shortDescription: 'Kruhové náušnice se žlutými květy a zlatými akcenty.',
-      fullDescription: 'Slunečné kruhové náušnice ozdobené skutečnými žlutými květy a jemnými zlatými akcenty. Přinášejí teplo a radost do každého dne a dokonale doplňují jak casualové, tak elegantní outfity.'
-    },
-    'e3': {
-      id: 'e3',
-      title: 'Bílá čistota',
-      price: '1 750 Kč',
-      images: [earringsImage],
-      category: 'Náušnice',
-      categoryPath: '/nausnice',
-      shortDescription: 'Minimalistické náušnice s drobnými bílými květy.',
-      fullDescription: 'Čisté a minimalistické náušnice s drobnými bílými květy symbolizují nevinnost a čistotu. Ideální pro nevěsty nebo pro ty, kteří preferují jemné a nenápadné šperky.'
-    },
-    // Prsteny
-    'r1': {
-      id: 'r1',
-      title: 'Věčná láska',
-      price: '3 500 Kč',
-      images: [ringImage, ringImage],
-      category: 'Prsteny',
-      categoryPath: '/prsteny',
-      shortDescription: 'Romantický prsten s červenými růžemi a zlatým rámem.',
-      fullDescription: 'Symbol věčné lásky - tento výjimečný prsten obsahuje miniaturní červené růže zasazené do zlatého rámu. Každá růže je pečlivě vybrána pro svou dokonalou formu a barvu. Ideální jako zásnubní nebo výroční dar.'
-    },
-    'r2': {
-      id: 'r2',
-      title: 'Přírodní elegance',
-      price: '2 900 Kč',
-      images: [ringImage],
-      category: 'Prsteny',
-      categoryPath: '/prsteny',
-      shortDescription: 'Široký prsten s mozaikou drobných polních květů.',
-      fullDescription: 'Široký prsten představující mozaiku drobných polních květů v různých barvách. Každý prsten je unikátní díky náhodné distribuci květů, což vytváří jedinečný přírodní vzor.'
-    },
-    'r3': {
-      id: 'r3',
-      title: 'Ranní rosa',
-      price: '3 200 Kč',
-      images: [ringImage],
-      category: 'Prsteny',
-      categoryPath: '/prsteny',
-      shortDescription: 'Jemný prsten s bílými květy a perleťovými akcenty.',
-      fullDescription: 'Jemný prsten evokující ranní rosu na bílých květech, doplněný perleťovými akcenty, které dodávají šperku ručně vyráběný luxusní vzhled. Symbolizuje nové začátky a čistotu.'
-    },
-    // Náramky
-    'b1': {
-      id: 'b1',
-      title: 'Zahradní sen',
-      price: '2 400 Kč',
-      images: [braceletImage, braceletImage],
-      category: 'Náramky',
-      categoryPath: '/naramky',
-      shortDescription: 'Široký náramek s různobarevnými zahradními květy.',
-      fullDescription: 'Široký náramek zachycující krásu zahradních květů v plném rozkvětu. Pestrobarevná kompozice zahrnuje růže, tulipány, narcisy a další oblíbené zahradní květiny. Dokonalé pro milovníky barev a výrazných doplňků.'
-    },
-    'b2': {
-      id: 'b2',
-      title: 'Lesní stezka',
-      price: '2 100 Kč',
-      images: [braceletImage],
-      category: 'Náramky',
-      categoryPath: '/naramky',
-      shortDescription: 'Náramek inspirovaný procházkou lesem s kapradinami a mechem.',
-      fullDescription: 'Tento náramek vás přenese na klidnou procházku lesní stezkou. Obsahuje kapradiny, mech a další lesní rostliny v zemitých zelených tónech. Ideální pro ty, kteří hledají spojení s přírodou.'
-    },
-    'b3': {
-      id: 'b3',
-      title: 'Levandulové pole',
-      price: '2 650 Kč',
-      images: [braceletImage],
-      category: 'Náramky',
-      categoryPath: '/naramky',
-      shortDescription: 'Elegantní náramek s levandulí a stříbrnými detaily.',
-      fullDescription: 'Elegantní náramek s větvičkami skutečné levandule a jemnými stříbrnými akcenty. Levandule je známá svými uklidňujícími vlastnostmi a krásnou fialovou barvou. Náramek je nejen krásný, ale také jemně vonný.'
-    }
+  // Fetch product from Shopify
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!productId) {
+        setHasError(true);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setHasError(false);
+
+        // Try to fetch from Shopify using the productId as handle
+        const shopifyProduct = await getProductByHandle(productId);
+        
+        if (shopifyProduct) {
+          const firstImage = shopifyProduct.images?.edges?.[0]?.node;
+          const firstVariant = shopifyProduct.variants?.edges?.[0]?.node;
+          
+          // Transform Shopify product to match expected format
+          const transformedProduct = {
+            id: shopifyProduct.id,
+            title: shopifyProduct.title,
+            price: firstVariant?.price ? 
+              `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
+              'Cena na vyžádání',
+            images: shopifyProduct.images?.edges?.map(edge => edge.node.url) || [getFallbackImage()],
+            category: getCategoryFromHandle(productId),
+            categoryPath: getCategoryPath(productId),
+            shortDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce',
+            fullDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce s ruční výrobou a přírodními materiály.',
+            handle: shopifyProduct.handle,
+            variants: shopifyProduct.variants?.edges?.map(edge => edge.node) || []
+          };
+          
+          setProduct(transformedProduct);
+        } else {
+          setHasError(true);
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        setHasError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [productId]);
+
+  // Helper function to get fallback image
+  const getFallbackImage = () => {
+    if (!productId) return necklaceImage;
+    if (productId.includes('nahr') || productId.includes('necklace')) return necklaceImage;
+    if (productId.includes('naus') || productId.includes('earring')) return earringsImage;
+    if (productId.includes('prst') || productId.includes('ring')) return ringImage;
+    if (productId.includes('nara') || productId.includes('bracelet')) return braceletImage;
+    return necklaceImage;
   };
 
-  const product = productId ? allProducts[productId as keyof typeof allProducts] : null;
+  // Helper function to get category from handle
+  const getCategoryFromHandle = (handle: string) => {
+    if (handle.includes('nahr') || handle.includes('necklace')) return 'Náhrdelníky';
+    if (handle.includes('naus') || handle.includes('earring')) return 'Náušnice';
+    if (handle.includes('prst') || handle.includes('ring')) return 'Prsteny';
+    if (handle.includes('nara') || handle.includes('bracelet')) return 'Náramky';
+    return 'Náhrdelníky';
+  };
+
+  // Helper function to get category path
+  const getCategoryPath = (handle: string) => {
+    if (handle.includes('nahr') || handle.includes('necklace')) return '/náhrdelníky';
+    if (handle.includes('naus') || handle.includes('earring')) return '/náušnice';
+    if (handle.includes('prst') || handle.includes('ring')) return '/prsteny';
+    if (handle.includes('nara') || handle.includes('bracelet')) return '/náramky';
+    return '/náhrdelníky';
+  };
 
   const handleAddToCart = () => {
     if (!product || animatingToCart) return;
@@ -163,55 +117,8 @@ const ProductDetailPage = () => {
     // Start animation
     setAnimatingToCart(true);
     
-    // Create flying image animation
-    if (productImageRef.current) {
-      const productImg = productImageRef.current;
-      const cartIcon = document.querySelector('[data-cart-icon]');
-      
-      if (cartIcon) {
-        // Create clone of product image
-        const flyingImg = productImg.cloneNode(true) as HTMLImageElement;
-        flyingImg.style.position = 'fixed';
-        flyingImg.style.width = '80px';
-        flyingImg.style.height = '80px';
-        flyingImg.style.borderRadius = '50%';
-        flyingImg.style.zIndex = '9999';
-        flyingImg.style.transition = 'all 0.8s ease-in-out';
-        flyingImg.style.pointerEvents = 'none';
-        
-        // Get positions
-        const productRect = productImg.getBoundingClientRect();
-        const cartRect = cartIcon.getBoundingClientRect();
-        
-        // Set initial position
-        flyingImg.style.left = `${productRect.left + productRect.width / 2 - 40}px`;
-        flyingImg.style.top = `${productRect.top + productRect.height / 2 - 40}px`;
-        
-        document.body.appendChild(flyingImg);
-        
-        // Animate to cart
-        setTimeout(() => {
-          flyingImg.style.left = `${cartRect.left + cartRect.width / 2 - 40}px`;
-          flyingImg.style.top = `${cartRect.top + cartRect.height / 2 - 40}px`;
-          flyingImg.style.transform = 'scale(0.3)';
-          flyingImg.style.opacity = '0.7';
-        }, 50);
-        
-        // Remove element after animation
-        setTimeout(() => {
-          if (flyingImg && flyingImg.parentNode) {
-            flyingImg.parentNode.removeChild(flyingImg);
-          }
-          setAnimatingToCart(false);
-        }, 850);
-      } else {
-        setAnimatingToCart(false);
-      }
-    }
-    
-    // Parse price to number (remove "Kč" and spaces, convert to number)
+    // Add to cart
     const priceNumber = parseInt(product.price.replace(/[^\d]/g, ''));
-    
     addToCart({
       id: product.id,
       name: product.title,
@@ -224,17 +131,73 @@ const ProductDetailPage = () => {
       title: "Přidáno do košíku",
       description: `${product.title} byl přidán do vašeho košíku.`,
     });
+    
+    // Reset animation after delay
+    setTimeout(() => {
+      setAnimatingToCart(false);
+    }, 1000);
   };
 
-  if (!product) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="pt-24 text-center">
-          <h1 className="text-4xl font-serif text-luxury">Produkt nenalezen</h1>
-          <Link to="/" className="text-gold hover:underline mt-4 inline-block">
-            Zpět na hlavní stránku
-          </Link>
+        <div className="pt-24 px-6 py-12">
+          <div className="max-w-7xl mx-auto">
+            <div className="animate-pulse">
+              <div className="h-8 bg-muted rounded-lg w-64 mb-8"></div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-4">
+                  <div className="aspect-square bg-muted rounded-2xl"></div>
+                  <div className="grid grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="aspect-square bg-muted rounded-lg"></div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  <div className="h-8 bg-muted rounded-lg w-3/4"></div>
+                  <div className="h-6 bg-muted rounded-lg w-1/2"></div>
+                  <div className="h-4 bg-muted rounded-lg w-full"></div>
+                  <div className="h-4 bg-muted rounded-lg w-5/6"></div>
+                  <div className="h-4 bg-muted rounded-lg w-4/6"></div>
+                  <div className="h-12 bg-muted rounded-lg w-48"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (hasError || !product) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="pt-24 px-6 py-12">
+          <div className="max-w-7xl mx-auto text-center">
+            <h1 className="text-4xl font-serif font-bold text-luxury mb-6">
+              Produkt nenalezen
+            </h1>
+            <p className="text-xl text-muted-foreground mb-8">
+              Omlouváme se, ale požadovaný produkt nebyl nalezen.
+            </p>
+            <div className="space-x-4">
+              <Button asChild>
+                <Link to="/">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Zpět na hlavní stránku
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/náhrdelníky">
+                  Prohlédnout produkty
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
         <Footer />
       </div>
@@ -245,43 +208,48 @@ const ProductDetailPage = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <div className="pt-24 pb-16 px-6">
+      {/* Breadcrumb */}
+      <div className="pt-24 px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          {/* Breadcrumb */}
-          <div className="mb-8">
-            <Link 
-              to={product.categoryPath} 
-              className="inline-flex items-center text-muted-foreground hover:text-gold transition-colors duration-300"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Zpět na {product.category}
+          <nav className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <Link to="/" className="hover:text-foreground transition-colors">
+              Domů
             </Link>
-          </div>
+            <span>/</span>
+            <Link to={product.categoryPath} className="hover:text-foreground transition-colors">
+              {product.category}
+            </Link>
+            <span>/</span>
+            <span className="text-foreground">{product.title}</span>
+          </nav>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+      {/* Product Details */}
+      <div className="px-6 pb-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Product Images */}
             <div className="space-y-4">
-              {/* Main Image */}
-              <div className="aspect-square bg-muted rounded-2xl overflow-hidden">
+              <div className="aspect-square overflow-hidden rounded-2xl bg-muted">
                 <img
                   ref={productImageRef}
                   src={product.images[selectedImage]}
                   alt={product.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-500"
                 />
               </div>
               
-              {/* Thumbnail Images */}
               {product.images.length > 1 && (
                 <div className="grid grid-cols-4 gap-4">
-                  {product.images.map((image, index) => (
+                  {product.images.map((image: string, index: number) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
-                      className={`aspect-square bg-muted rounded-lg overflow-hidden border-2 transition-all duration-300 ${
-                        selectedImage === index 
-                          ? 'border-gold shadow-lg' 
-                          : 'border-transparent hover:border-gold/50'
+                      className={`aspect-square overflow-hidden rounded-lg transition-all duration-300 ${
+                        selectedImage === index
+                          ? 'ring-2 ring-primary ring-offset-2'
+                          : 'hover:ring-2 hover:ring-primary/50'
                       }`}
                     >
                       <img
@@ -295,61 +263,62 @@ const ProductDetailPage = () => {
               )}
             </div>
 
-            {/* Product Details */}
-            <div className="space-y-8">
-              {/* Title and Price */}
+            {/* Product Info */}
+            <div className="space-y-6">
               <div>
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-4 tracking-wide">
+                <h1 className="text-4xl font-serif font-bold text-luxury mb-4">
                   {product.title}
                 </h1>
-                <p className="text-3xl font-serif font-semibold text-gold">
+                <p className="text-2xl font-semibold text-gold font-serif">
                   {product.price}
                 </p>
               </div>
 
-              {/* Short Description */}
-              <p className="text-xl text-muted-foreground leading-relaxed">
-                {product.shortDescription}
-              </p>
-
-              {/* Add to Cart Button */}
-              <div className="flex space-x-4">
-                <Button 
-                  variant="luxury" 
-                  size="lg" 
-                  className="flex-1"
-                  onClick={handleAddToCart}
-                  disabled={animatingToCart}
-                >
-                  {animatingToCart ? 'Přidávám...' : 'Přidat do košíku'}
-                </Button>
-                <Button variant="outline" size="lg" className="aspect-square p-0">
-                  <Heart className="h-5 w-5" />
-                </Button>
-              </div>
-
-              {/* Full Description */}
-              <div className="border-t border-border pt-8">
-                <h3 className="text-xl font-serif font-semibold text-luxury mb-4">
-                  O produktu
-                </h3>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground">Popis</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   {product.fullDescription}
                 </p>
               </div>
 
-              {/* Product Features */}
-              <div className="border-t border-border pt-8">
-                <h3 className="text-xl font-serif font-semibold text-luxury mb-4">
-                  Vlastnosti
-                </h3>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Ručně vyráběno s láskou k detailu</li>
-                  <li>• Skutečné květy konzervované v pryskyřici</li>
-                  <li>• Hypoalergenní materiály</li>
-                  <li>• Každý kus je jedinečný</li>
-                  <li>• Dodáváno v elegantním balení</li>
-                </ul>
+              <div className="flex items-center space-x-4">
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={animatingToCart}
+                  className={`px-8 py-4 text-lg font-medium transition-all duration-300 ${
+                    animatingToCart
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/25'
+                  }`}
+                >
+                  {animatingToCart ? 'Přidáno!' : 'Přidat do košíku'}
+                </Button>
+                
+                <Button variant="outline" size="lg" className="px-6 py-4">
+                  <Heart className="h-5 w-5 mr-2" />
+                  Oblíbit
+                </Button>
+              </div>
+
+              <div className="pt-6 border-t border-border">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-foreground">Kategorie:</span>
+                    <p className="text-muted-foreground">{product.category}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Materiál:</span>
+                    <p className="text-muted-foreground">Přírodní materiály</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Výroba:</span>
+                    <p className="text-muted-foreground">Ruční výroba</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Původ:</span>
+                    <p className="text-muted-foreground">Česká republika</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -358,8 +327,8 @@ const ProductDetailPage = () => {
 
       {/* Product Recommendations */}
       <ProductRecommendations 
-        currentProductId={product.id}
-        currentCategory={product.category}
+        currentProductId={product.id} 
+        currentCategory={product.category} 
       />
 
       <Footer />
