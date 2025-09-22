@@ -33,10 +33,10 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
 
   // Collection mapping for Shopify
   const collectionMapping = {
-    'Náhrdelníky': 'necklaces',
-    'Náušnice': 'earrings', 
-    'Prsteny': 'rings',
-    'Náramky': 'bracelets'
+    'Náhrdelníky': 'nahrdelniky',
+    'Náušnice': 'nausnice', 
+    'Prsteny': 'prsteny',
+    'Náramky': 'naramky'
   }
 
   // Helper function to get fallback image

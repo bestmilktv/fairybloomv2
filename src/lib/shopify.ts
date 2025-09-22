@@ -110,7 +110,7 @@ export async function fetchShopify<T>(
 
 /**
  * Get products from a specific collection by handle
- * @param handle - The collection handle (e.g., "necklaces", "earrings")
+ * @param handle - The collection handle (e.g., "nahrdelniky", "nausnice")
  * @param first - Number of products to fetch (default: 20)
  * @returns Promise with collection data including products
  */

@@ -19,10 +19,10 @@ const Index = () => {
 
   // Collection mapping for Shopify
   const collectionMapping = {
-    'náhrdelníky': 'necklaces',
-    'náušnice': 'earrings', 
-    'prsteny': 'rings',
-    'náramky': 'bracelets'
+    'náhrdelníky': 'nahrdelniky',
+    'náušnice': 'nausnice', 
+    'prsteny': 'prsteny',
+    'náramky': 'naramky'
   };
 
   // Helper function to get fallback image

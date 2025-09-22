@@ -26,7 +26,7 @@ const Slideshow = () => {
         setIsLoading(true);
         
         // Get featured products from different collections
-        const collections = ['necklaces', 'earrings', 'rings'];
+        const collections = ['nahrdelniky', 'nausnice', 'prsteny'];
         const slidesData: Slide[] = [];
         
         for (let i = 0; i < collections.length; i++) {
