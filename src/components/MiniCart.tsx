@@ -100,7 +100,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
     <>
       {/* Backdrop */}
       <div 
-        className={`fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/20 z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         style={{ 
@@ -108,9 +108,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
           top: 0,
           left: 0,
           width: '100vw',
-          height: '100vh',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)'
+          height: '100vh'
         }}
         onClick={onClose}
       />
