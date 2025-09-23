@@ -360,3 +360,37 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
     throw error;
   }
 }
+
+/**
+ * Get inventory quantity for a product variant
+ * @param variantGid - The variant GID (e.g., "gid://shopify/ProductVariant/123456789")
+ * @param variantId - Alternative: plain numeric variant ID
+ * @returns Promise with inventory quantity
+ */
+export async function getVariantInventory(variantGid?: string, variantId?: string) {
+  if (!variantGid && !variantId) {
+    throw new Error('Either variantGid or variantId must be provided');
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (variantGid) {
+      params.append('variantGid', variantGid);
+    } else if (variantId) {
+      params.append('variantId', variantId);
+    }
+
+    const response = await fetch(`/api/shopify/inventory?${params.toString()}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.inventory_quantity;
+  } catch (error) {
+    console.error('Error fetching variant inventory:', error);
+    throw error;
+  }
+}
