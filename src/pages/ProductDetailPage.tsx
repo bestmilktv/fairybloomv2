@@ -75,10 +75,11 @@ const ProductDetailPage = () => {
           setProduct(transformedProduct);
 
           // DEBUG: Test inventory endpoint
-          if (shopifyProduct.id) {
+          if (firstVariant?.id) {
             try {
-              const inventoryUrl = `/api/shopify/inventory?variantGid=${encodeURIComponent(shopifyProduct.id)}`;
+              const inventoryUrl = `/api/shopify/inventory?variantGid=${encodeURIComponent(firstVariant.id)}`;
               console.log('DEBUG: Fetching inventory from URL:', inventoryUrl);
+              console.log('DEBUG: Using variant ID:', firstVariant.id);
               
               const inventoryResponse = await fetch(inventoryUrl);
               const inventoryData = await inventoryResponse.json();
@@ -90,9 +91,9 @@ const ProductDetailPage = () => {
             }
           }
 
-          // Fetch inventory for the product
-          if (shopifyProduct.id) {
-            fetchInventory(shopifyProduct.id);
+          // Fetch inventory for the first variant
+          if (firstVariant?.id) {
+            fetchInventory(firstVariant.id);
           }
         } else {
           setHasError(true);
@@ -136,13 +137,13 @@ const ProductDetailPage = () => {
     return '/náhrdelníky';
   };
 
-  // Fetch inventory for a product
-  const fetchInventory = async (productGid: string) => {
+  // Fetch inventory for a variant
+  const fetchInventory = async (variantGid: string) => {
     try {
       setInventoryLoading(true);
       setInventoryError(false);
 
-      const response = await fetch(`/api/shopify/inventory?variantGid=${encodeURIComponent(productGid)}`);
+      const response = await fetch(`/api/shopify/inventory?variantGid=${encodeURIComponent(variantGid)}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

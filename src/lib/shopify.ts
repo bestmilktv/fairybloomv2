@@ -9,6 +9,7 @@ export interface ShopifyProduct {
   title: string;
   description: string;
   handle: string;
+  availableForSale: boolean;
   images: {
     edges: Array<{
       node: {
@@ -21,6 +22,7 @@ export interface ShopifyProduct {
     edges: Array<{
       node: {
         id: string;
+        title: string;
         price: {
           amount: string;
           currencyCode: string;
@@ -180,15 +182,24 @@ export async function getProductByHandle(handle: string) {
         handle
         description
         availableForSale
-        totalInventory
-        featuredImage {
-          url
-          altText
+        images(first: 6) {
+          edges {
+            node {
+              url
+              altText
+            }
+          }
         }
-        priceRange {
-          minVariantPrice {
-            amount
-            currencyCode
+        variants(first: 5) {
+          edges {
+            node {
+              id
+              title
+              price {
+                amount
+                currencyCode
+              }
+            }
           }
         }
       }
