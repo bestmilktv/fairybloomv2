@@ -74,6 +74,22 @@ const ProductDetailPage = () => {
           
           setProduct(transformedProduct);
 
+          // DEBUG: Test inventory endpoint
+          if (shopifyProduct.id) {
+            try {
+              const inventoryUrl = `/api/shopify/inventory?variantGid=${encodeURIComponent(shopifyProduct.id)}`;
+              console.log('DEBUG: Fetching inventory from URL:', inventoryUrl);
+              
+              const inventoryResponse = await fetch(inventoryUrl);
+              const inventoryData = await inventoryResponse.json();
+              
+              console.log('DEBUG: Inventory API response:', inventoryData);
+              console.log('DEBUG: Response status:', inventoryResponse.status);
+            } catch (debugError) {
+              console.error('DEBUG: Inventory API error:', debugError);
+            }
+          }
+
           // Fetch inventory for the product
           if (shopifyProduct.id) {
             fetchInventory(shopifyProduct.id);
