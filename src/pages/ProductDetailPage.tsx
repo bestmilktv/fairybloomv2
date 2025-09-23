@@ -68,14 +68,15 @@ const ProductDetailPage = () => {
             shortDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce',
             fullDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce s ruční výrobou a přírodními materiály.',
             handle: shopifyProduct.handle,
-            variants: shopifyProduct.variants?.edges?.map(edge => edge.node) || []
+            variants: shopifyProduct.variants?.edges?.map(edge => edge.node) || [],
+            inventoryQuantity: null // Will be updated when inventory is fetched
           };
           
           setProduct(transformedProduct);
 
-          // Fetch inventory for the first variant
-          if (firstVariant?.id) {
-            fetchInventory(firstVariant.id);
+          // Fetch inventory for the product
+          if (shopifyProduct.id) {
+            fetchInventory(shopifyProduct.id);
           }
         } else {
           setHasError(true);
@@ -119,13 +120,13 @@ const ProductDetailPage = () => {
     return '/náhrdelníky';
   };
 
-  // Fetch inventory for a variant
-  const fetchInventory = async (variantGid: string) => {
+  // Fetch inventory for a product
+  const fetchInventory = async (productGid: string) => {
     try {
       setInventoryLoading(true);
       setInventoryError(false);
 
-      const response = await fetch(`/api/shopify/inventory?variantGid=${encodeURIComponent(variantGid)}`);
+      const response = await fetch(`/api/shopify/inventory?variantGid=${encodeURIComponent(productGid)}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -133,6 +134,12 @@ const ProductDetailPage = () => {
 
       const data = await response.json();
       setInventory(data.inventory_quantity);
+      
+      // Update product state with inventory quantity
+      setProduct(prevProduct => ({
+        ...prevProduct,
+        inventoryQuantity: data.inventory_quantity
+      }));
     } catch (error) {
       console.error('Error fetching inventory:', error);
       setInventoryError(true);
@@ -385,6 +392,27 @@ const ProductDetailPage = () => {
                   <div>
                     <span className="font-medium text-foreground">Původ:</span>
                     <p className="text-muted-foreground">Česká republika</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Skladem:</span>
+                    <p className="text-muted-foreground">
+                      {inventoryLoading ? (
+                        <span className="flex items-center space-x-1">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b border-primary"></div>
+                          <span>Načítám...</span>
+                        </span>
+                      ) : inventoryError ? (
+                        <span className="text-muted-foreground">Není k dispozici</span>
+                      ) : inventory !== null ? (
+                        inventory > 0 ? (
+                          <span className="text-green-600 font-medium">{inventory} ks</span>
+                        ) : (
+                          <span className="text-red-600 font-medium">Není skladem</span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </p>
                   </div>
               </div>
               </div>
