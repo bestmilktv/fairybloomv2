@@ -16,7 +16,7 @@ import ringImage from '@/assets/ring-placeholder.jpg';
 import braceletImage from '@/assets/bracelet-placeholder.jpg';
 
 const ProductDetailPage = () => {
-  const { productId } = useParams<{ productId: string }>();
+  const { handle } = useParams<{ handle: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { toast } = useToast();
@@ -30,12 +30,12 @@ const ProductDetailPage = () => {
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [productId]);
+  }, [handle]);
 
   // Fetch product from Shopify
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!productId) {
+      if (!handle) {
         setHasError(true);
         setIsLoading(false);
         return;
@@ -45,8 +45,8 @@ const ProductDetailPage = () => {
         setIsLoading(true);
         setHasError(false);
 
-        // Try to fetch from Shopify using the productId as handle
-        const shopifyProduct = await getProductByHandle(productId);
+        // Try to fetch from Shopify using the handle
+        const shopifyProduct = await getProductByHandle(handle);
         
         if (shopifyProduct) {
           const firstImage = shopifyProduct.images?.edges?.[0]?.node;
@@ -60,8 +60,8 @@ const ProductDetailPage = () => {
               `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
               'Cena na vyžádání',
             images: shopifyProduct.images?.edges?.map(edge => edge.node.url) || [getFallbackImage()],
-            category: getCategoryFromHandle(productId),
-            categoryPath: getCategoryPath(productId),
+            category: getCategoryFromHandle(handle),
+            categoryPath: getCategoryPath(handle),
             shortDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce',
             fullDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce s ruční výrobou a přírodními materiály.',
             handle: shopifyProduct.handle,
@@ -81,33 +81,33 @@ const ProductDetailPage = () => {
     };
 
     fetchProduct();
-  }, [productId]);
+  }, [handle]);
 
   // Helper function to get fallback image
   const getFallbackImage = () => {
-    if (!productId) return necklaceImage;
-    if (productId.includes('nahr') || productId.includes('necklace')) return necklaceImage;
-    if (productId.includes('naus') || productId.includes('earring')) return earringsImage;
-    if (productId.includes('prst') || productId.includes('ring')) return ringImage;
-    if (productId.includes('nara') || productId.includes('bracelet')) return braceletImage;
+    if (!handle) return necklaceImage;
+    if (handle.includes('nahr') || handle.includes('necklace')) return necklaceImage;
+    if (handle.includes('naus') || handle.includes('earring')) return earringsImage;
+    if (handle.includes('prst') || handle.includes('ring')) return ringImage;
+    if (handle.includes('nara') || handle.includes('bracelet')) return braceletImage;
     return necklaceImage;
   };
 
   // Helper function to get category from handle
-  const getCategoryFromHandle = (handle: string) => {
-    if (handle.includes('nahr') || handle.includes('necklace')) return 'Náhrdelníky';
-    if (handle.includes('naus') || handle.includes('earring')) return 'Náušnice';
-    if (handle.includes('prst') || handle.includes('ring')) return 'Prsteny';
-    if (handle.includes('nara') || handle.includes('bracelet')) return 'Náramky';
+  const getCategoryFromHandle = (productHandle: string) => {
+    if (productHandle.includes('nahr') || productHandle.includes('necklace')) return 'Náhrdelníky';
+    if (productHandle.includes('naus') || productHandle.includes('earring')) return 'Náušnice';
+    if (productHandle.includes('prst') || productHandle.includes('ring')) return 'Prsteny';
+    if (productHandle.includes('nara') || productHandle.includes('bracelet')) return 'Náramky';
     return 'Náhrdelníky';
   };
 
   // Helper function to get category path
-  const getCategoryPath = (handle: string) => {
-    if (handle.includes('nahr') || handle.includes('necklace')) return '/náhrdelníky';
-    if (handle.includes('naus') || handle.includes('earring')) return '/náušnice';
-    if (handle.includes('prst') || handle.includes('ring')) return '/prsteny';
-    if (handle.includes('nara') || handle.includes('bracelet')) return '/náramky';
+  const getCategoryPath = (productHandle: string) => {
+    if (productHandle.includes('nahr') || productHandle.includes('necklace')) return '/náhrdelníky';
+    if (productHandle.includes('naus') || productHandle.includes('earring')) return '/náušnice';
+    if (productHandle.includes('prst') || productHandle.includes('ring')) return '/prsteny';
+    if (productHandle.includes('nara') || productHandle.includes('bracelet')) return '/náramky';
     return '/náhrdelníky';
   };
 
@@ -188,8 +188,8 @@ const ProductDetailPage = () => {
               <Button asChild>
                 <Link to="/">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Zpět na hlavní stránku
-                </Link>
+            Zpět na hlavní stránku
+          </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link to="/náhrdelníky">
@@ -223,7 +223,7 @@ const ProductDetailPage = () => {
             <span className="text-foreground">{product.title}</span>
           </nav>
         </div>
-      </div>
+          </div>
 
       {/* Product Details */}
       <div className="px-6 pb-12">
@@ -247,7 +247,7 @@ const ProductDetailPage = () => {
                       key={index}
                       onClick={() => setSelectedImage(index)}
                       className={`aspect-square overflow-hidden rounded-lg transition-all duration-300 ${
-                        selectedImage === index
+                        selectedImage === index 
                           ? 'ring-2 ring-primary ring-offset-2'
                           : 'hover:ring-2 hover:ring-primary/50'
                       }`}
@@ -282,7 +282,7 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="flex items-center space-x-4">
-                <Button
+                <Button 
                   onClick={handleAddToCart}
                   disabled={animatingToCart}
                   className={`px-8 py-4 text-lg font-medium transition-all duration-300 ${
@@ -318,7 +318,7 @@ const ProductDetailPage = () => {
                     <span className="font-medium text-foreground">Původ:</span>
                     <p className="text-muted-foreground">Česká republika</p>
                   </div>
-                </div>
+              </div>
               </div>
             </div>
           </div>
@@ -327,8 +327,8 @@ const ProductDetailPage = () => {
 
       {/* Product Recommendations */}
       <ProductRecommendations 
-        currentProductId={product.id} 
-        currentCategory={product.category} 
+        currentProductId={product.id}
+        currentCategory={product.category}
       />
 
       <Footer />

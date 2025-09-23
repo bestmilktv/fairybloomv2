@@ -26,7 +26,7 @@ const App = () => (
         <Route path="/náušnice" element={<CategoryPage />} />
         <Route path="/prsteny" element={<CategoryPage />} />
         <Route path="/náramky" element={<CategoryPage />} />
-        <Route path="/product/:productId" element={<ProductDetailPage />} />
+        <Route path="/produkt/:handle" element={<ProductDetailPage />} />
         <Route path="/product-shopify/:handle" element={<DynamicProductPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/orders" element={<OrdersPage />} />

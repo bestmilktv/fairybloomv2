@@ -45,7 +45,7 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
           {products.map((product, index) => (
             <div key={product.id} className={`fade-in-up-delayed`} style={{ animationDelay: `${index * 0.1}s` }}>
               <Link 
-                to={product.handle ? `/product-shopify/${product.handle}` : `/product/${product.id}`} 
+                to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 
                 className="group cursor-pointer fade-in-up block"
               >
                 <ProductCard

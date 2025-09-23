@@ -162,7 +162,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
           {recommendations.map((product) => (
             <Link
               key={product.id}
-              to={product.handle ? `/product-shopify/${product.handle}` : `/product/${product.id}`}
+              to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`}
               className="group block"
             >
               <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform group-hover:-translate-y-2">
