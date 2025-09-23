@@ -25,6 +25,9 @@ const ProductDetailPage = () => {
   const [product, setProduct] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [inventory, setInventory] = useState<number | null>(null);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [inventoryError, setInventoryError] = useState(false);
   const productImageRef = useRef<HTMLImageElement>(null);
 
   // Scroll to top when page loads
@@ -69,6 +72,11 @@ const ProductDetailPage = () => {
           };
           
           setProduct(transformedProduct);
+
+          // Fetch inventory for the first variant
+          if (firstVariant?.id) {
+            fetchInventory(firstVariant.id);
+          }
         } else {
           setHasError(true);
         }
@@ -109,6 +117,29 @@ const ProductDetailPage = () => {
     if (productHandle.includes('prst') || productHandle.includes('ring')) return '/prsteny';
     if (productHandle.includes('nara') || productHandle.includes('bracelet')) return '/náramky';
     return '/náhrdelníky';
+  };
+
+  // Fetch inventory for a variant
+  const fetchInventory = async (variantGid: string) => {
+    try {
+      setInventoryLoading(true);
+      setInventoryError(false);
+
+      const response = await fetch(`/api/shopify/inventory?variantGid=${encodeURIComponent(variantGid)}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setInventory(data.inventory_quantity);
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      setInventoryError(true);
+      // Don't set inventory to null, keep previous value if any
+    } finally {
+      setInventoryLoading(false);
+    }
   };
 
   const handleAddToCart = () => {
@@ -272,6 +303,36 @@ const ProductDetailPage = () => {
                 <p className="text-2xl font-semibold text-gold font-serif">
                   {product.price}
                 </p>
+                
+                {/* Inventory Status */}
+                <div className="mt-4">
+                  {inventoryLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span className="text-sm text-muted-foreground">Načítám skladové zásoby...</span>
+                    </div>
+                  ) : inventoryError ? (
+                    <span className="text-sm text-muted-foreground">Skladové zásoby nejsou k dispozici</span>
+                  ) : inventory !== null ? (
+                    <div className="flex items-center space-x-2">
+                      {inventory > 0 ? (
+                        <>
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-sm font-medium text-green-700">
+                            Skladem: {inventory} ks
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-sm font-medium text-red-700">
+                            Vyprodáno
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -284,14 +345,21 @@ const ProductDetailPage = () => {
               <div className="flex items-center space-x-4">
                 <Button 
                   onClick={handleAddToCart}
-                  disabled={animatingToCart}
+                  disabled={animatingToCart || (inventory !== null && inventory === 0)}
                   className={`px-8 py-4 text-lg font-medium transition-all duration-300 ${
                     animatingToCart
                       ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/25'
+                      : (inventory !== null && inventory === 0)
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/25'
                   }`}
                 >
-                  {animatingToCart ? 'Přidáno!' : 'Přidat do košíku'}
+                  {animatingToCart 
+                    ? 'Přidáno!' 
+                    : (inventory !== null && inventory === 0)
+                      ? 'Vyprodáno'
+                      : 'Přidat do košíku'
+                  }
                 </Button>
                 
                 <Button variant="outline" size="lg" className="px-6 py-4">
