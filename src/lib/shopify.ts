@@ -74,7 +74,7 @@ export async function fetchShopify<T>(
     throw new Error('Missing required environment variables: VITE_SHOPIFY_STORE_DOMAIN and VITE_SHOPIFY_STOREFRONT_TOKEN');
   }
 
-  const url = `https://${domain}/api/2023-10/graphql.json`;
+  const url = `https://${domain}/api/2025-01/graphql.json`;
 
   try {
     const response = await fetch(url, {
@@ -374,12 +374,13 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
 
 /**
  * Create a new customer account using Shopify Storefront API
+ * CHANGED: Now uses two-step process - create customer first, then add address
  * @param customerData - Customer registration data
  * @param customerData.firstName - Customer's first name
  * @param customerData.lastName - Customer's last name
  * @param customerData.email - Customer's email address
  * @param customerData.password - Customer's password
- * @param customerData.passwordConfirmation - Customer's password confirmation
+ * @param customerData.passwordConfirmation - Customer's password confirmation (frontend validation only)
  * @param customerData.acceptsMarketing - Whether customer accepts marketing emails
  * @param customerData.address - Customer's address object with address1, city, zip, country
  * @returns Promise with success status and customer ID or error details
@@ -389,7 +390,7 @@ export async function createCustomer({
   lastName,
   email,
   password,
-  passwordConfirmation,
+  passwordConfirmation, // CHANGED: Keep for frontend validation but don't send to API
   acceptsMarketing,
   address
 }: {
@@ -406,7 +407,8 @@ export async function createCustomer({
     country: string;
   };
 }) {
-  const mutation = `
+  // CHANGED: Step 1 - Create customer with only allowed fields (no passwordConfirmation or addresses)
+  const customerCreateMutation = `
     mutation customerCreate($input: CustomerCreateInput!) {
       customerCreate(input: $input) {
         customer {
@@ -420,30 +422,31 @@ export async function createCustomer({
     }
   `;
 
-  const variables = {
+  // CHANGED: Only send allowed fields to CustomerCreateInput
+  const customerCreateVariables = {
     input: {
       firstName,
       lastName,
       email,
       password,
-      passwordConfirmation,
-      acceptsMarketing,
-      addresses: [address]
+      acceptsMarketing
+      // CHANGED: Removed passwordConfirmation and addresses from customer creation
     }
   };
 
   try {
-    const response = await fetchShopify<{
+    // Step 1: Create the customer
+    const customerResponse = await fetchShopify<{
       customerCreate: {
         customer: { id: string } | null;
         userErrors: Array<{ field: string; message: string }>;
       };
-    }>(mutation, variables);
+    }>(customerCreateMutation, customerCreateVariables);
 
-    const { customer, userErrors } = response.data.customerCreate;
+    const { customer, userErrors } = customerResponse.data.customerCreate;
 
     if (userErrors && userErrors.length > 0) {
-      console.error("Shopify userErrors:", userErrors);
+      console.error("Shopify customerCreate userErrors:", userErrors);
       return {
         success: false,
         errors: userErrors
@@ -454,6 +457,63 @@ export async function createCustomer({
       return {
         success: false,
         errors: [{ field: 'general', message: 'Customer creation failed' }]
+      };
+    }
+
+    // CHANGED: Step 2 - Create customer address using customerAccessToken
+    const addressCreateMutation = `
+      mutation customerAddressCreate($customerAccessToken: String!, $address: MailingAddressInput!) {
+        customerAddressCreate(customerAccessToken: $customerAccessToken, address: $address) {
+          customerAddress {
+            id
+          }
+          customerUserErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    // CHANGED: Get customer access token for address creation
+    const loginResult = await loginCustomer(email, password);
+    if (!loginResult.success) {
+      console.error("Failed to get customer access token for address creation:", loginResult.errors);
+      // Customer was created but we couldn't add address - still return success
+      return {
+        success: true,
+        customerId: customer.id,
+        warning: "Customer created but address could not be added"
+      };
+    }
+
+    const addressCreateVariables = {
+      customerAccessToken: loginResult.accessToken,
+      address: {
+        address1: address.address1,
+        city: address.city,
+        zip: address.zip,
+        country: address.country
+      }
+    };
+
+    // Step 2: Create the customer address
+    const addressResponse = await fetchShopify<{
+      customerAddressCreate: {
+        customerAddress: { id: string } | null;
+        customerUserErrors: Array<{ field: string; message: string }>;
+      };
+    }>(addressCreateMutation, addressCreateVariables);
+
+    const { customerAddress, customerUserErrors } = addressResponse.data.customerAddressCreate;
+
+    if (customerUserErrors && customerUserErrors.length > 0) {
+      console.error("Shopify customerAddressCreate userErrors:", customerUserErrors);
+      // Customer was created but address failed - still return success
+      return {
+        success: true,
+        customerId: customer.id,
+        warning: "Customer created but address could not be added"
       };
     }
 
