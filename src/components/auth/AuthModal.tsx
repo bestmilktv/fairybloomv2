@@ -73,6 +73,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
           lastName: formData.lastName,
           email: formData.email,
           password: formData.password,
+          passwordConfirmation: formData.confirmPassword,
           acceptsMarketing: formData.newsletterConsent,
           address: {
             address1: formData.address1,

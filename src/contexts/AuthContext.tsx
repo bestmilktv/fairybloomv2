@@ -15,6 +15,7 @@ interface RegisterData {
   lastName: string
   email: string
   password: string
+  passwordConfirmation: string
   acceptsMarketing: boolean
   address: {
     address1: string

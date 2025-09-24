@@ -379,6 +379,7 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
  * @param customerData.lastName - Customer's last name
  * @param customerData.email - Customer's email address
  * @param customerData.password - Customer's password
+ * @param customerData.passwordConfirmation - Customer's password confirmation
  * @param customerData.acceptsMarketing - Whether customer accepts marketing emails
  * @param customerData.address - Customer's address object with address1, city, zip, country
  * @returns Promise with success status and customer ID or error details
@@ -388,6 +389,7 @@ export async function createCustomer({
   lastName,
   email,
   password,
+  passwordConfirmation,
   acceptsMarketing,
   address
 }: {
@@ -395,6 +397,7 @@ export async function createCustomer({
   lastName: string;
   email: string;
   password: string;
+  passwordConfirmation: string;
   acceptsMarketing: boolean;
   address: {
     address1: string;
@@ -423,6 +426,7 @@ export async function createCustomer({
       lastName,
       email,
       password,
+      passwordConfirmation,
       acceptsMarketing,
       addresses: [address]
     }
@@ -439,6 +443,7 @@ export async function createCustomer({
     const { customer, userErrors } = response.data.customerCreate;
 
     if (userErrors && userErrors.length > 0) {
+      console.error("Shopify userErrors:", userErrors);
       return {
         success: false,
         errors: userErrors
