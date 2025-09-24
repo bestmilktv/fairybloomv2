@@ -12,7 +12,7 @@ const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [miniCartOpen, setMiniCartOpen] = useState(false);
-  const { user, profile, signOut, isAdmin } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const { getTotalItems } = useCart();
   useEffect(() => {
     const handleScroll = () => {
@@ -35,15 +35,11 @@ const Navigation = () => {
     path: '/náramky'
   }];
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     console.log('Navigation: handleSignOut called');
     try {
-      const { error } = await signOut();
-      if (error) {
-        console.error('Navigation: Sign out error:', error);
-      } else {
-        console.log('Navigation: Sign out successful');
-      }
+      logout();
+      console.log('Navigation: Sign out successful');
     } catch (error) {
       console.error('Navigation: Unexpected sign out error:', error);
     }
@@ -71,7 +67,7 @@ const Navigation = () => {
 
           {/* Account & Cart */}
           <div className="flex items-center space-x-4">
-            {user ? (
+            {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="text-gold hover:text-gold/80 relative">
@@ -85,7 +81,7 @@ const Navigation = () => {
                 >
                   <div className="px-3 py-2">
                     <p className="text-sm font-medium text-luxury">
-                      {profile?.first_name} {profile?.last_name}
+                      {user.firstName} {user.lastName}
                     </p>
                     <p className="text-xs text-foreground/60">{user.email}</p>
                   </div>
@@ -102,14 +98,6 @@ const Navigation = () => {
                       Mé objednávky
                     </Link>
                   </DropdownMenuItem>
-                   {isAdmin && (
-                     <DropdownMenuItem asChild>
-                       <Link to="/admin" className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold">
-                         <Settings className="mr-2 h-4 w-4" />
-                         Administrace
-                       </Link>
-                     </DropdownMenuItem>
-                   )}
                    <DropdownMenuSeparator className="bg-gold/20" />
                    <DropdownMenuItem 
                      onClick={handleSignOut}

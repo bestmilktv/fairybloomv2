@@ -20,7 +20,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const { signIn, signUp } = useAuth()
+  const [errors, setErrors] = useState<string[]>([])
+  const { login, register } = useAuth()
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -29,69 +30,70 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    gender: 'other' as 'male' | 'female' | 'other',
+    address1: '',
+    city: '',
+    zip: '',
+    country: 'CZ',
     newsletterConsent: false
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setErrors([])
 
     try {
       if (mode === 'login') {
-        const { error } = await signIn(formData.email, formData.password)
-        if (error) {
-          toast({
-            title: "Chyba při přihlášení",
-            description: "Přihlášení není momentálně k dispozici.",
-            variant: "destructive",
-          })
+        const result = await login(formData.email, formData.password)
+        if (!result.success) {
+          setErrors([result.error || 'Přihlášení se nezdařilo'])
         } else {
           toast({
             title: "Přihlášení",
-            description: "Přihlášení není momentálně k dispozici.",
+            description: "Úspěšně jste se přihlásili.",
           })
           onClose()
         }
       } else {
+        // Validate password confirmation
         if (formData.password !== formData.confirmPassword) {
-          toast({
-            title: "Chyba",
-            description: "Hesla se neshodují.",
-            variant: "destructive",
-          })
+          setErrors(['Hesla se neshodují.'])
           return
         }
 
-        const { error } = await signUp({
-          email: formData.email,
-          password: formData.password,
+        // Validate required fields
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || 
+            !formData.address1 || !formData.city || !formData.zip || !formData.country) {
+          setErrors(['Všechna pole jsou povinná.'])
+          return
+        }
+
+        const result = await register({
           firstName: formData.firstName,
           lastName: formData.lastName,
-          gender: formData.gender,
-          newsletterConsent: formData.newsletterConsent
+          email: formData.email,
+          password: formData.password,
+          acceptsMarketing: formData.newsletterConsent,
+          address: {
+            address1: formData.address1,
+            city: formData.city,
+            zip: formData.zip,
+            country: formData.country
+          }
         })
 
-        if (error) {
-          toast({
-            title: "Chyba při registraci",
-            description: "Registrace není momentálně k dispozici.",
-            variant: "destructive",
-          })
+        if (!result.success) {
+          setErrors([result.error || 'Registrace se nezdařila'])
         } else {
           toast({
             title: "Registrace",
-            description: "Registrace není momentálně k dispozici.",
+            description: "Účet byl vytvořen a jste přihlášeni.",
           })
           onClose()
         }
       }
     } catch (error) {
-      toast({
-        title: "Chyba",
-        description: "Nastala neočekávaná chyba.",
-        variant: "destructive",
-      })
+      setErrors(['Nastala neočekávaná chyba.'])
     } finally {
       setLoading(false)
     }
@@ -137,15 +139,52 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
               </div>
 
               <div>
-                <Label htmlFor="gender">Pohlaví</Label>
-                <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
+                <Label htmlFor="address1">Ulice a číslo popisné</Label>
+                <Input
+                  id="address1"
+                  type="text"
+                  value={formData.address1}
+                  onChange={(e) => handleInputChange('address1', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="city">Město</Label>
+                  <Input
+                    id="city"
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="zip">PSČ</Label>
+                  <Input
+                    id="zip"
+                    type="text"
+                    value={formData.zip}
+                    onChange={(e) => handleInputChange('zip', e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="country">Země</Label>
+                <Select value={formData.country} onValueChange={(value) => handleInputChange('country', value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male">Muž</SelectItem>
-                    <SelectItem value="female">Žena</SelectItem>
-                    <SelectItem value="other">Jiné</SelectItem>
+                    <SelectItem value="CZ">Česká republika</SelectItem>
+                    <SelectItem value="SK">Slovensko</SelectItem>
+                    <SelectItem value="DE">Německo</SelectItem>
+                    <SelectItem value="AT">Rakousko</SelectItem>
+                    <SelectItem value="PL">Polsko</SelectItem>
+                    <SelectItem value="HU">Maďarsko</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -230,6 +269,14 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
             </>
           )}
 
+          {errors.length > 0 && (
+            <div className="text-red-600 text-sm space-y-1">
+              {errors.map((error, index) => (
+                <p key={index}>{error}</p>
+              ))}
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Načítám...' : (mode === 'login' ? 'Přihlásit se' : 'Registrovat se')}
           </Button>
@@ -238,7 +285,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
         <div className="text-center">
           <Button
             variant="link"
-            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+            onClick={() => {
+              setMode(mode === 'login' ? 'register' : 'login')
+              setErrors([])
+            }}
             className="text-sm"
           >
             {mode === 'login' 
@@ -246,11 +296,6 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
               : 'Máte účet? Přihlaste se'
             }
           </Button>
-        </div>
-
-        <div className="text-center text-sm text-muted-foreground">
-          <p>Autentizace není momentálně k dispozici.</p>
-          <p>E-shop funguje bez registrace.</p>
         </div>
       </DialogContent>
     </Dialog>
