@@ -7,6 +7,7 @@ interface Product {
   price: string;
   image: string;
   description: string;
+  inventoryQuantity?: number | null;
 }
 
 interface CategoryProductSectionProps {
@@ -27,6 +28,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
             price={product.price}
             image={product.image}
             description={product.description}
+            inventoryQuantity={product.inventoryQuantity}
           />
         </div>
       ))}

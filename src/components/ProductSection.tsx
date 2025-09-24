@@ -10,6 +10,7 @@ interface Product {
   price: string;
   image: string;
   description: string;
+  inventoryQuantity?: number | null;
 }
 
 interface ProductSectionProps {
@@ -54,6 +55,7 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
                   price={product.price}
                   image={product.image}
                   description={product.description}
+                  inventoryQuantity={product.inventoryQuantity}
                 />
               </Link>
             </div>

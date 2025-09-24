@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 interface ProductCardProps {
@@ -7,9 +7,22 @@ interface ProductCardProps {
   price: string;
   image: string;
   description?: string;
+  inventoryQuantity?: number | null;
 }
 
-const ProductCard = ({ id, title, price, image, description }: ProductCardProps) => {
+const ProductCard = ({ id, title, price, image, description, inventoryQuantity }: ProductCardProps) => {
+  const location = useLocation();
+  const isHomepage = location.pathname === '/';
+  
+  // Determine availability status
+  const getAvailabilityStatus = () => {
+    if (inventoryQuantity === null || inventoryQuantity === undefined) {
+      return null; // Don't show anything if inventory is unknown
+    }
+    return inventoryQuantity > 0 ? 'Skladem' : 'Není skladem';
+  };
+
+  const availabilityStatus = getAvailabilityStatus();
   return (
     <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2">
       {/* Image */}
@@ -33,13 +46,26 @@ const ProductCard = ({ id, title, price, image, description }: ProductCardProps)
           </p>
         )}
         
-        <div className="flex items-center justify-between">
-          <span className="text-2xl font-semibold text-gold font-serif">
-            {price}
-          </span>
-          <Button variant="premium" size="sm">
-            Detail
-          </Button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-semibold text-gold font-serif">
+              {price}
+            </span>
+            <Button variant="premium" size="sm">
+              Detail
+            </Button>
+          </div>
+          
+          {/* Availability status - only show on collection pages, not homepage */}
+          {!isHomepage && availabilityStatus && (
+            <p className={`text-sm ${
+              availabilityStatus === 'Skladem' 
+                ? 'text-green-600' 
+                : 'text-red-600'
+            }`}>
+              {availabilityStatus}
+            </p>
+          )}
         </div>
       </div>
     </div>

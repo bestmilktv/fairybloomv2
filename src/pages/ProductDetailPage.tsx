@@ -338,23 +338,13 @@ const ProductDetailPage = () => {
                   ) : inventoryError ? (
                     <span className="text-sm text-muted-foreground">Skladové zásoby nejsou k dispozici</span>
                   ) : inventory !== null ? (
-                    <div className="flex items-center space-x-2">
-                      {inventory > 0 ? (
-                        <>
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-green-700">
-                            Skladem: {inventory} ks
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-red-700">
-                            Vyprodáno
-                          </span>
-                        </>
-                      )}
-                    </div>
+                    <p className={`text-sm ${
+                      inventory > 0 
+                        ? 'text-green-600' 
+                        : 'text-red-600'
+                    }`}>
+                      {inventory > 0 ? 'Skladem' : 'Není skladem'}
+                    </p>
                   ) : null}
                 </div>
               </div>
@@ -421,11 +411,13 @@ const ProductDetailPage = () => {
                       ) : inventoryError ? (
                         <span className="text-muted-foreground">Není k dispozici</span>
                       ) : inventory !== null ? (
-                        inventory > 0 ? (
-                          <span className="text-green-600 font-medium">{inventory} ks</span>
-                        ) : (
-                          <span className="text-red-600 font-medium">Není skladem</span>
-                        )
+                        <span className={`font-medium ${
+                          inventory > 0 
+                            ? 'text-green-600' 
+                            : 'text-red-600'
+                        }`}>
+                          {inventory > 0 ? 'Skladem' : 'Není skladem'}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}

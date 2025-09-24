@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Navigation from '@/components/Navigation';
 import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
-import { getProductsByCollection } from '@/lib/shopify';
+import { getProductsByCollection, getVariantInventory } from '@/lib/shopify';
 
 // Import product images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -45,22 +45,36 @@ const CategoryPage = () => {
           const collection = await getProductsByCollection(shopifyHandle, 20);
           
           if (collection && collection.products?.edges) {
-            const products = collection.products.edges.map(edge => {
-              const product = edge.node;
-              const firstImage = product.images?.edges?.[0]?.node;
-              const firstVariant = product.variants?.edges?.[0]?.node;
-              
-              return {
-                id: product.id,
-                title: product.title,
-                price: firstVariant?.price ? 
-                  `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
-                  'Cena na vyžádání',
-                image: firstImage?.url || getFallbackImage(decodedCategory),
-                description: product.description || 'Elegantní šperk z naší kolekce',
-                handle: product.handle
-              };
-            });
+            const products = await Promise.all(
+              collection.products.edges.map(async (edge) => {
+                const product = edge.node;
+                const firstImage = product.images?.edges?.[0]?.node;
+                const firstVariant = product.variants?.edges?.[0]?.node;
+                
+                // Fetch inventory for the first variant
+                let inventoryQuantity = null;
+                if (firstVariant?.id) {
+                  try {
+                    inventoryQuantity = await getVariantInventory(firstVariant.id);
+                  } catch (error) {
+                    console.error('Error fetching inventory for product:', product.title, error);
+                    // Keep inventoryQuantity as null if fetch fails
+                  }
+                }
+                
+                return {
+                  id: product.id,
+                  title: product.title,
+                  price: firstVariant?.price ? 
+                    `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
+                    'Cena na vyžádání',
+                  image: firstImage?.url || getFallbackImage(decodedCategory),
+                  description: product.description || 'Elegantní šperk z naší kolekce',
+                  handle: product.handle,
+                  inventoryQuantity
+                };
+              })
+            );
             
             setShopifyProducts(products);
           } else {
