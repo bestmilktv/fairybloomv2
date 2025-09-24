@@ -601,6 +601,52 @@ export async function loginCustomer(email: string, password: string) {
 }
 
 /**
+ * Get customer information using customer access token
+ * @param customerAccessToken - The customer access token
+ * @returns Promise with customer data including name, email, and default address
+ */
+export async function getCustomer(customerAccessToken: string) {
+  const query = `
+    query getCustomer($customerAccessToken: String!) {
+      customer(customerAccessToken: $customerAccessToken) {
+        firstName
+        lastName
+        email
+        defaultAddress {
+          address1
+          city
+          zip
+          country
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetchShopify<{
+      customer: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        defaultAddress: {
+          address1: string;
+          city: string;
+          zip: string;
+          country: string;
+        } | null;
+      } | null;
+    }>(query, {
+      customerAccessToken,
+    });
+
+    return response.data.customer;
+  } catch (error) {
+    console.error('Error fetching customer:', error);
+    return null;
+  }
+}
+
+/**
  * Get inventory quantity for a product variant
  * @param variantGid - The variant GID (e.g., "gid://shopify/ProductVariant/123456789")
  * @param variantId - Alternative: plain numeric variant ID

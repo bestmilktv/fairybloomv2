@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { createCustomer, loginCustomer } from '@/lib/shopify'
+import { createCustomer, loginCustomer, getCustomer } from '@/lib/shopify'
 
 // User interface for authenticated customer
 interface User {
@@ -7,6 +7,12 @@ interface User {
   firstName: string
   lastName: string
   email: string
+  defaultAddress?: {
+    address1: string
+    city: string
+    zip: string
+    country: string
+  } | null
 }
 
 // Registration data interface
@@ -54,25 +60,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Initialize authentication state from localStorage on app start
    */
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
         const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY)
         if (storedToken) {
           setToken(storedToken)
-          // For minimal implementation, we'll set a basic user object
-          // In a full implementation, you might want to fetch customer details
-          // using the token to get the complete user information
-          setUser({
-            id: 'customer-id', // This would come from a customer details API call
-            firstName: 'Customer',
-            lastName: 'User',
-            email: 'customer@example.com'
-          })
+          
+          // Fetch complete customer data using the stored token
+          const customerData = await getCustomer(storedToken)
+          if (customerData) {
+            setUser({
+              id: 'customer-id', // Shopify doesn't expose customer ID in Storefront API
+              firstName: customerData.firstName,
+              lastName: customerData.lastName,
+              email: customerData.email,
+              defaultAddress: customerData.defaultAddress
+            })
+          } else {
+            // If we can't fetch customer data, the token might be invalid
+            localStorage.removeItem(TOKEN_STORAGE_KEY)
+            setToken(null)
+            setUser(null)
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
         // Clear invalid token
         localStorage.removeItem(TOKEN_STORAGE_KEY)
+        setToken(null)
+        setUser(null)
       } finally {
         setLoading(false)
       }
@@ -105,16 +121,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: errorMessage }
       }
 
-      // Store token and user info
+      // Store token and fetch complete customer data
       const accessToken = loginResult.accessToken
       localStorage.setItem(TOKEN_STORAGE_KEY, accessToken)
       setToken(accessToken)
-      setUser({
-        id: createResult.customerId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email
-      })
+      
+      // Fetch complete customer data using the access token
+      const customerData = await getCustomer(accessToken)
+      if (customerData) {
+        setUser({
+          id: createResult.customerId,
+          firstName: customerData.firstName,
+          lastName: customerData.lastName,
+          email: customerData.email,
+          defaultAddress: customerData.defaultAddress
+        })
+      } else {
+        // Fallback to registration data if customer data fetch fails
+        setUser({
+          id: createResult.customerId,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          defaultAddress: data.address
+        })
+      }
 
       return { success: true }
     } catch (error) {
@@ -139,19 +170,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: errorMessage }
       }
 
-      // Store token and basic user info
+      // Store token and fetch complete customer data
       const accessToken = result.accessToken
       localStorage.setItem(TOKEN_STORAGE_KEY, accessToken)
       setToken(accessToken)
       
-      // For minimal implementation, we'll set basic user info
-      // In a full implementation, you'd fetch complete customer details
-      setUser({
-        id: 'customer-id', // This would come from a customer details API call
-        firstName: 'Customer',
-        lastName: 'User',
-        email: email
-      })
+      // Fetch complete customer data using the access token
+      const customerData = await getCustomer(accessToken)
+      if (customerData) {
+        setUser({
+          id: 'customer-id', // Shopify doesn't expose customer ID in Storefront API
+          firstName: customerData.firstName,
+          lastName: customerData.lastName,
+          email: customerData.email,
+          defaultAddress: customerData.defaultAddress
+        })
+      } else {
+        // Fallback to basic user info if customer data fetch fails
+        setUser({
+          id: 'customer-id',
+          firstName: 'Customer',
+          lastName: 'User',
+          email: email
+        })
+      }
 
       return { success: true }
     } catch (error) {

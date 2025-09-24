@@ -1,9 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { User, Mail, UserCheck } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, profile, loading } = useAuth()
@@ -41,89 +38,17 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Profile Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Základní informace
-                </CardTitle>
-                <CardDescription>
-                  Vaše osobní údaje
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">E-mail</p>
-                    <p className="text-sm text-muted-foreground">
-                      {user?.email || 'Není k dispozici'}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <UserCheck className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Stav účtu</p>
-                    <p className="text-sm text-muted-foreground">
-                      {user ? 'Aktivní' : 'Neaktivní'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Account Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Nastavení účtu</CardTitle>
-                <CardDescription>
-                  Spravujte své předvolby
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <h3 className="font-semibold text-foreground mb-2">Shopify Integrace</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Všechny produkty a objednávky jsou nyní spravovány přes Shopify.
-                  </p>
-                  <Button variant="outline" size="sm" disabled>
-                    Nastavení není k dispozici
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Additional Information */}
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>O aplikaci</CardTitle>
-              <CardDescription>
-                Informace o Fairy Bloom
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <h3 className="font-semibold text-foreground mb-2">E-shop</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Fairy Bloom je e-shop s ručně vyráběnými šperky s květinami zachycenými v čase.
-                    Všechny produkty jsou spravovány přes Shopify platformu.
-                  </p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <h3 className="font-semibold text-foreground mb-2">Kontakt</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Pro jakékoliv dotazy nebo podporu nás kontaktujte přes kontaktní formulář.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Basic Information */}
+          <section className="p-6 rounded-lg shadow bg-white">
+            <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
+            <p><strong>Name:</strong> {user?.firstName} {user?.lastName}</p>
+            <p><strong>Email:</strong> {user?.email}</p>
+            {user?.defaultAddress ? (
+              <p><strong>Address:</strong> {user.defaultAddress.address1}, {user.defaultAddress.city}, {user.defaultAddress.zip}, {user.defaultAddress.country}</p>
+            ) : (
+              <p><strong>Address:</strong> Address not provided</p>
+            )}
+          </section>
         </div>
       </div>
       <Footer />
