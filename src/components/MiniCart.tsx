@@ -107,14 +107,14 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
           position: 'fixed',
           top: 0,
           left: 0,
-          width: '100vw',
+          width: '100%',
           height: '100vh'
         }}
         onClick={onClose}
       />
       
       {/* Cart Sidebar Panel - 20-25% width */}
-      <div className={`fixed top-0 right-0 h-screen w-[25vw] min-w-[400px] max-w-[500px] bg-background border-l border-border shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed top-0 right-0 h-screen w-96 min-w-[400px] max-w-[500px] bg-background border-l border-border shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`} style={{ position: 'fixed', top: 0, right: 0, height: '100vh' }}>
         <div className="flex flex-col h-full">

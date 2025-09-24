@@ -6,6 +6,16 @@ import { CartProvider } from '@/contexts/CartContext';
 import App from "./App.tsx";
 import "./index.css";
 
+// Ensure page always starts at the very top
+window.addEventListener('load', () => {
+  window.scrollTo(0, 0);
+});
+
+// Also ensure scroll position is reset on page navigation
+window.addEventListener('beforeunload', () => {
+  window.scrollTo(0, 0);
+});
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>

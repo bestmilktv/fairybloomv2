@@ -126,18 +126,40 @@ html {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "kern" 1;
     overflow-x: hidden;
-    width: 100vw;
+    width: 100%;
     position: relative;
+    /* Ensure page always starts at the very top */
+    scroll-behavior: auto;
   }
   
   html {
     overflow-y: scroll;
+    overflow-x: hidden;
     scrollbar-gutter: stable;
+    /* Ensure page always starts at the very top */
+    scroll-behavior: auto;
   }
   
   /* Prevent horizontal shifting */
   * {
     box-sizing: border-box;
+  }
+
+  /* Ensure page always starts at the very top on load */
+  html, body {
+    scroll-behavior: auto !important;
+  }
+
+  /* Prevent any element from causing horizontal overflow */
+  * {
+    max-width: 100%;
+  }
+
+  /* Ensure root element doesn't cause overflow */
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   /* Ensure dropdown doesn't affect layout */
