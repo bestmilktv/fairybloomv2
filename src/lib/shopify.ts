@@ -407,7 +407,7 @@ export async function createCustomer({
   };
 }) {
   const mutation = `
-    mutation customerCreate($input: CustomerInput!) {
+    mutation customerCreate($input: CustomerCreateInput!) {
       customerCreate(input: $input) {
         customer {
           id
