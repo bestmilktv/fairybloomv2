@@ -6,14 +6,27 @@ import { CartProvider } from '@/contexts/CartContext';
 import App from "./App.tsx";
 import "./index.css";
 
-// Ensure page always starts at the very top
+// Ensure page always starts at the very top - handles page reloads (F5) and initial loads
 window.addEventListener('load', () => {
   window.scrollTo(0, 0);
 });
 
-// Also ensure scroll position is reset on page navigation
+// Handle page refresh/reload scenarios
 window.addEventListener('beforeunload', () => {
   window.scrollTo(0, 0);
+});
+
+// Additional safety for immediate scroll to top on page load
+document.addEventListener('DOMContentLoaded', () => {
+  window.scrollTo(0, 0);
+});
+
+// Handle browser back/forward navigation
+window.addEventListener('pageshow', (event) => {
+  // If page was loaded from cache (back/forward), ensure scroll to top
+  if (event.persisted) {
+    window.scrollTo(0, 0);
+  }
 });
 
 createRoot(document.getElementById("root")!).render(
