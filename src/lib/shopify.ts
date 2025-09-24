@@ -373,6 +373,169 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
 }
 
 /**
+ * Create a new customer account using Shopify Storefront API
+ * @param customerData - Customer registration data
+ * @param customerData.firstName - Customer's first name
+ * @param customerData.lastName - Customer's last name
+ * @param customerData.email - Customer's email address
+ * @param customerData.password - Customer's password
+ * @param customerData.acceptsMarketing - Whether customer accepts marketing emails
+ * @param customerData.address - Customer's address object with address1, city, zip, country
+ * @returns Promise with success status and customer ID or error details
+ */
+export async function createCustomer({
+  firstName,
+  lastName,
+  email,
+  password,
+  acceptsMarketing,
+  address
+}: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  acceptsMarketing: boolean;
+  address: {
+    address1: string;
+    city: string;
+    zip: string;
+    country: string;
+  };
+}) {
+  const mutation = `
+    mutation customerCreate($input: CustomerInput!) {
+      customerCreate(input: $input) {
+        customer {
+          id
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    input: {
+      firstName,
+      lastName,
+      email,
+      password,
+      acceptsMarketing,
+      addresses: [address]
+    }
+  };
+
+  try {
+    const response = await fetchShopify<{
+      customerCreate: {
+        customer: { id: string } | null;
+        userErrors: Array<{ field: string; message: string }>;
+      };
+    }>(mutation, variables);
+
+    const { customer, userErrors } = response.data.customerCreate;
+
+    if (userErrors && userErrors.length > 0) {
+      return {
+        success: false,
+        errors: userErrors
+      };
+    }
+
+    if (!customer) {
+      return {
+        success: false,
+        errors: [{ field: 'general', message: 'Customer creation failed' }]
+      };
+    }
+
+    return {
+      success: true,
+      customerId: customer.id
+    };
+  } catch (error) {
+    console.error('Error creating customer:', error);
+    return {
+      success: false,
+      errors: [{ field: 'general', message: 'Failed to create customer account' }]
+    };
+  }
+}
+
+/**
+ * Login a customer using email and password
+ * @param email - Customer's email address
+ * @param password - Customer's password
+ * @returns Promise with success status, access token, and expiration or error details
+ */
+export async function loginCustomer(email: string, password: string) {
+  const mutation = `
+    mutation customerAccessTokenCreate($input: CustomerAccessTokenCreateInput!) {
+      customerAccessTokenCreate(input: $input) {
+        customerAccessToken {
+          accessToken
+          expiresAt
+        }
+        customerUserErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    input: {
+      email,
+      password
+    }
+  };
+
+  try {
+    const response = await fetchShopify<{
+      customerAccessTokenCreate: {
+        customerAccessToken: {
+          accessToken: string;
+          expiresAt: string;
+        } | null;
+        customerUserErrors: Array<{ field: string; message: string }>;
+      };
+    }>(mutation, variables);
+
+    const { customerAccessToken, customerUserErrors } = response.data.customerAccessTokenCreate;
+
+    if (customerUserErrors && customerUserErrors.length > 0) {
+      return {
+        success: false,
+        errors: customerUserErrors
+      };
+    }
+
+    if (!customerAccessToken) {
+      return {
+        success: false,
+        errors: [{ field: 'general', message: 'Login failed' }]
+      };
+    }
+
+    return {
+      success: true,
+      accessToken: customerAccessToken.accessToken,
+      expiresAt: customerAccessToken.expiresAt
+    };
+  } catch (error) {
+    console.error('Error logging in customer:', error);
+    return {
+      success: false,
+      errors: [{ field: 'general', message: 'Failed to login customer' }]
+    };
+  }
+}
+
+/**
  * Get inventory quantity for a product variant
  * @param variantGid - The variant GID (e.g., "gid://shopify/ProductVariant/123456789")
  * @param variantId - Alternative: plain numeric variant ID
