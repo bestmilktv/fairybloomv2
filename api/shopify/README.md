@@ -99,3 +99,4 @@ This API endpoint is designed to work with serverless platforms like:
 
 Make sure to set the required environment variables in your deployment platform.
 
+
