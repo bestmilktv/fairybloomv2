@@ -280,8 +280,10 @@ const ProductDetailPage = () => {
   };
 
   // Debug logging
+  console.log('ProductDetailPage - Full product object:', product);
   console.log('ProductDetailPage - Product tags:', product?.tags);
   console.log('ProductDetailPage - Primary collection:', primaryCollection);
+  console.log('ProductDetailPage - Product collections:', product?.collections);
   console.log('ProductDetailPage - All collections:', product?.collections?.edges?.map(edge => edge.node));
 
   return (
@@ -295,6 +297,7 @@ const ProductDetailPage = () => {
             <BackToCollectionButton
               productTags={product?.tags}
               productCollections={product?.collections?.edges?.map(edge => edge.node)}
+              productHandle={product?.handle}
               fallbackCollectionHandle={primaryCollection ? collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle : undefined}
               fallbackCollectionTitle={primaryCollection?.title}
             />

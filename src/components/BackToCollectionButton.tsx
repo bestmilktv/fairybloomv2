@@ -10,6 +10,7 @@ interface BackToCollectionButtonProps {
     handle: string;
     title: string;
   }>;
+  productHandle?: string;
 }
 
 const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
@@ -17,6 +18,7 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   fallbackCollectionHandle,
   fallbackCollectionTitle,
   productCollections,
+  productHandle,
 }) => {
   // Extract collection tag from product tags, completely ignoring "Home page" tag
   const getCollectionTag = (tags: string[]): string | null => {
@@ -62,9 +64,34 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
     return collection ? collection.title : null;
   };
 
+  // Guess collection from product handle as last resort
+  const guessCollectionFromHandle = (handle: string): string | null => {
+    if (!handle) return null;
+    
+    const handleLower = handle.toLowerCase();
+    console.log('BackToCollectionButton - Guessing collection from handle:', handle);
+    
+    // Common patterns in product handles
+    if (handleLower.includes('nahrdelnik') || handleLower.includes('necklace')) {
+      return 'Náhrdelníky';
+    }
+    if (handleLower.includes('nausnice') || handleLower.includes('earring')) {
+      return 'Náušnice';
+    }
+    if (handleLower.includes('prsten') || handleLower.includes('ring')) {
+      return 'Prsteny';
+    }
+    if (handleLower.includes('naramk') || handleLower.includes('bracelet')) {
+      return 'Náramky';
+    }
+    
+    return null;
+  };
+
   // Get the collection from multiple sources
   const collectionTag = productTags ? getCollectionTag(productTags) : null;
   const collectionFromCollections = productCollections ? getCollectionFromCollections(productCollections) : null;
+  const guessedCollection = productHandle ? guessCollectionFromHandle(productHandle) : null;
   
   let linkPath = '/';
   let buttonText = 'Zpět na hlavní stránku';
@@ -74,6 +101,8 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
     collectionTag,
     productCollections,
     collectionFromCollections,
+    productHandle,
+    guessedCollection,
     fallbackCollectionHandle,
     fallbackCollectionTitle
   });
@@ -92,7 +121,13 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
     buttonText = `Zpět do ${collectionFromCollections}`;
     console.log('BackToCollectionButton - Using collection from collections:', collectionFromCollections, '->', linkPath);
   }
-  // Priority 3: Use fallback collection title (if not "Home page")
+  // Priority 3: Guess collection from product handle
+  else if (guessedCollection) {
+    linkPath = createCollectionPath(guessedCollection);
+    buttonText = `Zpět do ${guessedCollection}`;
+    console.log('BackToCollectionButton - Using guessed collection:', guessedCollection, '->', linkPath);
+  }
+  // Priority 4: Use fallback collection title (if not "Home page")
   else if (fallbackCollectionTitle) {
     const normalizedFallback = fallbackCollectionTitle.toLowerCase().trim();
     if (normalizedFallback !== "home page" && normalizedFallback !== "homepage" && normalizedFallback !== "home") {

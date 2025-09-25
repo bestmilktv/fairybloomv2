@@ -293,8 +293,10 @@ const DynamicProductPage = () => {
   };
 
   // Debug logging
+  console.log('DynamicProductPage - Full product object:', product);
   console.log('DynamicProductPage - Product tags:', product?.tags);
   console.log('DynamicProductPage - Primary collection:', primaryCollection);
+  console.log('DynamicProductPage - Product collections:', product?.collections);
   console.log('DynamicProductPage - All collections:', product?.collections?.edges?.map(edge => edge.node));
 
   return (
@@ -308,6 +310,7 @@ const DynamicProductPage = () => {
             <BackToCollectionButton
               productTags={product?.tags}
               productCollections={product?.collections?.edges?.map(edge => edge.node)}
+              productHandle={product?.handle}
               fallbackCollectionHandle={primaryCollection ? collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle : undefined}
               fallbackCollectionTitle={primaryCollection?.title}
             />
