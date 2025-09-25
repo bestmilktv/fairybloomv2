@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle } from '@/lib/shopify';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
+import { createCollectionHandle } from '@/lib/slugify';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -270,12 +271,12 @@ const ProductDetailPage = () => {
     );
   }
 
-  // Collection mapping for URL paths
+  // Collection mapping for URL paths - using slugified handles
   const collectionMapping = {
-    'nahrdelniky': 'náhrdelníky',
-    'nausnice': 'náušnice', 
-    'prsteny': 'prsteny',
-    'naramky': 'náramky'
+    'nahrdelniky': createCollectionHandle('náhrdelníky'),
+    'nausnice': createCollectionHandle('náušnice'), 
+    'prsteny': createCollectionHandle('prsteny'),
+    'naramky': createCollectionHandle('náramky')
   };
 
   return (

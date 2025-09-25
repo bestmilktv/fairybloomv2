@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { MiniCart } from '@/components/MiniCart';
+import { createCollectionPath } from '@/lib/slugify';
 import logo from '@/assets/logo.png';
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -23,16 +24,16 @@ const Navigation = () => {
   }, []);
   const categories = [{
     name: 'Náhrdelníky',
-    path: '/náhrdelníky'
+    path: createCollectionPath('Náhrdelníky')
   }, {
     name: 'Náušnice',
-    path: '/náušnice'
+    path: createCollectionPath('Náušnice')
   }, {
     name: 'Prsteny',
-    path: '/prsteny'
+    path: createCollectionPath('Prsteny')
   }, {
     name: 'Náramky',
-    path: '/náramky'
+    path: createCollectionPath('Náramky')
   }];
 
   const handleSignOut = () => {

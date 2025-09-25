@@ -9,6 +9,7 @@ import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle, createCart } from '@/lib/shopify';
 import { useCart } from '@/contexts/CartContext';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
+import { createCollectionHandle } from '@/lib/slugify';
 
 // Import fallback images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -283,12 +284,12 @@ const DynamicProductPage = () => {
   // Get primary collection for back button
   const primaryCollection = product.collections?.edges?.[0]?.node;
   
-  // Collection mapping for URL paths
+  // Collection mapping for URL paths - using slugified handles
   const collectionMapping = {
-    'nahrdelniky': 'náhrdelníky',
-    'nausnice': 'náušnice', 
-    'prsteny': 'prsteny',
-    'naramky': 'náramky'
+    'nahrdelniky': createCollectionHandle('náhrdelníky'),
+    'nausnice': createCollectionHandle('náušnice'), 
+    'prsteny': createCollectionHandle('prsteny'),
+    'naramky': createCollectionHandle('náramky')
   };
 
   return (

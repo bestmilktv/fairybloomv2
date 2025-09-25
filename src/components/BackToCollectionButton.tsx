@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import slugify from 'slugify';
+import { createCollectionPath } from '@/lib/slugify';
 
 interface BackToCollectionButtonProps {
   productTags?: string[];
@@ -33,13 +33,12 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   let buttonText = 'Zpět na hlavní stránku';
   
   if (collectionTag) {
-    // Use slugify to create URL-friendly handle from the collection tag
-    const collectionHandle = slugify(collectionTag, { lower: true, strict: true });
-    linkPath = `/${collectionHandle}`;
+    // Use our custom slugify to create URL-friendly path from the collection tag
+    linkPath = createCollectionPath(collectionTag);
     buttonText = `Zpět do ${collectionTag}`;
   } else if (fallbackCollectionHandle && fallbackCollectionTitle) {
     // Fallback to the old logic if no valid tags found
-    linkPath = `/${fallbackCollectionHandle}`;
+    linkPath = createCollectionPath(fallbackCollectionTitle);
     buttonText = `Zpět do ${fallbackCollectionTitle}`;
   }
 

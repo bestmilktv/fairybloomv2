@@ -5,6 +5,7 @@ import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
 import { getProductsByCollection, getVariantInventory } from '@/lib/shopify';
 import BackToHomepageButton from '@/components/BackToHomepageButton';
+import { createCollectionHandle } from '@/lib/slugify';
 
 // Import product images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -19,12 +20,12 @@ const CategoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping for Shopify
+  // Collection mapping for Shopify - using slugified handles
   const collectionMapping = {
-    'náhrdelníky': 'nahrdelniky',
-    'náušnice': 'nausnice', 
-    'prsteny': 'prsteny',
-    'náramky': 'naramky'
+    'náhrdelníky': createCollectionHandle('náhrdelníky'),
+    'náušnice': createCollectionHandle('náušnice'), 
+    'prsteny': createCollectionHandle('prsteny'),
+    'náramky': createCollectionHandle('náramky')
   };
 
   // Scroll to top when page loads

@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { getProductsByCollection } from '@/lib/shopify'
+import { createCollectionHandle, createProductPath } from '@/lib/slugify'
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg'
@@ -31,12 +32,12 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
   const [recommendations, setRecommendations] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Collection mapping for Shopify
+  // Collection mapping for Shopify - using slugified handles
   const collectionMapping = {
-    'Náhrdelníky': 'nahrdelniky',
-    'Náušnice': 'nausnice', 
-    'Prsteny': 'prsteny',
-    'Náramky': 'naramky'
+    'Náhrdelníky': createCollectionHandle('Náhrdelníky'),
+    'Náušnice': createCollectionHandle('Náušnice'), 
+    'Prsteny': createCollectionHandle('Prsteny'),
+    'Náramky': createCollectionHandle('Náramky')
   }
 
   // Helper function to get fallback image
@@ -162,7 +163,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
           {recommendations.map((product) => (
             <Link
               key={product.id}
-              to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`}
+              to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`}
               className="group block"
             >
               <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform group-hover:-translate-y-2">

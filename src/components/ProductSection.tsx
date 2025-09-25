@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import ProductCard from './ProductCard';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { createProductPath } from '@/lib/slugify';
 
 interface Product {
   id: string;
@@ -46,7 +47,7 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
           {products.map((product, index) => (
             <div key={product.id} className={`fade-in-up-delayed`} style={{ animationDelay: `${index * 0.1}s` }}>
               <Link 
-                to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 
+                to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
                 className="group cursor-pointer fade-in-up block"
               >
                 <ProductCard
