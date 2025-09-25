@@ -8,7 +8,6 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle } from '@/lib/shopify';
-import { getCollectionFromTags } from '@/lib/utils';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 
 // Import product images for fallback
@@ -58,18 +57,13 @@ const ProductDetailPage = () => {
           const firstImage = shopifyProduct.images?.edges?.[0]?.node;
           const firstVariant = shopifyProduct.variants?.edges?.[0]?.node;
           
-          // Get primary collection using tags to filter out "Home page"
-          const primaryCollectionData = getCollectionFromTags(
-            shopifyProduct.tags || []
-          );
-          
-          if (primaryCollectionData) {
+          // Get primary collection
+          const firstCollection = shopifyProduct.collections?.edges?.[0]?.node;
+          if (firstCollection) {
             setPrimaryCollection({
-              handle: primaryCollectionData.slug,
-              title: primaryCollectionData.title
+              handle: firstCollection.handle,
+              title: firstCollection.title
             });
-          } else {
-            setPrimaryCollection(null);
           }
           
           // Transform Shopify product to match expected format
@@ -294,7 +288,7 @@ const ProductDetailPage = () => {
           {primaryCollection && (
             <div className="mb-6">
               <BackToCollectionButton
-                collectionSlug={primaryCollection.handle}
+                collectionHandle={collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle}
                 collectionTitle={primaryCollection.title}
               />
             </div>
