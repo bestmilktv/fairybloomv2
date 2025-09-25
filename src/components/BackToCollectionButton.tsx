@@ -70,21 +70,30 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
     
     const handleLower = handle.toLowerCase();
     console.log('BackToCollectionButton - Guessing collection from handle:', handle);
+    console.log('BackToCollectionButton - Handle lowercased:', handleLower);
     
-    // Common patterns in product handles
+    // Common patterns in product handles - order matters, check more specific patterns first
     if (handleLower.includes('nahrdelnik') || handleLower.includes('necklace')) {
+      console.log('BackToCollectionButton - Matched necklace pattern');
       return 'Náhrdelníky';
     }
     if (handleLower.includes('nausnice') || handleLower.includes('earring')) {
+      console.log('BackToCollectionButton - Matched earring pattern');
       return 'Náušnice';
     }
     if (handleLower.includes('prsten') || handleLower.includes('ring')) {
+      console.log('BackToCollectionButton - Matched ring pattern');
       return 'Prsteny';
     }
-    if (handleLower.includes('naramk') || handleLower.includes('bracelet')) {
+    // More comprehensive patterns for bracelets
+    if (handleLower.includes('naramk') || handleLower.includes('bracelet') || 
+        handleLower.includes('náramk') || handleLower.includes('náramky') ||
+        handleLower.includes('naramky') || handleLower.includes('naramek')) {
+      console.log('BackToCollectionButton - Matched bracelet pattern');
       return 'Náramky';
     }
     
+    console.log('BackToCollectionButton - No pattern matched for handle:', handle);
     return null;
   };
 
