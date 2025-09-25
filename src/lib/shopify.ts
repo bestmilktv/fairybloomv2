@@ -45,7 +45,9 @@ export interface ShopifyProduct {
 }
 
 export interface ShopifyCollection {
+  id: string;
   title: string;
+  handle: string;
   description?: string;
   products: {
     edges: Array<{
@@ -132,7 +134,9 @@ export async function getProductsByCollection(handle: string, first: number = 20
   const query = `
     query GetProducts($handle: String!, $first: Int!) {
       collectionByHandle(handle: $handle) {
+        id
         title
+        handle
         description
         products(first: $first) {
           edges {
@@ -141,6 +145,7 @@ export async function getProductsByCollection(handle: string, first: number = 20
               title
               description
               handle
+              tags
               images(first: 5) {
                 edges {
                   node {
@@ -696,14 +701,13 @@ export const reverseCollectionMapping = {
 export function getPrimaryCollection(product: ShopifyProduct): { handle: string; title: string } {
   // First priority: Use product tags, ignoring "Home page" tag
   if (product.tags && product.tags.length > 0) {
-    // Filter out "Home page" tag and find the first collection tag
-    const collectionTags = product.tags.filter(tag => 
+    // Find the first tag that is NOT "Home page" and looks like a collection name
+    const collectionTag = product.tags.find(tag => 
       tag.toLowerCase() !== 'home page' && 
       (tag.includes('náhrdelník') || tag.includes('náušnice') || tag.includes('prsten') || tag.includes('náramek'))
     );
     
-    if (collectionTags.length > 0) {
-      const collectionTag = collectionTags[0];
+    if (collectionTag) {
       const slugifiedHandle = slugifyCollection(collectionTag);
       const czechTitle = deslugifyCollection(slugifiedHandle);
       return {

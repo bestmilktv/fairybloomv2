@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 import { getProductByHandle, getPrimaryCollection } from '@/lib/shopify';
-import { slugifyCollection } from '@/lib/slugify';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -287,7 +286,7 @@ const ProductDetailPage = () => {
               Domů
             </Link>
             <span>/</span>
-            <Link to={`/${slugifyCollection(product.category)}`} className="hover:text-foreground transition-colors">
+            <Link to={`/${getPrimaryCollection(shopifyProduct).handle}`} className="hover:text-foreground transition-colors">
               {product.category}
             </Link>
             <span>/</span>

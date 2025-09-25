@@ -3,7 +3,7 @@ import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
-import { getProductsByCollection } from '@/lib/shopify'
+import { getProductsByCollection, collectionMapping } from '@/lib/shopify'
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg'
@@ -31,13 +31,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
   const [recommendations, setRecommendations] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Collection mapping for Shopify
-  const collectionMapping = {
-    'Náhrdelníky': 'nahrdelniky',
-    'Náušnice': 'nausnice', 
-    'Prsteny': 'prsteny',
-    'Náramky': 'naramky'
-  }
+  // Collection mapping is now imported from shopify.ts
 
   // Helper function to get fallback image
   const getFallbackImage = (category: string) => {

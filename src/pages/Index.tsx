@@ -70,7 +70,8 @@ const Index = () => {
                 id: czechKey,
                 title: collection.title || czechKey,
                 subtitle: collection.description || `Elegantní ${czechKey} z naší kolekce`,
-                products: products
+                products: products,
+                handle: collection.handle || shopifyHandle
               });
             } else {
               // If no products found, create empty category
@@ -78,7 +79,8 @@ const Index = () => {
                 id: czechKey,
                 title: czechKey,
                 subtitle: `Elegantní ${czechKey} z naší kolekce`,
-                products: []
+                products: [],
+                handle: shopifyHandle
               });
             }
           } catch (error) {
@@ -88,7 +90,8 @@ const Index = () => {
               id: czechKey,
               title: czechKey,
               subtitle: `Elegantní ${czechKey} z naší kolekce`,
-              products: []
+              products: [],
+              handle: shopifyHandle
             });
           }
         }
@@ -161,7 +164,7 @@ const Index = () => {
             title={category.title}
             subtitle={category.subtitle}
             products={category.products}
-            categoryPath={`/${slugifyCollection(category.id)}`}
+            categoryPath={`/${category.handle}`}
           />
         ))
       )}
