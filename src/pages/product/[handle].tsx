@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle, createCart } from '@/lib/shopify';
 import { useCart } from '@/contexts/CartContext';
-import { getPrimaryCollectionFromTags } from '@/lib/utils';
+import { getCollectionFromTags } from '@/lib/utils';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 
 // Import fallback images
@@ -283,7 +283,7 @@ const DynamicProductPage = () => {
   const variants = product.variants.edges.map(edge => edge.node);
 
   // Get primary collection for back button using tags to filter out "Home page"
-  const primaryCollectionData = getPrimaryCollectionFromTags(
+  const primaryCollectionData = getCollectionFromTags(
     product.tags || []
   );
   

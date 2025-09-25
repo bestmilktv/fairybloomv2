@@ -66,3 +66,29 @@ export function getPrimaryCollectionFromTags(tags: string[]): { slug: string; ti
     title: primaryTag
   };
 }
+
+/**
+ * Alternative function that always returns a collection if any tags exist
+ * This ensures the button always appears when there are tags
+ * @param tags - Array of product tags
+ * @returns Object with collection slug and title
+ */
+export function getCollectionFromTags(tags: string[]): { slug: string; title: string } | null {
+  if (!tags || tags.length === 0) {
+    return null;
+  }
+
+  // Filter out "Home page" tag (case-insensitive)
+  const filteredTags = tags.filter(tag => 
+    tag.toLowerCase() !== "home page"
+  );
+
+  // Use the first non-home-page tag if available, otherwise use the first tag
+  const primaryTag = filteredTags.length > 0 ? filteredTags[0] : tags[0];
+  const collectionSlug = slugify(primaryTag);
+  
+  return {
+    slug: collectionSlug,
+    title: primaryTag
+  };
+}

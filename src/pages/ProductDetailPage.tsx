@@ -8,7 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle } from '@/lib/shopify';
-import { getPrimaryCollectionFromTags } from '@/lib/utils';
+import { getCollectionFromTags } from '@/lib/utils';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 
 // Import product images for fallback
@@ -59,7 +59,7 @@ const ProductDetailPage = () => {
           const firstVariant = shopifyProduct.variants?.edges?.[0]?.node;
           
           // Get primary collection using tags to filter out "Home page"
-          const primaryCollectionData = getPrimaryCollectionFromTags(
+          const primaryCollectionData = getCollectionFromTags(
             shopifyProduct.tags || []
           );
           
