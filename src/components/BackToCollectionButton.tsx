@@ -26,17 +26,13 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
       return null;
     }
     
-    console.log('BackToCollectionButton - Input tags:', tags);
-    
     // Filter out "Home page" tag completely (case-insensitive, with trimming)
     const filteredTags = tags.filter(tag => {
       const normalizedTag = tag.toLowerCase().trim();
       return normalizedTag !== "home page" && normalizedTag !== "homepage" && normalizedTag !== "home";
     });
-    console.log('BackToCollectionButton - Filtered tags (without Home page):', filteredTags);
     
     const collectionTag = filteredTags.length > 0 ? filteredTags[0] : null;
-    console.log('BackToCollectionButton - Selected collection tag:', collectionTag);
     
     return collectionTag;
   };
@@ -47,8 +43,6 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
       return null;
     }
     
-    console.log('BackToCollectionButton - Input collections:', collections);
-    
     // Filter out "Home page" collection (case-insensitive, with trimming)
     const filteredCollections = collections.filter(collection => {
       const normalizedTitle = collection.title.toLowerCase().trim();
@@ -56,10 +50,8 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
       return normalizedTitle !== "home page" && normalizedTitle !== "homepage" && normalizedTitle !== "home" &&
              normalizedHandle !== "frontpage" && normalizedHandle !== "home-page";
     });
-    console.log('BackToCollectionButton - Filtered collections (without Home page):', filteredCollections);
     
     const collection = filteredCollections.length > 0 ? filteredCollections[0] : null;
-    console.log('BackToCollectionButton - Selected collection:', collection);
     
     return collection ? collection.title : null;
   };
@@ -69,31 +61,22 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
     if (!handle) return null;
     
     const handleLower = handle.toLowerCase();
-    console.log('BackToCollectionButton - Guessing collection from handle:', handle);
-    console.log('BackToCollectionButton - Handle lowercased:', handleLower);
-    
     // Common patterns in product handles - order matters, check more specific patterns first
     if (handleLower.includes('nahrdelnik') || handleLower.includes('necklace')) {
-      console.log('BackToCollectionButton - Matched necklace pattern');
       return 'Náhrdelníky';
     }
     if (handleLower.includes('nausnice') || handleLower.includes('earring')) {
-      console.log('BackToCollectionButton - Matched earring pattern');
       return 'Náušnice';
     }
     if (handleLower.includes('prsten') || handleLower.includes('ring')) {
-      console.log('BackToCollectionButton - Matched ring pattern');
       return 'Prsteny';
     }
     // More comprehensive patterns for bracelets
     if (handleLower.includes('naramk') || handleLower.includes('bracelet') || 
         handleLower.includes('náramk') || handleLower.includes('náramky') ||
         handleLower.includes('naramky') || handleLower.includes('naramek')) {
-      console.log('BackToCollectionButton - Matched bracelet pattern');
       return 'Náramky';
     }
-    
-    console.log('BackToCollectionButton - No pattern matched for handle:', handle);
     return null;
   };
 
@@ -105,36 +88,20 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   let linkPath = '/';
   let buttonText = 'Zpět na hlavní stránku';
   
-  console.log('BackToCollectionButton - Final logic:', {
-    productTags,
-    collectionTag,
-    productCollections,
-    collectionFromCollections,
-    productHandle,
-    guessedCollection,
-    fallbackCollectionHandle,
-    fallbackCollectionTitle
-  });
-  
-  console.log('BackToCollectionButton - Available collections for filtering:', productCollections);
-  
   // Priority 1: Use collection tag from product tags
   if (collectionTag) {
     linkPath = createCollectionPath(collectionTag);
     buttonText = `Zpět do ${collectionTag}`;
-    console.log('BackToCollectionButton - Using collection tag:', collectionTag, '->', linkPath);
   }
   // Priority 2: Use collection from product collections array
   else if (collectionFromCollections) {
     linkPath = createCollectionPath(collectionFromCollections);
     buttonText = `Zpět do ${collectionFromCollections}`;
-    console.log('BackToCollectionButton - Using collection from collections:', collectionFromCollections, '->', linkPath);
   }
   // Priority 3: Guess collection from product handle
   else if (guessedCollection) {
     linkPath = createCollectionPath(guessedCollection);
     buttonText = `Zpět do ${guessedCollection}`;
-    console.log('BackToCollectionButton - Using guessed collection:', guessedCollection, '->', linkPath);
   }
   // Priority 4: Use fallback collection title (if not "Home page")
   else if (fallbackCollectionTitle) {
@@ -142,9 +109,6 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
     if (normalizedFallback !== "home page" && normalizedFallback !== "homepage" && normalizedFallback !== "home") {
       linkPath = createCollectionPath(fallbackCollectionTitle);
       buttonText = `Zpět do ${fallbackCollectionTitle}`;
-      console.log('BackToCollectionButton - Using fallback title:', fallbackCollectionTitle, '->', linkPath);
-    } else {
-      console.log('BackToCollectionButton - Fallback title is also "Home page", using homepage');
     }
   }
 

@@ -279,12 +279,6 @@ const ProductDetailPage = () => {
     'naramky': createCollectionHandle('náramky')
   };
 
-  // Debug logging
-  console.log('ProductDetailPage - Full product object:', product);
-  console.log('ProductDetailPage - Product tags:', product?.tags);
-  console.log('ProductDetailPage - Primary collection:', primaryCollection);
-  console.log('ProductDetailPage - Product collections:', product?.collections);
-  console.log('ProductDetailPage - All collections:', product?.collections?.edges?.map(edge => edge.node));
 
   return (
     <div className="min-h-screen bg-background">

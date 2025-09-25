@@ -28,6 +28,14 @@ const CategoryPage = () => {
     'náramky': createCollectionHandle('náramky')
   };
 
+  // Reverse mapping from slugified URLs to original category names
+  const slugToCategoryMapping = {
+    'nahrdelniky': 'náhrdelníky',
+    'nausnice': 'náušnice',
+    'prsteny': 'prsteny',
+    'naramky': 'náramky'
+  };
+
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -41,7 +49,9 @@ const CategoryPage = () => {
         setHasError(false);
 
         const decodedCategory = category ? decodeURIComponent(category) : null;
-        const shopifyHandle = decodedCategory ? collectionMapping[decodedCategory as keyof typeof collectionMapping] : null;
+        // Convert slugified URL back to original category name
+        const originalCategory = decodedCategory ? slugToCategoryMapping[decodedCategory as keyof typeof slugToCategoryMapping] : null;
+        const shopifyHandle = originalCategory ? collectionMapping[originalCategory as keyof typeof collectionMapping] : null;
         
         if (shopifyHandle) {
           const collection = await getProductsByCollection(shopifyHandle, 20);
@@ -70,7 +80,7 @@ const CategoryPage = () => {
                   price: firstVariant?.price ? 
                     `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                     'Cena na vyžádání',
-                  image: firstImage?.url || getFallbackImage(decodedCategory),
+                  image: firstImage?.url || getFallbackImage(originalCategory),
                   description: product.description || 'Elegantní šperk z naší kolekce',
                   handle: product.handle,
                   inventoryQuantity
