@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle, createCart } from '@/lib/shopify';
 import { useCart } from '@/contexts/CartContext';
+import BackToCollectionButton from '@/components/BackToCollectionButton';
 
 // Import fallback images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -43,6 +44,15 @@ interface ShopifyProduct {
   variants: {
     edges: Array<{
       node: ProductVariant;
+    }>;
+  };
+  collections?: {
+    edges: Array<{
+      node: {
+        id: string;
+        title: string;
+        handle: string;
+      };
     }>;
   };
 }
@@ -270,12 +280,33 @@ const DynamicProductPage = () => {
   // Get product variants
   const variants = product.variants.edges.map(edge => edge.node);
 
+  // Get primary collection for back button
+  const primaryCollection = product.collections?.edges?.[0]?.node;
+  
+  // Collection mapping for URL paths
+  const collectionMapping = {
+    'nahrdelniky': 'náhrdelníky',
+    'nausnice': 'náušnice', 
+    'prsteny': 'prsteny',
+    'naramky': 'náramky'
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
       
       <div className="pt-24 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
+          {/* Back to Collection Button */}
+          {primaryCollection && (
+            <div className="mb-6 fade-in-up">
+              <BackToCollectionButton
+                collectionHandle={collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle}
+                collectionTitle={primaryCollection.title}
+              />
+            </div>
+          )}
+          
           {/* Breadcrumb */}
           <div className="mb-8 fade-in-up">
             <Link 

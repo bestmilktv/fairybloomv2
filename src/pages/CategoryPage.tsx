@@ -4,6 +4,7 @@ import Navigation from '@/components/Navigation';
 import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
 import { getProductsByCollection, getVariantInventory } from '@/lib/shopify';
+import BackToHomepageButton from '@/components/BackToHomepageButton';
 
 // Import product images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -155,8 +156,15 @@ const CategoryPage = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       
+      {/* Back to Homepage Button */}
+      <div className="pt-24 px-6 py-6">
+        <div className="max-w-7xl mx-auto">
+          <BackToHomepageButton />
+        </div>
+      </div>
+      
       {/* Category Header */}
-      <section className="pt-32 pb-16 px-6">
+      <section className="pb-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-6 tracking-wide">
             {categoryData.title}

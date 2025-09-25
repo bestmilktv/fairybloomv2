@@ -30,6 +30,15 @@ export interface ShopifyProduct {
       };
     }>;
   };
+  collections?: {
+    edges: Array<{
+      node: {
+        id: string;
+        title: string;
+        handle: string;
+      };
+    }>;
+  };
 }
 
 export interface ShopifyCollection {
@@ -199,6 +208,15 @@ export async function getProductByHandle(handle: string) {
                 amount
                 currencyCode
               }
+            }
+          }
+        }
+        collections(first: 5) {
+          edges {
+            node {
+              id
+              title
+              handle
             }
           }
         }

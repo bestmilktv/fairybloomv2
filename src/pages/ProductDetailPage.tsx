@@ -8,6 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle } from '@/lib/shopify';
+import BackToCollectionButton from '@/components/BackToCollectionButton';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -28,6 +29,7 @@ const ProductDetailPage = () => {
   const [inventory, setInventory] = useState<number | null>(null);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [inventoryError, setInventoryError] = useState(false);
+  const [primaryCollection, setPrimaryCollection] = useState<{handle: string, title: string} | null>(null);
   const productImageRef = useRef<HTMLImageElement>(null);
 
   // Scroll to top when page loads
@@ -54,6 +56,15 @@ const ProductDetailPage = () => {
         if (shopifyProduct) {
           const firstImage = shopifyProduct.images?.edges?.[0]?.node;
           const firstVariant = shopifyProduct.variants?.edges?.[0]?.node;
+          
+          // Get primary collection
+          const firstCollection = shopifyProduct.collections?.edges?.[0]?.node;
+          if (firstCollection) {
+            setPrimaryCollection({
+              handle: firstCollection.handle,
+              title: firstCollection.title
+            });
+          }
           
           // Transform Shopify product to match expected format
           const transformedProduct = {
@@ -259,12 +270,34 @@ const ProductDetailPage = () => {
     );
   }
 
+  // Collection mapping for URL paths
+  const collectionMapping = {
+    'nahrdelniky': 'náhrdelníky',
+    'nausnice': 'náušnice', 
+    'prsteny': 'prsteny',
+    'naramky': 'náramky'
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      {/* Breadcrumb */}
+      {/* Back to Collection Button */}
       <div className="pt-24 px-6 py-6">
+        <div className="max-w-7xl mx-auto">
+          {primaryCollection && (
+            <div className="mb-6">
+              <BackToCollectionButton
+                collectionHandle={collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle}
+                collectionTitle={primaryCollection.title}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Breadcrumb */}
+      <div className="px-6 py-6">
         <div className="max-w-7xl mx-auto">
           <nav className="flex items-center space-x-2 text-sm text-muted-foreground">
             <Link to="/" className="hover:text-foreground transition-colors">
@@ -278,7 +311,7 @@ const ProductDetailPage = () => {
             <span className="text-foreground">{product.title}</span>
           </nav>
         </div>
-          </div>
+      </div>
 
       {/* Product Details */}
       <div className="px-6 pb-12">
