@@ -63,10 +63,14 @@ const ProductDetailPage = () => {
             shopifyProduct.tags || []
           );
           
-          setPrimaryCollection({
-            handle: primaryCollectionData.slug,
-            title: primaryCollectionData.title
-          });
+          if (primaryCollectionData) {
+            setPrimaryCollection({
+              handle: primaryCollectionData.slug,
+              title: primaryCollectionData.title
+            });
+          } else {
+            setPrimaryCollection(null);
+          }
           
           // Transform Shopify product to match expected format
           const transformedProduct = {
@@ -287,12 +291,14 @@ const ProductDetailPage = () => {
       {/* Back to Collection Button */}
       <div className="pt-24 px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <BackToCollectionButton
-              collectionSlug={primaryCollection.handle}
-              collectionTitle={primaryCollection.title}
-            />
-          </div>
+          {primaryCollection && (
+            <div className="mb-6">
+              <BackToCollectionButton
+                collectionSlug={primaryCollection.handle}
+                collectionTitle={primaryCollection.title}
+              />
+            </div>
+          )}
         </div>
       </div>
       

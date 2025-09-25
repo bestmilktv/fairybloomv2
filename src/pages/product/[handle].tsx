@@ -287,10 +287,10 @@ const DynamicProductPage = () => {
     product.tags || []
   );
   
-  const primaryCollection = {
+  const primaryCollection = primaryCollectionData ? {
     handle: primaryCollectionData.slug,
     title: primaryCollectionData.title
-  };
+  } : null;
   
   // Collection mapping for URL paths
   const collectionMapping = {
@@ -307,12 +307,14 @@ const DynamicProductPage = () => {
       <div className="pt-24 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
           {/* Back to Collection Button */}
-          <div className="mb-6 fade-in-up">
-            <BackToCollectionButton
-              collectionSlug={primaryCollection.handle}
-              collectionTitle={primaryCollection.title}
-            />
-          </div>
+          {primaryCollection && (
+            <div className="mb-6 fade-in-up">
+              <BackToCollectionButton
+                collectionSlug={primaryCollection.handle}
+                collectionTitle={primaryCollection.title}
+              />
+            </div>
+          )}
           
           {/* Breadcrumb */}
           <div className="mb-8 fade-in-up">
