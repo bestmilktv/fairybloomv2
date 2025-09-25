@@ -6,17 +6,44 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Simple slugify function to create URL-friendly strings
+ * Handles Czech characters properly
+ * @param text - Text to slugify
+ * @returns URL-friendly slug
+ */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    // Replace Czech characters with their ASCII equivalents
+    .replace(/á/g, 'a')
+    .replace(/č/g, 'c')
+    .replace(/ď/g, 'd')
+    .replace(/é/g, 'e')
+    .replace(/ě/g, 'e')
+    .replace(/í/g, 'i')
+    .replace(/ň/g, 'n')
+    .replace(/ó/g, 'o')
+    .replace(/ř/g, 'r')
+    .replace(/š/g, 's')
+    .replace(/ť/g, 't')
+    .replace(/ú/g, 'u')
+    .replace(/ů/g, 'u')
+    .replace(/ý/g, 'y')
+    .replace(/ž/g, 'z')
+    .replace(/[^\w\s-]/g, '') // Remove remaining special characters
+    .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+}
+
+/**
  * Determines the primary collection for a product based on its tags
  * Filters out "Home page" tag and uses the first non-home-page tag
  * @param tags - Array of product tags
- * @param collections - Array of product collections
- * @returns Object with collection handle and title, or null if no valid collection found
+ * @returns Object with collection slug and title, or null if no valid collection found
  */
-export function getPrimaryCollectionFromTags(
-  tags: string[], 
-  collections: Array<{ handle: string; title: string }>
-): { handle: string; title: string } | null {
-  if (!tags || tags.length === 0 || !collections || collections.length === 0) {
+export function getPrimaryCollectionFromTags(tags: string[]): { slug: string; title: string } | null {
+  if (!tags || tags.length === 0) {
     return null;
   }
 
@@ -26,28 +53,15 @@ export function getPrimaryCollectionFromTags(
   );
 
   if (filteredTags.length === 0) {
-    // If no non-home-page tags, fall back to first collection
-    return collections[0];
+    return null;
   }
 
-  // Find collection that matches the first non-home-page tag
+  // Use the first non-home-page tag
   const primaryTag = filteredTags[0];
-  const matchingCollection = collections.find(collection => 
-    collection.title.toLowerCase() === primaryTag.toLowerCase() ||
-    collection.handle.toLowerCase() === primaryTag.toLowerCase()
-  );
-
-  // If no exact match, try to find a collection with similar name
-  if (!matchingCollection) {
-    const similarCollection = collections.find(collection => 
-      collection.title.toLowerCase().includes(primaryTag.toLowerCase()) ||
-      primaryTag.toLowerCase().includes(collection.title.toLowerCase())
-    );
-    
-    if (similarCollection) {
-      return similarCollection;
-    }
-  }
-
-  return matchingCollection || collections[0];
+  const collectionSlug = slugify(primaryTag);
+  
+  return {
+    slug: collectionSlug,
+    title: primaryTag
+  };
 }

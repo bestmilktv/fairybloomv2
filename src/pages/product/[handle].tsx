@@ -283,15 +283,14 @@ const DynamicProductPage = () => {
   const variants = product.variants.edges.map(edge => edge.node);
 
   // Get primary collection for back button using tags to filter out "Home page"
-  const collections = product.collections?.edges?.map(edge => ({
-    handle: edge.node.handle,
-    title: edge.node.title
-  })) || [];
-  
-  const primaryCollection = getPrimaryCollectionFromTags(
-    product.tags || [], 
-    collections
+  const primaryCollectionData = getPrimaryCollectionFromTags(
+    product.tags || []
   );
+  
+  const primaryCollection = primaryCollectionData ? {
+    handle: primaryCollectionData.slug,
+    title: primaryCollectionData.title
+  } : null;
   
   // Collection mapping for URL paths
   const collectionMapping = {
@@ -311,7 +310,7 @@ const DynamicProductPage = () => {
           {primaryCollection && (
             <div className="mb-6 fade-in-up">
               <BackToCollectionButton
-                collectionHandle={collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle}
+                collectionSlug={primaryCollection.handle}
                 collectionTitle={primaryCollection.title}
               />
             </div>
