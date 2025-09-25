@@ -6,7 +6,8 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
-import { getProductByHandle, createCart } from '@/lib/shopify';
+import BackToCollectionButton from '@/components/BackToCollectionButton';
+import { getProductByHandle, createCart, getPrimaryCollection } from '@/lib/shopify';
 import { useCart } from '@/contexts/CartContext';
 
 // Import fallback images
@@ -276,15 +277,14 @@ const DynamicProductPage = () => {
       
       <div className="pt-24 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
-          {/* Breadcrumb */}
+          {/* Back to Collection Button */}
           <div className="mb-8 fade-in-up">
-            <Link 
-              to="/" 
-              className="inline-flex items-center text-muted-foreground hover:text-gold transition-colors duration-300"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Zpět na hlavní stránku
-            </Link>
+            {product && (
+              <BackToCollectionButton
+                collectionHandle={getPrimaryCollection(product).handle}
+                collectionTitle={getPrimaryCollection(product).title}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">

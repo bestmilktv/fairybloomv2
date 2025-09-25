@@ -30,6 +30,15 @@ export interface ShopifyProduct {
       };
     }>;
   };
+  collections?: {
+    edges: Array<{
+      node: {
+        id: string;
+        title: string;
+        handle: string;
+      };
+    }>;
+  };
 }
 
 export interface ShopifyCollection {
@@ -199,6 +208,15 @@ export async function getProductByHandle(handle: string) {
                 amount
                 currencyCode
               }
+            }
+          }
+        }
+        collections(first: 5) {
+          edges {
+            node {
+              id
+              title
+              handle
             }
           }
         }
@@ -644,6 +662,61 @@ export async function getCustomer(customerAccessToken: string) {
     console.error('Error fetching customer:', error);
     return null;
   }
+}
+
+/**
+ * Collection mapping for Shopify handles to Czech category names
+ */
+export const collectionMapping = {
+  'náhrdelníky': 'nahrdelniky',
+  'náušnice': 'nausnice', 
+  'prsteny': 'prsteny',
+  'náramky': 'naramky'
+} as const;
+
+/**
+ * Reverse mapping from Shopify handles to Czech names
+ */
+export const reverseCollectionMapping = {
+  'nahrdelniky': 'náhrdelníky',
+  'nausnice': 'náušnice',
+  'prsteny': 'prsteny',
+  'naramky': 'náramky'
+} as const;
+
+/**
+ * Get the primary collection for a product (first collection or fallback based on product handle)
+ * @param product - The Shopify product
+ * @returns Object with collection handle and title
+ */
+export function getPrimaryCollection(product: ShopifyProduct): { handle: string; title: string } {
+  // If product has collections, use the first one
+  if (product.collections?.edges && product.collections.edges.length > 0) {
+    const firstCollection = product.collections.edges[0].node;
+    const czechTitle = reverseCollectionMapping[firstCollection.handle as keyof typeof reverseCollectionMapping] || firstCollection.title;
+    return {
+      handle: firstCollection.handle,
+      title: czechTitle
+    };
+  }
+
+  // Fallback: determine collection from product handle
+  const productHandle = product.handle.toLowerCase();
+  if (productHandle.includes('nahr') || productHandle.includes('necklace')) {
+    return { handle: 'nahrdelniky', title: 'náhrdelníky' };
+  }
+  if (productHandle.includes('naus') || productHandle.includes('earring')) {
+    return { handle: 'nausnice', title: 'náušnice' };
+  }
+  if (productHandle.includes('prst') || productHandle.includes('ring')) {
+    return { handle: 'prsteny', title: 'prsteny' };
+  }
+  if (productHandle.includes('nara') || productHandle.includes('bracelet')) {
+    return { handle: 'naramky', title: 'náramky' };
+  }
+
+  // Default fallback
+  return { handle: 'nahrdelniky', title: 'náhrdelníky' };
 }
 
 /**

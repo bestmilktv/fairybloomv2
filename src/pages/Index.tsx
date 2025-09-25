@@ -4,7 +4,7 @@ import Hero from '@/components/Hero';
 import ProductSection from '@/components/ProductSection';
 import Slideshow from '@/components/Slideshow';
 import Footer from '@/components/Footer';
-import { getProductsByCollection } from '@/lib/shopify';
+import { getProductsByCollection, collectionMapping } from '@/lib/shopify';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -17,13 +17,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping for Shopify
-  const collectionMapping = {
-    'náhrdelníky': 'nahrdelniky',
-    'náušnice': 'nausnice', 
-    'prsteny': 'prsteny',
-    'náramky': 'naramky'
-  };
+  // Collection mapping is now imported from shopify.ts
 
   // Helper function to get fallback image
   const getFallbackImage = (category: string) => {
