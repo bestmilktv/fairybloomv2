@@ -142,11 +142,11 @@ const ProductDetailPage = () => {
 
   // Helper function to get category path
   const getCategoryPath = (productHandle: string) => {
-    if (productHandle.includes('nahr') || productHandle.includes('necklace')) return '/náhrdelníky';
-    if (productHandle.includes('naus') || productHandle.includes('earring')) return '/náušnice';
+    if (productHandle.includes('nahr') || productHandle.includes('necklace')) return '/nahrdelniky';
+    if (productHandle.includes('naus') || productHandle.includes('earring')) return '/nausnice';
     if (productHandle.includes('prst') || productHandle.includes('ring')) return '/prsteny';
-    if (productHandle.includes('nara') || productHandle.includes('bracelet')) return '/náramky';
-    return '/náhrdelníky';
+    if (productHandle.includes('nara') || productHandle.includes('bracelet')) return '/naramky';
+    return '/nahrdelniky';
   };
 
   // Fetch inventory for a variant
@@ -259,7 +259,7 @@ const ProductDetailPage = () => {
           </Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link to="/náhrdelníky">
+                <Link to="/nahrdelniky">
                   Prohlédnout produkty
                 </Link>
               </Button>
@@ -271,12 +271,12 @@ const ProductDetailPage = () => {
     );
   }
 
-  // Collection mapping for URL paths - using slugified handles
+  // Collection mapping for URL paths - using actual Shopify collection handles
   const collectionMapping = {
-    'nahrdelniky': createCollectionHandle('náhrdelníky'),
-    'nausnice': createCollectionHandle('náušnice'), 
-    'prsteny': createCollectionHandle('prsteny'),
-    'naramky': createCollectionHandle('náramky')
+    'nahrdelniky': 'náhrdelníky',  // Actual Shopify handle
+    'nausnice': 'náušnice',        // Actual Shopify handle
+    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
+    'naramky': 'náramky'           // Actual Shopify handle
   };
 
 

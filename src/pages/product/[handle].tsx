@@ -284,12 +284,12 @@ const DynamicProductPage = () => {
   // Get primary collection for back button
   const primaryCollection = product.collections?.edges?.[0]?.node;
   
-  // Collection mapping for URL paths - using slugified handles
+  // Collection mapping for URL paths - using actual Shopify collection handles
   const collectionMapping = {
-    'nahrdelniky': createCollectionHandle('náhrdelníky'),
-    'nausnice': createCollectionHandle('náušnice'), 
-    'prsteny': createCollectionHandle('prsteny'),
-    'naramky': createCollectionHandle('náramky')
+    'nahrdelniky': 'náhrdelníky',  // Actual Shopify handle
+    'nausnice': 'náušnice',        // Actual Shopify handle
+    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
+    'naramky': 'náramky'           // Actual Shopify handle
   };
 
 

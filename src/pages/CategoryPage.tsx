@@ -20,12 +20,12 @@ const CategoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping for Shopify - using slugified handles
+  // Collection mapping for Shopify - using actual Shopify collection handles
   const collectionMapping = {
-    'náhrdelníky': createCollectionHandle('náhrdelníky'),
-    'náušnice': createCollectionHandle('náušnice'), 
-    'prsteny': createCollectionHandle('prsteny'),
-    'náramky': createCollectionHandle('náramky')
+    'náhrdelníky': 'náhrdelníky',  // Actual Shopify handle
+    'náušnice': 'náušnice',        // Actual Shopify handle
+    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
+    'náramky': 'náramky'           // Actual Shopify handle
   };
 
   // Reverse mapping from slugified URLs to original category names
