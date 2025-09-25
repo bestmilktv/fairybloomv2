@@ -300,9 +300,6 @@ const DynamicProductPage = () => {
         <div className="max-w-7xl mx-auto">
           {/* Back to Collection Button */}
           <div className="mb-6 fade-in-up">
-            {console.log('DynamicProductPage: Product object:', product)}
-            {console.log('DynamicProductPage: Product tags:', product?.tags)}
-            {console.log('DynamicProductPage: Primary collection:', primaryCollection)}
             <BackToCollectionButton
               productTags={product?.tags}
               fallbackCollectionHandle={primaryCollection ? collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle : undefined}

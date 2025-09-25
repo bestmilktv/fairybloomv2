@@ -14,79 +14,33 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   fallbackCollectionTitle,
 }) => {
   // Extract collection tag from product tags, completely ignoring "Home page" tag
-  const getValidCollectionTag = (tags: string[]): string | null => {
+  const getCollectionTag = (tags: string[]): string | null => {
     if (!tags || tags.length === 0) {
       return null;
     }
     
-    // Find the first tag that is NOT "Home page" (case-insensitive, with trimming)
-    for (const tag of tags) {
-      const normalizedTag = tag.toLowerCase().trim();
-      if (normalizedTag !== "home page" && normalizedTag !== "homepage" && normalizedTag !== "home") {
-        return tag; // Return the original tag (not normalized)
-      }
-    }
+    // Filter out "Home page" tag completely and get the first remaining tag
+    const filteredTags = tags.filter(tag => tag.toLowerCase() !== "home page");
+    const collectionTag = filteredTags.length > 0 ? filteredTags[0] : null;
     
-    return null; // No valid collection tag found
+    return collectionTag;
   };
 
-  // AGGRESSIVE: Try multiple sources to find a collection
-  let collectionName = null;
+  // Get the collection tag and create the link
+  const collectionTag = productTags ? getCollectionTag(productTags) : null;
+  
   let linkPath = '/';
   let buttonText = 'Zpět na hlavní stránku';
   
-  // Method 1: Try to get collection from product tags
-  if (productTags && productTags.length > 0) {
-    collectionName = getValidCollectionTag(productTags);
-    if (collectionName) {
-      console.log('BackToCollectionButton: Found collection from tags:', collectionName);
-    }
+  if (collectionTag) {
+    // Use our custom slugify to create URL-friendly path from the collection tag
+    linkPath = createCollectionPath(collectionTag);
+    buttonText = `Zpět do ${collectionTag}`;
+  } else if (fallbackCollectionHandle && fallbackCollectionTitle) {
+    // Fallback to the old logic if no valid tags found
+    linkPath = createCollectionPath(fallbackCollectionTitle);
+    buttonText = `Zpět do ${fallbackCollectionTitle}`;
   }
-  
-  // Method 2: If no collection from tags, try fallback collection title
-  if (!collectionName && fallbackCollectionTitle) {
-    const normalizedFallback = fallbackCollectionTitle.toLowerCase().trim();
-    if (normalizedFallback !== "home page" && normalizedFallback !== "homepage" && normalizedFallback !== "home") {
-      collectionName = fallbackCollectionTitle;
-      console.log('BackToCollectionButton: Found collection from fallback:', collectionName);
-    }
-  }
-  
-  // Method 3: If still no collection, try to extract from fallback handle
-  if (!collectionName && fallbackCollectionHandle) {
-    // Map common handles to collection names
-    const handleToCollectionMap: Record<string, string> = {
-      'nahrdelniky': 'Náhrdelníky',
-      'nausnice': 'Náušnice', 
-      'prsteny': 'Prsteny',
-      'naramky': 'Náramky',
-      'necklaces': 'Náhrdelníky',
-      'earrings': 'Náušnice',
-      'rings': 'Prsteny',
-      'bracelets': 'Náramky'
-    };
-    
-    const mappedCollection = handleToCollectionMap[fallbackCollectionHandle.toLowerCase()];
-    if (mappedCollection) {
-      collectionName = mappedCollection;
-      console.log('BackToCollectionButton: Found collection from handle mapping:', collectionName);
-    }
-  }
-  
-  // Final result
-  if (collectionName) {
-    linkPath = createCollectionPath(collectionName);
-    buttonText = `Zpět do ${collectionName}`;
-  }
-  
-  console.log('BackToCollectionButton: Final result:', {
-    productTags,
-    fallbackCollectionHandle,
-    fallbackCollectionTitle,
-    collectionName,
-    linkPath,
-    buttonText
-  });
 
   return (
     <Link
@@ -100,3 +54,4 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
 };
 
 export default BackToCollectionButton;
+
