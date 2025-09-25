@@ -694,38 +694,55 @@ export const reverseCollectionMapping = {
 } as const;
 
 /**
+ * Get the correct collection tag from product tags (ignoring "Home page")
+ * @param product - The Shopify product
+ * @returns The collection tag or null if not found
+ */
+export function getCollectionTag(product: ShopifyProduct): string | null {
+  if (!product.tags || product.tags.length === 0) {
+    return null;
+  }
+  
+  // Find the first tag that is NOT "Home page" and looks like a collection name
+  return product.tags.find(tag => 
+    tag.toLowerCase() !== 'home page' && 
+    (tag.includes('náhrdelník') || tag.includes('náušnice') || tag.includes('prsten') || tag.includes('náramek'))
+  ) || null;
+}
+
+/**
  * Get the primary collection for a product using tags (ignoring "Home page" tag)
  * @param product - The Shopify product
  * @returns Object with collection handle and title
  */
 export function getPrimaryCollection(product: ShopifyProduct): { handle: string; title: string } {
   // First priority: Use product tags, ignoring "Home page" tag
-  if (product.tags && product.tags.length > 0) {
-    // Find the first tag that is NOT "Home page" and looks like a collection name
-    const collectionTag = product.tags.find(tag => 
-      tag.toLowerCase() !== 'home page' && 
-      (tag.includes('náhrdelník') || tag.includes('náušnice') || tag.includes('prsten') || tag.includes('náramek'))
+  const collectionTag = getCollectionTag(product);
+  if (collectionTag) {
+    const slugifiedHandle = slugifyCollection(collectionTag);
+    const czechTitle = deslugifyCollection(slugifiedHandle);
+    return {
+      handle: slugifiedHandle,
+      title: czechTitle
+    };
+  }
+
+  // Second priority: Use collections if available (also ignore "Home page" collection)
+  if (product.collections?.edges && product.collections.edges.length > 0) {
+    // Find first collection that is not "Home page"
+    const validCollection = product.collections.edges.find(edge => 
+      edge.node.title.toLowerCase() !== 'home page'
     );
     
-    if (collectionTag) {
-      const slugifiedHandle = slugifyCollection(collectionTag);
+    if (validCollection) {
+      const collection = validCollection.node;
+      const slugifiedHandle = slugifyCollection(collection.title);
       const czechTitle = deslugifyCollection(slugifiedHandle);
       return {
         handle: slugifiedHandle,
         title: czechTitle
       };
     }
-  }
-
-  // Second priority: Use collections if available
-  if (product.collections?.edges && product.collections.edges.length > 0) {
-    const firstCollection = product.collections.edges[0].node;
-    const slugifiedHandle = slugifyCollection(firstCollection.title);
-    const czechTitle = deslugifyCollection(slugifiedHandle);
-    return {
-      handle: slugifiedHandle,
-      title: czechTitle
-    };
   }
 
   // Fallback: determine collection from product handle
@@ -745,6 +762,62 @@ export function getPrimaryCollection(product: ShopifyProduct): { handle: string;
 
   // Default fallback
   return { handle: 'nahrdelniky', title: 'Náhrdelníky' };
+}
+
+/**
+ * Get the correct collection handle from a category name
+ * @param categoryName - The category name (Czech or English)
+ * @returns The collection handle or null if not found
+ */
+export function getCollectionHandle(categoryName: string): string | null {
+  // Check if it's already a handle
+  if (Object.values(collectionMapping).includes(categoryName as any)) {
+    return categoryName;
+  }
+  
+  // Check if it's a Czech name
+  if (collectionMapping[categoryName as keyof typeof collectionMapping]) {
+    return collectionMapping[categoryName as keyof typeof collectionMapping];
+  }
+  
+  // Try to find by partial match
+  const lowerCategory = categoryName.toLowerCase();
+  for (const [czechName, handle] of Object.entries(collectionMapping)) {
+    if (czechName.toLowerCase().includes(lowerCategory) || lowerCategory.includes(czechName.toLowerCase())) {
+      return handle;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Get all collections from Shopify (for debugging)
+ * @returns Promise with all collections
+ */
+export async function getAllCollections() {
+  const query = `
+    query GetAllCollections {
+      collections(first: 50) {
+        edges {
+          node {
+            id
+            title
+            handle
+            description
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetchShopify<{ collections: { edges: Array<{ node: { id: string; title: string; handle: string; description?: string } }> } }>(query);
+    return response.data.collections.edges.map(edge => edge.node);
+  } catch (error) {
+    console.error('Error fetching all collections:', error);
+    return [];
+  }
 }
 
 /**

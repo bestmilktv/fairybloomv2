@@ -8,7 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
-import { getProductByHandle, getPrimaryCollection } from '@/lib/shopify';
+import { getProductByHandle, getPrimaryCollection, getCollectionTag } from '@/lib/shopify';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';

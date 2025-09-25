@@ -4,7 +4,7 @@ import Navigation from '@/components/Navigation';
 import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
 import BackToHomepageButton from '@/components/BackToHomepageButton';
-import { getProductsByCollection, getVariantInventory, collectionMapping } from '@/lib/shopify';
+import { getProductsByCollection, getVariantInventory, collectionMapping, getAllCollections, getCollectionHandle } from '@/lib/shopify';
 import { deslugifyCollection } from '@/lib/slugify';
 
 // Import product images
@@ -35,8 +35,8 @@ const CategoryPage = () => {
         setIsLoading(true);
         setHasError(false);
 
-        // Use the slug directly as it's already the Shopify handle
-        const shopifyHandle = categorySlug;
+        // Get the correct collection handle
+        const shopifyHandle = getCollectionHandle(categorySlug) || categorySlug;
         
         if (shopifyHandle) {
           const collection = await getProductsByCollection(shopifyHandle, 20);
@@ -187,7 +187,13 @@ const CategoryPage = () => {
             </div>
           ) : hasError ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground mb-6">Nepodařilo se načíst produkty z obchodu. Zkontrolujte prosím připojení k internetu.</p>
+              <p className="text-muted-foreground mb-6">
+                Kategorie "{category}" nebyla nalezena nebo neobsahuje žádné produkty. 
+                Zkontrolujte prosím, zda je název kategorie správný.
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Dostupné kategorie: {Object.keys(collectionMapping).join(', ')}
+              </p>
               <div className="text-center">
                 <button 
                   onClick={() => window.location.reload()} 

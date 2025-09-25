@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
-import { getProductByHandle, createCart, getPrimaryCollection } from '@/lib/shopify';
+import { getProductByHandle, createCart, getPrimaryCollection, getCollectionTag } from '@/lib/shopify';
 import { useCart } from '@/contexts/CartContext';
 
 // Import fallback images
