@@ -1,10 +1,10 @@
-import { useLocation } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Navigation from '@/components/Navigation';
 import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
 import BackToHomepageButton from '@/components/BackToHomepageButton';
-import { getProductsByCollection, getVariantInventory, collectionMapping, getAllCollections, getCollectionHandle } from '@/lib/shopify';
+import { getProductsByCollection, getVariantInventory, collectionMapping } from '@/lib/shopify';
 import { deslugifyCollection } from '@/lib/slugify';
 
 // Import product images
@@ -14,34 +14,42 @@ import ringImage from '@/assets/ring-placeholder.jpg';
 import braceletImage from '@/assets/bracelet-placeholder.jpg';
 
 const CategoryPage = () => {
-  const location = useLocation();
-  const categorySlug = location.pathname.substring(1); // Remove leading slash
+  const { handle } = useParams<{ handle: string }>();
   const [shopifyProducts, setShopifyProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [collection, setCollection] = useState<any>(null);
 
-  // Convert slug back to Czech name for display
-  const category = deslugifyCollection(categorySlug);
+  // Convert handle back to Czech name for display
+  const category = handle ? deslugifyCollection(handle) : null;
 
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [categorySlug]);
+  }, [handle]);
 
   // Fetch products from Shopify
   useEffect(() => {
     const fetchShopifyProducts = async () => {
+      if (!handle) {
+        setHasError(true);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setHasError(false);
 
-        // Get the correct collection handle
-        const shopifyHandle = getCollectionHandle(categorySlug) || categorySlug;
+        // Use the handle directly from the URL to query Shopify
+        console.log('Fetching collection with handle:', handle);
+        const collection = await getProductsByCollection(handle, 50);
+        console.log('Collection response:', collection);
         
-        if (shopifyHandle) {
-          const collection = await getProductsByCollection(shopifyHandle, 20);
+        if (collection) {
+          setCollection(collection);
           
-          if (collection && collection.products?.edges) {
+          if (collection.products?.edges && collection.products.edges.length > 0) {
             const products = await Promise.all(
               collection.products.edges.map(async (edge) => {
                 const product = edge.node;
@@ -75,9 +83,11 @@ const CategoryPage = () => {
             
             setShopifyProducts(products);
           } else {
-            setHasError(true);
+            // Collection exists but has no products
+            setShopifyProducts([]);
           }
         } else {
+          // Collection not found in Shopify
           setHasError(true);
         }
       } catch (error) {
@@ -88,10 +98,8 @@ const CategoryPage = () => {
       }
     };
 
-    if (categorySlug) {
-      fetchShopifyProducts();
-    }
-  }, [categorySlug]);
+    fetchShopifyProducts();
+  }, [handle, category]);
 
   // Helper function to get fallback image
   const getFallbackImage = (category: string | null) => {
@@ -129,15 +137,23 @@ const CategoryPage = () => {
     }
   };
 
-  // Get category data using the Czech name
-  const categoryData = category ? categoryInfo[category as keyof typeof categoryInfo] : null;
+  // Get category data - use Shopify collection data if available, otherwise fallback to hardcoded info
+  const categoryData = collection ? {
+    title: collection.title,
+    subtitle: collection.description || `Elegantní ${category} z naší kolekce`,
+    image: category ? categoryInfo[category as keyof typeof categoryInfo]?.image : necklaceImage
+  } : (category ? categoryInfo[category as keyof typeof categoryInfo] : null);
 
-  if (!categoryData) {
+  // Show error only if we have an error and no collection data
+  if (hasError && !collection) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
         <div className="pt-24 text-center">
           <h1 className="text-4xl font-serif text-luxury">Kategorie nenalezena</h1>
+          <p className="text-muted-foreground mt-4">
+            Kategorie "{handle}" nebyla nalezena v obchodě.
+          </p>
         </div>
         <Footer />
       </div>
@@ -188,11 +204,7 @@ const CategoryPage = () => {
           ) : hasError ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-6">
-                Kategorie "{category}" nebyla nalezena nebo neobsahuje žádné produkty. 
-                Zkontrolujte prosím, zda je název kategorie správný.
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Dostupné kategorie: {Object.keys(collectionMapping).join(', ')}
+                Nepodařilo se načíst produkty z obchodu. Zkontrolujte prosím připojení k internetu.
               </p>
               <div className="text-center">
                 <button 
