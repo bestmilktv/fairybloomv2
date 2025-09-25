@@ -127,6 +127,7 @@ export async function fetchShopify<T>(
  * @param first - Number of products to fetch (default: 20)
  * @returns Promise with collection data including products
  */
+
 export async function getProductsByCollection(handle: string, first: number = 20) {
   const query = `
     query GetProducts($handle: String!, $first: Int!) {

@@ -34,10 +34,10 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
 
   // Collection mapping for Shopify - using slugified handles
   const collectionMapping = {
-    'Náhrdelníky': 'náhrdelníky',  // Actual Shopify handle
-    'Náušnice': 'náušnice',        // Actual Shopify handle
-    'Prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
-    'Náramky': 'náramky'           // Actual Shopify handle
+    'Náhrdelníky': 'náhrdelníky',  // Original Shopify handle
+    'Náušnice': 'náušnice',        // Original Shopify handle
+    'Prsteny': 'prsteny',          // Original Shopify handle
+    'Náramky': 'náramky'           // Original Shopify handle
   }
 
   // Helper function to get fallback image

@@ -20,12 +20,12 @@ const CategoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping for Shopify - using actual Shopify collection handles
+  // Collection mapping for Shopify - using original handles (these work!)
   const collectionMapping = {
-    'náhrdelníky': 'náhrdelníky',  // Actual Shopify handle
-    'náušnice': 'náušnice',        // Actual Shopify handle
-    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
-    'náramky': 'náramky'           // Actual Shopify handle
+    'náhrdelníky': 'náhrdelníky',  // Original Shopify handle
+    'náušnice': 'náušnice',        // Original Shopify handle
+    'prsteny': 'prsteny',          // Original Shopify handle
+    'náramky': 'náramky'           // Original Shopify handle
   };
 
   // Reverse mapping from slugified URLs to original category names
@@ -52,6 +52,7 @@ const CategoryPage = () => {
         // Convert slugified URL back to original category name
         const originalCategory = decodedCategory ? slugToCategoryMapping[decodedCategory as keyof typeof slugToCategoryMapping] : null;
         const shopifyHandle = originalCategory ? collectionMapping[originalCategory as keyof typeof collectionMapping] : null;
+        
         
         if (shopifyHandle) {
           const collection = await getProductsByCollection(shopifyHandle, 20);

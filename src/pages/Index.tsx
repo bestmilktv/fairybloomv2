@@ -18,12 +18,12 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping for Shopify - using actual Shopify collection handles
+  // Collection mapping for Shopify - using original handles (these work!)
   const collectionMapping = {
-    'náhrdelníky': 'náhrdelníky',  // Actual Shopify handle
-    'náušnice': 'náušnice',        // Actual Shopify handle
-    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
-    'náramky': 'náramky'           // Actual Shopify handle
+    'náhrdelníky': 'náhrdelníky',  // Original Shopify handle
+    'náušnice': 'náušnice',        // Original Shopify handle
+    'prsteny': 'prsteny',          // Original Shopify handle
+    'náramky': 'náramky'           // Original Shopify handle
   };
 
   // Helper function to get fallback image
@@ -44,12 +44,15 @@ const Index = () => {
         setIsLoading(true);
         setHasError(false);
 
+
+
         // Fetch each collection individually
         const categories = Object.keys(collectionMapping);
         const transformedCategories = [];
 
         for (const czechKey of categories) {
           const shopifyHandle = collectionMapping[czechKey as keyof typeof collectionMapping];
+          
           
           try {
             const collection = await getProductsByCollection(shopifyHandle, 3);
