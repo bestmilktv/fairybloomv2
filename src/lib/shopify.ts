@@ -10,6 +10,7 @@ export interface ShopifyProduct {
   description: string;
   handle: string;
   availableForSale: boolean;
+  tags: string[];
   images: {
     edges: Array<{
       node: {
@@ -191,6 +192,7 @@ export async function getProductByHandle(handle: string) {
         handle
         description
         availableForSale
+        tags
         images(first: 6) {
           edges {
             node {

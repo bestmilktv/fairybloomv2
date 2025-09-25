@@ -8,6 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle } from '@/lib/shopify';
+import { getPrimaryCollectionFromTags } from '@/lib/utils';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 
 // Import product images for fallback
@@ -57,13 +58,19 @@ const ProductDetailPage = () => {
           const firstImage = shopifyProduct.images?.edges?.[0]?.node;
           const firstVariant = shopifyProduct.variants?.edges?.[0]?.node;
           
-          // Get primary collection
-          const firstCollection = shopifyProduct.collections?.edges?.[0]?.node;
-          if (firstCollection) {
-            setPrimaryCollection({
-              handle: firstCollection.handle,
-              title: firstCollection.title
-            });
+          // Get primary collection using tags to filter out "Home page"
+          const collections = shopifyProduct.collections?.edges?.map(edge => ({
+            handle: edge.node.handle,
+            title: edge.node.title
+          })) || [];
+          
+          const primaryCollectionData = getPrimaryCollectionFromTags(
+            shopifyProduct.tags || [], 
+            collections
+          );
+          
+          if (primaryCollectionData) {
+            setPrimaryCollection(primaryCollectionData);
           }
           
           // Transform Shopify product to match expected format
