@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
-import BackToCollectionButton from '@/components/BackToCollectionButton';
-import { getProductByHandle, getPrimaryCollection, getCollectionTag } from '@/lib/shopify';
+import { getProductByHandle } from '@/lib/shopify';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -24,7 +23,6 @@ const ProductDetailPage = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [animatingToCart, setAnimatingToCart] = useState(false);
   const [product, setProduct] = useState<any>(null);
-  const [shopifyProduct, setShopifyProduct] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [inventory, setInventory] = useState<number | null>(null);
@@ -51,27 +49,26 @@ const ProductDetailPage = () => {
         setHasError(false);
 
         // Try to fetch from Shopify using the handle
-        const shopifyProductData = await getProductByHandle(handle);
+        const shopifyProduct = await getProductByHandle(handle);
         
-        if (shopifyProductData) {
-          setShopifyProduct(shopifyProductData);
-          const firstImage = shopifyProductData.images?.edges?.[0]?.node;
-          const firstVariant = shopifyProductData.variants?.edges?.[0]?.node;
+        if (shopifyProduct) {
+          const firstImage = shopifyProduct.images?.edges?.[0]?.node;
+          const firstVariant = shopifyProduct.variants?.edges?.[0]?.node;
           
           // Transform Shopify product to match expected format
           const transformedProduct = {
-            id: shopifyProductData.id,
-            title: shopifyProductData.title,
+            id: shopifyProduct.id,
+            title: shopifyProduct.title,
             price: firstVariant?.price ? 
               `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
               'Cena na vyžádání',
-            images: shopifyProductData.images?.edges?.map(edge => edge.node.url) || [getFallbackImage()],
+            images: shopifyProduct.images?.edges?.map(edge => edge.node.url) || [getFallbackImage()],
             category: getCategoryFromHandle(handle),
             categoryPath: getCategoryPath(handle),
-            shortDescription: shopifyProductData.description || 'Elegantní šperk z naší kolekce',
-            fullDescription: shopifyProductData.description || 'Elegantní šperk z naší kolekce s ruční výrobou a přírodními materiály.',
-            handle: shopifyProductData.handle,
-            variants: shopifyProductData.variants?.edges?.map(edge => edge.node) || [],
+            shortDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce',
+            fullDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce s ruční výrobou a přírodními materiály.',
+            handle: shopifyProduct.handle,
+            variants: shopifyProduct.variants?.edges?.map(edge => edge.node) || [],
             inventoryQuantity: null // Will be updated when inventory is fetched
           };
           
@@ -266,27 +263,15 @@ const ProductDetailPage = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      {/* Back to Collection Button */}
-      <div className="pt-24 px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          {shopifyProduct && (
-            <BackToCollectionButton
-              collectionHandle={getPrimaryCollection(shopifyProduct).handle}
-              collectionTitle={getPrimaryCollection(shopifyProduct).title}
-            />
-          )}
-        </div>
-      </div>
-      
       {/* Breadcrumb */}
-      <div className="px-6 py-6">
+      <div className="pt-24 px-6 py-6">
         <div className="max-w-7xl mx-auto">
           <nav className="flex items-center space-x-2 text-sm text-muted-foreground">
             <Link to="/" className="hover:text-foreground transition-colors">
               Domů
             </Link>
             <span>/</span>
-            <Link to={`/${getPrimaryCollection(shopifyProduct).handle}`} className="hover:text-foreground transition-colors">
+            <Link to={product.categoryPath} className="hover:text-foreground transition-colors">
               {product.category}
             </Link>
             <span>/</span>

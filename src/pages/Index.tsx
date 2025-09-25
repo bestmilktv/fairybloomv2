@@ -4,8 +4,7 @@ import Hero from '@/components/Hero';
 import ProductSection from '@/components/ProductSection';
 import Slideshow from '@/components/Slideshow';
 import Footer from '@/components/Footer';
-import { getProductsByCollection, collectionMapping } from '@/lib/shopify';
-import { slugifyCollection } from '@/lib/slugify';
+import { getProductsByCollection } from '@/lib/shopify';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -18,7 +17,13 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping is now imported from shopify.ts
+  // Collection mapping for Shopify
+  const collectionMapping = {
+    'náhrdelníky': 'nahrdelniky',
+    'náušnice': 'nausnice', 
+    'prsteny': 'prsteny',
+    'náramky': 'naramky'
+  };
 
   // Helper function to get fallback image
   const getFallbackImage = (category: string) => {
@@ -70,8 +75,7 @@ const Index = () => {
                 id: czechKey,
                 title: collection.title || czechKey,
                 subtitle: collection.description || `Elegantní ${czechKey} z naší kolekce`,
-                products: products,
-                handle: collection.handle || shopifyHandle
+                products: products
               });
             } else {
               // If no products found, create empty category
@@ -79,8 +83,7 @@ const Index = () => {
                 id: czechKey,
                 title: czechKey,
                 subtitle: `Elegantní ${czechKey} z naší kolekce`,
-                products: [],
-                handle: shopifyHandle
+                products: []
               });
             }
           } catch (error) {
@@ -90,8 +93,7 @@ const Index = () => {
               id: czechKey,
               title: czechKey,
               subtitle: `Elegantní ${czechKey} z naší kolekce`,
-              products: [],
-              handle: shopifyHandle
+              products: []
             });
           }
         }
@@ -164,7 +166,7 @@ const Index = () => {
             title={category.title}
             subtitle={category.subtitle}
             products={category.products}
-            categoryPath={`/${category.handle}`}
+            categoryPath={`/${category.id}`}
           />
         ))
       )}

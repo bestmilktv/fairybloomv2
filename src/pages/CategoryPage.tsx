@@ -1,11 +1,9 @@
-import { useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Navigation from '@/components/Navigation';
 import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
-import BackToHomepageButton from '@/components/BackToHomepageButton';
-import { getProductsByCollection, getVariantInventory, collectionMapping } from '@/lib/shopify';
-import { deslugifyCollection, addDiacritics, removeDiacriticsFromHandle } from '@/lib/slugify';
+import { getProductsByCollection, getVariantInventory } from '@/lib/shopify';
 
 // Import product images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -14,53 +12,39 @@ import ringImage from '@/assets/ring-placeholder.jpg';
 import braceletImage from '@/assets/bracelet-placeholder.jpg';
 
 const CategoryPage = () => {
-  const { handle } = useParams<{ handle: string }>();
+  const location = useLocation();
+  const category = location.pathname.substring(1); // Remove leading slash
   const [shopifyProducts, setShopifyProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [collection, setCollection] = useState<any>(null);
 
-  // Convert handle back to Czech name for display
-  const category = handle ? deslugifyCollection(handle) : null;
+  // Collection mapping for Shopify
+  const collectionMapping = {
+    'náhrdelníky': 'nahrdelniky',
+    'náušnice': 'nausnice', 
+    'prsteny': 'prsteny',
+    'náramky': 'naramky'
+  };
 
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [handle]);
+  }, [category]);
 
   // Fetch products from Shopify
   useEffect(() => {
     const fetchShopifyProducts = async () => {
-      if (!handle) {
-        setHasError(true);
-        setIsLoading(false);
-        return;
-      }
-
       try {
         setIsLoading(true);
         setHasError(false);
 
-        // Use the handle directly from the URL to query Shopify
-        // Try the handle as-is first
-        let collection = await getProductsByCollection(handle, 50);
+        const decodedCategory = category ? decodeURIComponent(category) : null;
+        const shopifyHandle = decodedCategory ? collectionMapping[decodedCategory as keyof typeof collectionMapping] : null;
         
-        // If not found, try with diacritics (if handle doesn't have them)
-        if (!collection && !handle.includes('á') && !handle.includes('í') && !handle.includes('ú') && !handle.includes('ý')) {
-          const handleWithDiacritics = addDiacritics(handle);
-          collection = await getProductsByCollection(handleWithDiacritics, 50);
-        }
-        
-        // If still not found, try without diacritics (if handle has them)
-        if (!collection && (handle.includes('á') || handle.includes('í') || handle.includes('ú') || handle.includes('ý'))) {
-          const handleWithoutDiacritics = removeDiacriticsFromHandle(handle);
-          collection = await getProductsByCollection(handleWithoutDiacritics, 50);
-        }
-        
-        if (collection) {
-          setCollection(collection);
+        if (shopifyHandle) {
+          const collection = await getProductsByCollection(shopifyHandle, 20);
           
-          if (collection.products?.edges && collection.products.edges.length > 0) {
+          if (collection && collection.products?.edges) {
             const products = await Promise.all(
               collection.products.edges.map(async (edge) => {
                 const product = edge.node;
@@ -84,7 +68,7 @@ const CategoryPage = () => {
                   price: firstVariant?.price ? 
                     `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                     'Cena na vyžádání',
-                  image: firstImage?.url || getFallbackImage(category),
+                  image: firstImage?.url || getFallbackImage(decodedCategory),
                   description: product.description || 'Elegantní šperk z naší kolekce',
                   handle: product.handle,
                   inventoryQuantity
@@ -94,11 +78,9 @@ const CategoryPage = () => {
             
             setShopifyProducts(products);
           } else {
-            // Collection exists but has no products
-            setShopifyProducts([]);
+            setHasError(true);
           }
         } else {
-          // Collection not found in Shopify
           setHasError(true);
         }
       } catch (error) {
@@ -109,8 +91,10 @@ const CategoryPage = () => {
       }
     };
 
-    fetchShopifyProducts();
-  }, [handle, category]);
+    if (category) {
+      fetchShopifyProducts();
+    }
+  }, [category]);
 
   // Helper function to get fallback image
   const getFallbackImage = (category: string | null) => {
@@ -148,27 +132,16 @@ const CategoryPage = () => {
     }
   };
 
-  // Get category data - use Shopify collection data if available, otherwise fallback to hardcoded info
-  const categoryData = collection ? {
-    title: collection.title || 'Kategorie',
-    subtitle: collection.description || `Elegantní ${category} z naší kolekce`,
-    image: category ? categoryInfo[category as keyof typeof categoryInfo]?.image : necklaceImage
-  } : (category ? categoryInfo[category as keyof typeof categoryInfo] : {
-    title: 'Kategorie',
-    subtitle: 'Elegantní šperky z naší kolekce',
-    image: necklaceImage
-  });
+  // URL decode the category name to handle Czech characters properly
+  const decodedCategory = category ? decodeURIComponent(category) : null;
+  const categoryData = decodedCategory ? categoryInfo[decodedCategory as keyof typeof categoryInfo] : null;
 
-  // Show error only if we have an error and no collection data
-  if (hasError && !collection) {
+  if (!categoryData) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
         <div className="pt-24 text-center">
           <h1 className="text-4xl font-serif text-luxury">Kategorie nenalezena</h1>
-          <p className="text-muted-foreground mt-4">
-            Kategorie "{handle}" nebyla nalezena v obchodě.
-          </p>
         </div>
         <Footer />
       </div>
@@ -182,21 +155,14 @@ const CategoryPage = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      {/* Back to Homepage Button */}
-      <div className="pt-24 px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          <BackToHomepageButton />
-        </div>
-      </div>
-      
       {/* Category Header */}
-      <section className="pb-16 px-6">
+      <section className="pt-32 pb-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-6 tracking-wide">
-            {categoryData?.title || 'Kategorie'}
+            {categoryData.title}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            {categoryData?.subtitle || 'Elegantní šperky z naší kolekce'}
+            {categoryData.subtitle}
           </p>
         </div>
       </section>
@@ -218,9 +184,7 @@ const CategoryPage = () => {
             </div>
           ) : hasError ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground mb-6">
-                Nepodařilo se načíst produkty z obchodu. Zkontrolujte prosím připojení k internetu.
-              </p>
+              <p className="text-muted-foreground mb-6">Nepodařilo se načíst produkty z obchodu. Zkontrolujte prosím připojení k internetu.</p>
               <div className="text-center">
                 <button 
                   onClick={() => window.location.reload()} 
@@ -236,7 +200,7 @@ const CategoryPage = () => {
             </div>
           ) : (
             <CategoryProductSection 
-              category={category || ''}
+              category={decodedCategory || ''}
               initialProducts={displayProducts}
             />
           )}

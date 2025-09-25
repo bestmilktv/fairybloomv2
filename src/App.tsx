@@ -49,7 +49,10 @@ const App = () => (
       <Sonner />
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/:handle" element={<CategoryPage />} />
+        <Route path="/náhrdelníky" element={<CategoryPage />} />
+        <Route path="/náušnice" element={<CategoryPage />} />
+        <Route path="/prsteny" element={<CategoryPage />} />
+        <Route path="/náramky" element={<CategoryPage />} />
         <Route path="/produkt/:handle" element={<ProductDetailPage />} />
         <Route path="/product-shopify/:handle" element={<DynamicProductPage />} />
         <Route path="/profile" element={<ProfilePage />} />

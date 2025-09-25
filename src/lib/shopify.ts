@@ -3,8 +3,6 @@
  * Handles GraphQL requests to Shopify's Storefront API
  */
 
-import { slugify, slugifyCollection, deslugifyCollection } from './slugify';
-
 // Types for Shopify API responses
 export interface ShopifyProduct {
   id: string;
@@ -12,7 +10,6 @@ export interface ShopifyProduct {
   description: string;
   handle: string;
   availableForSale: boolean;
-  tags: string[];
   images: {
     edges: Array<{
       node: {
@@ -33,21 +30,10 @@ export interface ShopifyProduct {
       };
     }>;
   };
-  collections?: {
-    edges: Array<{
-      node: {
-        id: string;
-        title: string;
-        handle: string;
-      };
-    }>;
-  };
 }
 
 export interface ShopifyCollection {
-  id: string;
   title: string;
-  handle: string;
   description?: string;
   products: {
     edges: Array<{
@@ -134,9 +120,7 @@ export async function getProductsByCollection(handle: string, first: number = 20
   const query = `
     query GetProducts($handle: String!, $first: Int!) {
       collectionByHandle(handle: $handle) {
-        id
         title
-        handle
         description
         products(first: $first) {
           edges {
@@ -145,7 +129,6 @@ export async function getProductsByCollection(handle: string, first: number = 20
               title
               description
               handle
-              tags
               images(first: 5) {
                 edges {
                   node {
@@ -199,7 +182,6 @@ export async function getProductByHandle(handle: string) {
         handle
         description
         availableForSale
-        tags
         images(first: 6) {
           edges {
             node {
@@ -217,15 +199,6 @@ export async function getProductByHandle(handle: string) {
                 amount
                 currencyCode
               }
-            }
-          }
-        }
-        collections(first: 5) {
-          edges {
-            node {
-              id
-              title
-              handle
             }
           }
         }
@@ -670,179 +643,6 @@ export async function getCustomer(customerAccessToken: string) {
   } catch (error) {
     console.error('Error fetching customer:', error);
     return null;
-  }
-}
-
-/**
- * Collection mapping for Czech category names to Shopify handles
- * Note: Shopify handles might have diacritics, so we map both ways
- */
-export const collectionMapping = {
-  'náhrdelníky': 'náhrdelníky',  // Try with diacritics first
-  'náušnice': 'náušnice',
-  'prsteny': 'prsteny',
-  'náramky': 'náramky'
-} as const;
-
-/**
- * Alternative mapping for diacritics-free handles (fallback)
- */
-export const collectionMappingNoDiacritics = {
-  'náhrdelníky': 'nahrdelniky',
-  'náušnice': 'nausnice',
-  'prsteny': 'prsteny',
-  'náramky': 'naramky'
-} as const;
-
-/**
- * Reverse mapping from handles to Czech names
- */
-export const reverseCollectionMapping = {
-  'náhrdelníky': 'náhrdelníky',
-  'náušnice': 'náušnice',
-  'prsteny': 'prsteny',
-  'náramky': 'náramky',
-  'nahrdelniky': 'náhrdelníky',
-  'nausnice': 'náušnice',
-  'naramky': 'náramky'
-} as const;
-
-/**
- * Get the correct collection tag from product tags (ignoring "Home page")
- * @param product - The Shopify product
- * @returns The collection tag or null if not found
- */
-export function getCollectionTag(product: ShopifyProduct): string | null {
-  if (!product.tags || product.tags.length === 0) {
-    return null;
-  }
-  
-  // Find the first tag that is NOT "Home page" and looks like a collection name
-  return product.tags.find(tag => 
-    tag.toLowerCase() !== 'home page' && 
-    (tag.includes('náhrdelník') || tag.includes('náušnice') || tag.includes('prsten') || tag.includes('náramek'))
-  ) || null;
-}
-
-/**
- * Get the primary collection for a product using tags (ignoring "Home page" tag)
- * @param product - The Shopify product
- * @returns Object with collection handle and title
- */
-export function getPrimaryCollection(product: ShopifyProduct): { handle: string; title: string } {
-  // First priority: Use product tags, ignoring "Home page" tag
-  const collectionTag = getCollectionTag(product);
-  if (collectionTag) {
-    const slugifiedHandle = slugifyCollection(collectionTag);
-    const czechTitle = deslugifyCollection(slugifiedHandle);
-    return {
-      handle: slugifiedHandle,
-      title: czechTitle
-    };
-  }
-
-  // Second priority: Use collections if available (also ignore "Home page" collection)
-  if (product.collections?.edges && product.collections.edges.length > 0) {
-    // Find first collection that is not "Home page"
-    const validCollection = product.collections.edges.find(edge => 
-      edge.node.title.toLowerCase() !== 'home page'
-    );
-    
-    if (validCollection) {
-      const collection = validCollection.node;
-      const slugifiedHandle = slugifyCollection(collection.title);
-      const czechTitle = deslugifyCollection(slugifiedHandle);
-      return {
-        handle: slugifiedHandle,
-        title: czechTitle
-      };
-    }
-  }
-
-  // Fallback: determine collection from product handle
-  const productHandle = product.handle.toLowerCase();
-  if (productHandle.includes('nahr') || productHandle.includes('necklace')) {
-    return { handle: 'nahrdelniky', title: 'Náhrdelníky' };
-  }
-  if (productHandle.includes('naus') || productHandle.includes('earring')) {
-    return { handle: 'nausnice', title: 'Náušnice' };
-  }
-  if (productHandle.includes('prst') || productHandle.includes('ring')) {
-    return { handle: 'prsteny', title: 'Prsteny' };
-  }
-  if (productHandle.includes('nara') || productHandle.includes('bracelet')) {
-    return { handle: 'naramky', title: 'Náramky' };
-  }
-
-  // Default fallback
-  return { handle: 'nahrdelniky', title: 'Náhrdelníky' };
-}
-
-/**
- * Get the correct collection handle from a category name
- * @param categoryName - The category name (Czech or English)
- * @returns The collection handle or null if not found
- */
-export function getCollectionHandle(categoryName: string): string | null {
-  // Check if it's already a handle (with or without diacritics)
-  if (Object.values(collectionMapping).includes(categoryName as any) || 
-      Object.values(collectionMappingNoDiacritics).includes(categoryName as any)) {
-    return categoryName;
-  }
-  
-  // Check if it's a Czech name - try with diacritics first
-  if (collectionMapping[categoryName as keyof typeof collectionMapping]) {
-    return collectionMapping[categoryName as keyof typeof collectionMapping];
-  }
-  
-  // Try without diacritics as fallback
-  if (collectionMappingNoDiacritics[categoryName as keyof typeof collectionMappingNoDiacritics]) {
-    return collectionMappingNoDiacritics[categoryName as keyof typeof collectionMappingNoDiacritics];
-  }
-  
-  // Try to find by partial match
-  const lowerCategory = categoryName.toLowerCase();
-  for (const [czechName, handle] of Object.entries(collectionMapping)) {
-    if (czechName.toLowerCase().includes(lowerCategory) || lowerCategory.includes(czechName.toLowerCase())) {
-      return handle;
-    }
-  }
-  
-  for (const [czechName, handle] of Object.entries(collectionMappingNoDiacritics)) {
-    if (czechName.toLowerCase().includes(lowerCategory) || lowerCategory.includes(czechName.toLowerCase())) {
-      return handle;
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Get all collections from Shopify (for debugging)
- * @returns Promise with all collections
- */
-export async function getAllCollections() {
-  const query = `
-    query GetAllCollections {
-      collections(first: 50) {
-        edges {
-          node {
-            id
-            title
-            handle
-            description
-          }
-        }
-      }
-    }
-  `;
-
-  try {
-    const response = await fetchShopify<{ collections: { edges: Array<{ node: { id: string; title: string; handle: string; description?: string } }> } }>(query);
-    return response.data.collections.edges.map(edge => edge.node);
-  } catch (error) {
-    console.error('Error fetching all collections:', error);
-    return [];
   }
 }
 
