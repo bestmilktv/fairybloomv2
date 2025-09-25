@@ -13,33 +13,41 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   fallbackCollectionHandle,
   fallbackCollectionTitle,
 }) => {
-  // Extract collection tag from product tags, completely ignoring "Home page" tag
-  const getCollectionTag = (tags: string[]): string | null => {
+  // BULLETPROOF: Extract collection tag from product tags, completely ignoring "Home page" tag
+  const getValidCollectionTag = (tags: string[]): string | null => {
     if (!tags || tags.length === 0) {
       return null;
     }
     
-    // Filter out "Home page" tag completely and get the first remaining tag
-    const filteredTags = tags.filter(tag => tag.toLowerCase() !== "home page");
-    const collectionTag = filteredTags.length > 0 ? filteredTags[0] : null;
+    // Find the first tag that is NOT "Home page" (case-insensitive, with trimming)
+    for (const tag of tags) {
+      const normalizedTag = tag.toLowerCase().trim();
+      if (normalizedTag !== "home page" && normalizedTag !== "homepage" && normalizedTag !== "home") {
+        return tag; // Return the original tag (not normalized)
+      }
+    }
     
-    return collectionTag;
+    return null; // No valid collection tag found
   };
 
-  // Get the collection tag and create the link
-  const collectionTag = productTags ? getCollectionTag(productTags) : null;
+  // BULLETPROOF: Get the collection tag and create the link
+  const collectionTag = productTags ? getValidCollectionTag(productTags) : null;
   
   let linkPath = '/';
   let buttonText = 'Zpět na hlavní stránku';
   
   if (collectionTag) {
-    // Use our custom slugify to create URL-friendly path from the collection tag
+    // Use the collection tag (guaranteed to not be "Home page")
     linkPath = createCollectionPath(collectionTag);
     buttonText = `Zpět do ${collectionTag}`;
   } else if (fallbackCollectionHandle && fallbackCollectionTitle) {
-    // Fallback to the old logic if no valid tags found
-    linkPath = createCollectionPath(fallbackCollectionTitle);
-    buttonText = `Zpět do ${fallbackCollectionTitle}`;
+    // Check if fallback title is also not "Home page"
+    const normalizedFallback = fallbackCollectionTitle.toLowerCase().trim();
+    if (normalizedFallback !== "home page" && normalizedFallback !== "homepage" && normalizedFallback !== "home") {
+      linkPath = createCollectionPath(fallbackCollectionTitle);
+      buttonText = `Zpět do ${fallbackCollectionTitle}`;
+    }
+    // If fallback is also "Home page", we'll use the default (home page link)
   }
 
   return (
@@ -54,4 +62,3 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
 };
 
 export default BackToCollectionButton;
-
