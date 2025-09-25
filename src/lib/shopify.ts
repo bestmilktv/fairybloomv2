@@ -674,22 +674,36 @@ export async function getCustomer(customerAccessToken: string) {
 }
 
 /**
- * Collection mapping for Czech category names to slugified handles
+ * Collection mapping for Czech category names to Shopify handles
+ * Note: Shopify handles might have diacritics, so we map both ways
  */
 export const collectionMapping = {
+  'náhrdelníky': 'náhrdelníky',  // Try with diacritics first
+  'náušnice': 'náušnice',
+  'prsteny': 'prsteny',
+  'náramky': 'náramky'
+} as const;
+
+/**
+ * Alternative mapping for diacritics-free handles (fallback)
+ */
+export const collectionMappingNoDiacritics = {
   'náhrdelníky': 'nahrdelniky',
-  'náušnice': 'nausnice', 
+  'náušnice': 'nausnice',
   'prsteny': 'prsteny',
   'náramky': 'naramky'
 } as const;
 
 /**
- * Reverse mapping from slugified handles to Czech names
+ * Reverse mapping from handles to Czech names
  */
 export const reverseCollectionMapping = {
+  'náhrdelníky': 'náhrdelníky',
+  'náušnice': 'náušnice',
+  'prsteny': 'prsteny',
+  'náramky': 'náramky',
   'nahrdelniky': 'náhrdelníky',
   'nausnice': 'náušnice',
-  'prsteny': 'prsteny',
   'naramky': 'náramky'
 } as const;
 
@@ -770,19 +784,31 @@ export function getPrimaryCollection(product: ShopifyProduct): { handle: string;
  * @returns The collection handle or null if not found
  */
 export function getCollectionHandle(categoryName: string): string | null {
-  // Check if it's already a handle
-  if (Object.values(collectionMapping).includes(categoryName as any)) {
+  // Check if it's already a handle (with or without diacritics)
+  if (Object.values(collectionMapping).includes(categoryName as any) || 
+      Object.values(collectionMappingNoDiacritics).includes(categoryName as any)) {
     return categoryName;
   }
   
-  // Check if it's a Czech name
+  // Check if it's a Czech name - try with diacritics first
   if (collectionMapping[categoryName as keyof typeof collectionMapping]) {
     return collectionMapping[categoryName as keyof typeof collectionMapping];
+  }
+  
+  // Try without diacritics as fallback
+  if (collectionMappingNoDiacritics[categoryName as keyof typeof collectionMappingNoDiacritics]) {
+    return collectionMappingNoDiacritics[categoryName as keyof typeof collectionMappingNoDiacritics];
   }
   
   // Try to find by partial match
   const lowerCategory = categoryName.toLowerCase();
   for (const [czechName, handle] of Object.entries(collectionMapping)) {
+    if (czechName.toLowerCase().includes(lowerCategory) || lowerCategory.includes(czechName.toLowerCase())) {
+      return handle;
+    }
+  }
+  
+  for (const [czechName, handle] of Object.entries(collectionMappingNoDiacritics)) {
     if (czechName.toLowerCase().includes(lowerCategory) || lowerCategory.includes(czechName.toLowerCase())) {
       return handle;
     }

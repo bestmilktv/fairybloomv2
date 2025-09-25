@@ -98,8 +98,37 @@ export function deslugifyCollection(slug: string): string {
     'nahrdelniky': 'Náhrdelníky',
     'nausnice': 'Náušnice',
     'prsteny': 'Prsteny',
-    'naramky': 'Náramky'
+    'naramky': 'Náramky',
+    'náhrdelníky': 'Náhrdelníky',
+    'náušnice': 'Náušnice',
+    'náramky': 'Náramky'
   };
   
   return reverseMappings[slug] || slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
+/**
+ * Add diacritics to a handle (for Czech collections)
+ * @param handle - The handle to add diacritics to
+ * @returns Handle with diacritics
+ */
+export function addDiacritics(handle: string): string {
+  return handle
+    .replace(/a/g, 'á')
+    .replace(/i/g, 'í')
+    .replace(/u/g, 'ú')
+    .replace(/y/g, 'ý');
+}
+
+/**
+ * Remove diacritics from a handle
+ * @param handle - The handle to remove diacritics from
+ * @returns Handle without diacritics
+ */
+export function removeDiacriticsFromHandle(handle: string): string {
+  return handle
+    .replace(/á/g, 'a')
+    .replace(/í/g, 'i')
+    .replace(/ú/g, 'u')
+    .replace(/ý/g, 'y');
 }

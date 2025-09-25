@@ -5,7 +5,7 @@ import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
 import BackToHomepageButton from '@/components/BackToHomepageButton';
 import { getProductsByCollection, getVariantInventory, collectionMapping } from '@/lib/shopify';
-import { deslugifyCollection } from '@/lib/slugify';
+import { deslugifyCollection, addDiacritics, removeDiacriticsFromHandle } from '@/lib/slugify';
 
 // Import product images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -42,9 +42,20 @@ const CategoryPage = () => {
         setHasError(false);
 
         // Use the handle directly from the URL to query Shopify
-        console.log('Fetching collection with handle:', handle);
-        const collection = await getProductsByCollection(handle, 50);
-        console.log('Collection response:', collection);
+        // Try the handle as-is first
+        let collection = await getProductsByCollection(handle, 50);
+        
+        // If not found, try with diacritics (if handle doesn't have them)
+        if (!collection && !handle.includes('á') && !handle.includes('í') && !handle.includes('ú') && !handle.includes('ý')) {
+          const handleWithDiacritics = addDiacritics(handle);
+          collection = await getProductsByCollection(handleWithDiacritics, 50);
+        }
+        
+        // If still not found, try without diacritics (if handle has them)
+        if (!collection && (handle.includes('á') || handle.includes('í') || handle.includes('ú') || handle.includes('ý'))) {
+          const handleWithoutDiacritics = removeDiacriticsFromHandle(handle);
+          collection = await getProductsByCollection(handleWithoutDiacritics, 50);
+        }
         
         if (collection) {
           setCollection(collection);
@@ -139,10 +150,14 @@ const CategoryPage = () => {
 
   // Get category data - use Shopify collection data if available, otherwise fallback to hardcoded info
   const categoryData = collection ? {
-    title: collection.title,
+    title: collection.title || 'Kategorie',
     subtitle: collection.description || `Elegantní ${category} z naší kolekce`,
     image: category ? categoryInfo[category as keyof typeof categoryInfo]?.image : necklaceImage
-  } : (category ? categoryInfo[category as keyof typeof categoryInfo] : null);
+  } : (category ? categoryInfo[category as keyof typeof categoryInfo] : {
+    title: 'Kategorie',
+    subtitle: 'Elegantní šperky z naší kolekce',
+    image: necklaceImage
+  });
 
   // Show error only if we have an error and no collection data
   if (hasError && !collection) {
@@ -178,10 +193,10 @@ const CategoryPage = () => {
       <section className="pb-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-6 tracking-wide">
-            {categoryData.title}
+            {categoryData?.title || 'Kategorie'}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            {categoryData.subtitle}
+            {categoryData?.subtitle || 'Elegantní šperky z naší kolekce'}
           </p>
         </div>
       </section>
