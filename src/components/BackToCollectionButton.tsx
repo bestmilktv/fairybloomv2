@@ -19,9 +19,17 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
       return null;
     }
     
-    // Filter out "Home page" tag completely and get the first remaining tag
-    const filteredTags = tags.filter(tag => tag.toLowerCase() !== "home page");
+    console.log('BackToCollectionButton - Input tags:', tags);
+    
+    // Filter out "Home page" tag completely (case-insensitive, with trimming)
+    const filteredTags = tags.filter(tag => {
+      const normalizedTag = tag.toLowerCase().trim();
+      return normalizedTag !== "home page" && normalizedTag !== "homepage" && normalizedTag !== "home";
+    });
+    console.log('BackToCollectionButton - Filtered tags (without Home page):', filteredTags);
+    
     const collectionTag = filteredTags.length > 0 ? filteredTags[0] : null;
+    console.log('BackToCollectionButton - Selected collection tag:', collectionTag);
     
     return collectionTag;
   };
@@ -32,14 +40,29 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   let linkPath = '/';
   let buttonText = 'Zpět na hlavní stránku';
   
+  console.log('BackToCollectionButton - Final logic:', {
+    productTags,
+    collectionTag,
+    fallbackCollectionHandle,
+    fallbackCollectionTitle
+  });
+  
   if (collectionTag) {
     // Use our custom slugify to create URL-friendly path from the collection tag
     linkPath = createCollectionPath(collectionTag);
     buttonText = `Zpět do ${collectionTag}`;
-  } else if (fallbackCollectionHandle && fallbackCollectionTitle) {
-    // Fallback to the old logic if no valid tags found
-    linkPath = createCollectionPath(fallbackCollectionTitle);
-    buttonText = `Zpět do ${fallbackCollectionTitle}`;
+    console.log('BackToCollectionButton - Using collection tag:', collectionTag, '->', linkPath);
+  } else if (fallbackCollectionTitle) {
+    // Fallback to the collection title if no valid tags found
+    // Make sure the fallback title is not "Home page" either
+    const normalizedFallback = fallbackCollectionTitle.toLowerCase().trim();
+    if (normalizedFallback !== "home page" && normalizedFallback !== "homepage" && normalizedFallback !== "home") {
+      linkPath = createCollectionPath(fallbackCollectionTitle);
+      buttonText = `Zpět do ${fallbackCollectionTitle}`;
+      console.log('BackToCollectionButton - Using fallback title:', fallbackCollectionTitle, '->', linkPath);
+    } else {
+      console.log('BackToCollectionButton - Fallback title is also "Home page", using homepage');
+    }
   }
 
   return (

@@ -292,6 +292,10 @@ const DynamicProductPage = () => {
     'naramky': createCollectionHandle('náramky')
   };
 
+  // Debug logging
+  console.log('DynamicProductPage - Product tags:', product?.tags);
+  console.log('DynamicProductPage - Primary collection:', primaryCollection);
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
