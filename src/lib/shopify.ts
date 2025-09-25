@@ -10,6 +10,7 @@ export interface ShopifyProduct {
   description: string;
   handle: string;
   availableForSale: boolean;
+  tags: string[];
   images: {
     edges: Array<{
       node: {
@@ -138,6 +139,7 @@ export async function getProductsByCollection(handle: string, first: number = 20
               title
               description
               handle
+              tags
               images(first: 5) {
                 edges {
                   node {
@@ -191,6 +193,7 @@ export async function getProductByHandle(handle: string) {
         handle
         description
         availableForSale
+        tags
         images(first: 6) {
           edges {
             node {
@@ -662,6 +665,21 @@ export async function getCustomer(customerAccessToken: string) {
     console.error('Error fetching customer:', error);
     return null;
   }
+}
+
+/**
+ * Extract the correct collection tag from product tags, ignoring "Home page" tag
+ * @param tags - Array of product tags
+ * @returns The collection tag (e.g., "Náušnice") or null if no valid tag found
+ */
+export function getCollectionTagFromProductTags(tags: string[]): string | null {
+  if (!tags || tags.length === 0) {
+    return null;
+  }
+  
+  // Find the first tag that is not "Home page"
+  const collectionTag = tags.find(tag => tag !== "Home page");
+  return collectionTag || null;
 }
 
 /**

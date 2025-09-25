@@ -285,14 +285,13 @@ const ProductDetailPage = () => {
       {/* Back to Collection Button */}
       <div className="pt-24 px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          {primaryCollection && (
-            <div className="mb-6">
-              <BackToCollectionButton
-                collectionHandle={collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle}
-                collectionTitle={primaryCollection.title}
-              />
-            </div>
-          )}
+          <div className="mb-6">
+            <BackToCollectionButton
+              productTags={product?.tags}
+              fallbackCollectionHandle={primaryCollection ? collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle : undefined}
+              fallbackCollectionTitle={primaryCollection?.title}
+            />
+          </div>
         </div>
       </div>
       

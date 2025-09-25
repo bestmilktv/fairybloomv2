@@ -36,6 +36,7 @@ interface ShopifyProduct {
   title: string;
   handle: string;
   description: string;
+  tags: string[];
   images: {
     edges: Array<{
       node: ProductImage;
@@ -298,14 +299,13 @@ const DynamicProductPage = () => {
       <div className="pt-24 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
           {/* Back to Collection Button */}
-          {primaryCollection && (
-            <div className="mb-6 fade-in-up">
-              <BackToCollectionButton
-                collectionHandle={collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle}
-                collectionTitle={primaryCollection.title}
-              />
-            </div>
-          )}
+          <div className="mb-6 fade-in-up">
+            <BackToCollectionButton
+              productTags={product?.tags}
+              fallbackCollectionHandle={primaryCollection ? collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle : undefined}
+              fallbackCollectionTitle={primaryCollection?.title}
+            />
+          </div>
           
           {/* Breadcrumb */}
           <div className="mb-8 fade-in-up">
