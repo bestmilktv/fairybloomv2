@@ -40,11 +40,15 @@ export function slugify(text: string): string {
  * Determines the primary collection for a product based on its tags
  * Filters out "Home page" tag and uses the first non-home-page tag
  * @param tags - Array of product tags
- * @returns Object with collection slug and title, or null if no valid collection found
+ * @returns Object with collection slug and title, or fallback collection
  */
-export function getPrimaryCollectionFromTags(tags: string[]): { slug: string; title: string } | null {
+export function getPrimaryCollectionFromTags(tags: string[]): { slug: string; title: string } {
   if (!tags || tags.length === 0) {
-    return null;
+    // Fallback to a default collection
+    return {
+      slug: 'vsechny-produkty',
+      title: 'Všechny produkty'
+    };
   }
 
   // Filter out "Home page" tag (case-insensitive)
@@ -53,7 +57,12 @@ export function getPrimaryCollectionFromTags(tags: string[]): { slug: string; ti
   );
 
   if (filteredTags.length === 0) {
-    return null;
+    // If only "Home page" tag exists, use the first tag as fallback
+    const fallbackTag = tags[0];
+    return {
+      slug: slugify(fallbackTag),
+      title: fallbackTag
+    };
   }
 
   // Use the first non-home-page tag
