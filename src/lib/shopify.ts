@@ -24,6 +24,7 @@ export interface ShopifyProduct {
       node: {
         id: string;
         title: string;
+        availableForSale: boolean;
         price: {
           amount: string;
           currencyCode: string;
@@ -152,6 +153,7 @@ export async function getProductsByCollection(handle: string, first: number = 20
                 edges {
                   node {
                     id
+                    availableForSale
                     price {
                       amount
                       currencyCode
@@ -207,6 +209,7 @@ export async function getProductByHandle(handle: string) {
             node {
               id
               title
+              availableForSale
               price {
                 amount
                 currencyCode
@@ -677,9 +680,11 @@ export function getCollectionTagFromProductTags(tags: string[]): string | null {
     return null;
   }
   
-  // Find the first tag that is not "Home page"
-  const collectionTag = tags.find(tag => tag !== "Home page");
-  return collectionTag || null;
+  // Filter out "Home page" tag completely and get the first remaining tag
+  const filteredTags = tags.filter(tag => tag.toLowerCase() !== "home page");
+  const collectionTag = filteredTags.length > 0 ? filteredTags[0] : null;
+  
+  return collectionTag;
 }
 
 /**

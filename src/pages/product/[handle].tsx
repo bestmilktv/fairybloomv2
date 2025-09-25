@@ -28,7 +28,7 @@ interface ProductVariant {
 
 interface ProductImage {
   url: string;
-  altText: string;
+  altText?: string;
 }
 
 interface ShopifyProduct {
@@ -86,8 +86,7 @@ const DynamicProductPage = () => {
         setIsLoading(true);
         setHasError(false);
 
-        const result = await getProductByHandle(handle);
-        const productData = result.data.product;
+        const productData = await getProductByHandle(handle);
 
         if (!productData) {
           setHasError(true);
