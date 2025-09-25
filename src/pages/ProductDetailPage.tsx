@@ -271,12 +271,12 @@ const ProductDetailPage = () => {
     );
   }
 
-  // Collection mapping for URL paths - using original handles (these work!)
+  // Collection mapping for URL paths - using slugified handles (these are the actual Shopify handles!)
   const collectionMapping = {
-    'nahrdelniky': 'náhrdelníky',  // Original Shopify handle
-    'nausnice': 'náušnice',        // Original Shopify handle
-    'prsteny': 'prsteny',          // Original Shopify handle
-    'naramky': 'náramky'           // Original Shopify handle
+    'nahrdelniky': 'nahrdelniky',  // Actual Shopify handle (slugified)
+    'nausnice': 'nausnice',        // Actual Shopify handle (slugified)
+    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
+    'naramky': 'naramky'           // Actual Shopify handle (slugified)
   };
 
 

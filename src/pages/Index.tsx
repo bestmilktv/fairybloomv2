@@ -18,12 +18,12 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping for Shopify - using original handles (these work!)
+  // Collection mapping for Shopify - using slugified handles (these are the actual Shopify handles!)
   const collectionMapping = {
-    'náhrdelníky': 'náhrdelníky',  // Original Shopify handle
-    'náušnice': 'náušnice',        // Original Shopify handle
-    'prsteny': 'prsteny',          // Original Shopify handle
-    'náramky': 'náramky'           // Original Shopify handle
+    'náhrdelníky': 'nahrdelniky',  // Actual Shopify handle (slugified)
+    'náušnice': 'nausnice',        // Actual Shopify handle (slugified)
+    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
+    'náramky': 'naramky'           // Actual Shopify handle (slugified)
   };
 
   // Helper function to get fallback image
