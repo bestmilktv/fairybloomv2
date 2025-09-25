@@ -6,12 +6,17 @@ interface BackToCollectionButtonProps {
   productTags?: string[];
   fallbackCollectionHandle?: string;
   fallbackCollectionTitle?: string;
+  productCollections?: Array<{
+    handle: string;
+    title: string;
+  }>;
 }
 
 const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   productTags,
   fallbackCollectionHandle,
   fallbackCollectionTitle,
+  productCollections,
 }) => {
   // Extract collection tag from product tags, completely ignoring "Home page" tag
   const getCollectionTag = (tags: string[]): string | null => {
@@ -34,8 +39,32 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
     return collectionTag;
   };
 
-  // Get the collection tag and create the link
+  // Extract collection from product collections array, ignoring "Home page"
+  const getCollectionFromCollections = (collections: Array<{handle: string; title: string}>): string | null => {
+    if (!collections || collections.length === 0) {
+      return null;
+    }
+    
+    console.log('BackToCollectionButton - Input collections:', collections);
+    
+    // Filter out "Home page" collection (case-insensitive, with trimming)
+    const filteredCollections = collections.filter(collection => {
+      const normalizedTitle = collection.title.toLowerCase().trim();
+      const normalizedHandle = collection.handle.toLowerCase().trim();
+      return normalizedTitle !== "home page" && normalizedTitle !== "homepage" && normalizedTitle !== "home" &&
+             normalizedHandle !== "frontpage" && normalizedHandle !== "home-page";
+    });
+    console.log('BackToCollectionButton - Filtered collections (without Home page):', filteredCollections);
+    
+    const collection = filteredCollections.length > 0 ? filteredCollections[0] : null;
+    console.log('BackToCollectionButton - Selected collection:', collection);
+    
+    return collection ? collection.title : null;
+  };
+
+  // Get the collection from multiple sources
   const collectionTag = productTags ? getCollectionTag(productTags) : null;
+  const collectionFromCollections = productCollections ? getCollectionFromCollections(productCollections) : null;
   
   let linkPath = '/';
   let buttonText = 'Zpět na hlavní stránku';
@@ -43,18 +72,28 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   console.log('BackToCollectionButton - Final logic:', {
     productTags,
     collectionTag,
+    productCollections,
+    collectionFromCollections,
     fallbackCollectionHandle,
     fallbackCollectionTitle
   });
   
+  console.log('BackToCollectionButton - Available collections for filtering:', productCollections);
+  
+  // Priority 1: Use collection tag from product tags
   if (collectionTag) {
-    // Use our custom slugify to create URL-friendly path from the collection tag
     linkPath = createCollectionPath(collectionTag);
     buttonText = `Zpět do ${collectionTag}`;
     console.log('BackToCollectionButton - Using collection tag:', collectionTag, '->', linkPath);
-  } else if (fallbackCollectionTitle) {
-    // Fallback to the collection title if no valid tags found
-    // Make sure the fallback title is not "Home page" either
+  }
+  // Priority 2: Use collection from product collections array
+  else if (collectionFromCollections) {
+    linkPath = createCollectionPath(collectionFromCollections);
+    buttonText = `Zpět do ${collectionFromCollections}`;
+    console.log('BackToCollectionButton - Using collection from collections:', collectionFromCollections, '->', linkPath);
+  }
+  // Priority 3: Use fallback collection title (if not "Home page")
+  else if (fallbackCollectionTitle) {
     const normalizedFallback = fallbackCollectionTitle.toLowerCase().trim();
     if (normalizedFallback !== "home page" && normalizedFallback !== "homepage" && normalizedFallback !== "home") {
       linkPath = createCollectionPath(fallbackCollectionTitle);

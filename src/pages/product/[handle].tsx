@@ -295,6 +295,7 @@ const DynamicProductPage = () => {
   // Debug logging
   console.log('DynamicProductPage - Product tags:', product?.tags);
   console.log('DynamicProductPage - Primary collection:', primaryCollection);
+  console.log('DynamicProductPage - All collections:', product?.collections?.edges?.map(edge => edge.node));
 
   return (
     <div className="min-h-screen bg-background">
@@ -306,6 +307,7 @@ const DynamicProductPage = () => {
           <div className="mb-6 fade-in-up">
             <BackToCollectionButton
               productTags={product?.tags}
+              productCollections={product?.collections?.edges?.map(edge => edge.node)}
               fallbackCollectionHandle={primaryCollection ? collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle : undefined}
               fallbackCollectionTitle={primaryCollection?.title}
             />

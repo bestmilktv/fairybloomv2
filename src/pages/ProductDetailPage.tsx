@@ -282,6 +282,7 @@ const ProductDetailPage = () => {
   // Debug logging
   console.log('ProductDetailPage - Product tags:', product?.tags);
   console.log('ProductDetailPage - Primary collection:', primaryCollection);
+  console.log('ProductDetailPage - All collections:', product?.collections?.edges?.map(edge => edge.node));
 
   return (
     <div className="min-h-screen bg-background">
@@ -293,6 +294,7 @@ const ProductDetailPage = () => {
           <div className="mb-6">
             <BackToCollectionButton
               productTags={product?.tags}
+              productCollections={product?.collections?.edges?.map(edge => edge.node)}
               fallbackCollectionHandle={primaryCollection ? collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle : undefined}
               fallbackCollectionTitle={primaryCollection?.title}
             />
