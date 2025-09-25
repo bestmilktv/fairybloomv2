@@ -13,7 +13,7 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
   fallbackCollectionHandle,
   fallbackCollectionTitle,
 }) => {
-  // BULLETPROOF: Extract collection tag from product tags, completely ignoring "Home page" tag
+  // Extract collection tag from product tags, completely ignoring "Home page" tag
   const getValidCollectionTag = (tags: string[]): string | null => {
     if (!tags || tags.length === 0) {
       return null;
@@ -30,25 +30,63 @@ const BackToCollectionButton: React.FC<BackToCollectionButtonProps> = ({
     return null; // No valid collection tag found
   };
 
-  // BULLETPROOF: Get the collection tag and create the link
-  const collectionTag = productTags ? getValidCollectionTag(productTags) : null;
-  
+  // AGGRESSIVE: Try multiple sources to find a collection
+  let collectionName = null;
   let linkPath = '/';
   let buttonText = 'Zpět na hlavní stránku';
   
-  if (collectionTag) {
-    // Use the collection tag (guaranteed to not be "Home page")
-    linkPath = createCollectionPath(collectionTag);
-    buttonText = `Zpět do ${collectionTag}`;
-  } else if (fallbackCollectionHandle && fallbackCollectionTitle) {
-    // Check if fallback title is also not "Home page"
+  // Method 1: Try to get collection from product tags
+  if (productTags && productTags.length > 0) {
+    collectionName = getValidCollectionTag(productTags);
+    if (collectionName) {
+      console.log('BackToCollectionButton: Found collection from tags:', collectionName);
+    }
+  }
+  
+  // Method 2: If no collection from tags, try fallback collection title
+  if (!collectionName && fallbackCollectionTitle) {
     const normalizedFallback = fallbackCollectionTitle.toLowerCase().trim();
     if (normalizedFallback !== "home page" && normalizedFallback !== "homepage" && normalizedFallback !== "home") {
-      linkPath = createCollectionPath(fallbackCollectionTitle);
-      buttonText = `Zpět do ${fallbackCollectionTitle}`;
+      collectionName = fallbackCollectionTitle;
+      console.log('BackToCollectionButton: Found collection from fallback:', collectionName);
     }
-    // If fallback is also "Home page", we'll use the default (home page link)
   }
+  
+  // Method 3: If still no collection, try to extract from fallback handle
+  if (!collectionName && fallbackCollectionHandle) {
+    // Map common handles to collection names
+    const handleToCollectionMap: Record<string, string> = {
+      'nahrdelniky': 'Náhrdelníky',
+      'nausnice': 'Náušnice', 
+      'prsteny': 'Prsteny',
+      'naramky': 'Náramky',
+      'necklaces': 'Náhrdelníky',
+      'earrings': 'Náušnice',
+      'rings': 'Prsteny',
+      'bracelets': 'Náramky'
+    };
+    
+    const mappedCollection = handleToCollectionMap[fallbackCollectionHandle.toLowerCase()];
+    if (mappedCollection) {
+      collectionName = mappedCollection;
+      console.log('BackToCollectionButton: Found collection from handle mapping:', collectionName);
+    }
+  }
+  
+  // Final result
+  if (collectionName) {
+    linkPath = createCollectionPath(collectionName);
+    buttonText = `Zpět do ${collectionName}`;
+  }
+  
+  console.log('BackToCollectionButton: Final result:', {
+    productTags,
+    fallbackCollectionHandle,
+    fallbackCollectionTitle,
+    collectionName,
+    linkPath,
+    buttonText
+  });
 
   return (
     <Link

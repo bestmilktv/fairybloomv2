@@ -287,6 +287,9 @@ const ProductDetailPage = () => {
       <div className="pt-24 px-6 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
+            {console.log('ProductDetailPage: Product object:', product)}
+            {console.log('ProductDetailPage: Product tags:', product?.tags)}
+            {console.log('ProductDetailPage: Primary collection:', primaryCollection)}
             <BackToCollectionButton
               productTags={product?.tags}
               fallbackCollectionHandle={primaryCollection ? collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle : undefined}
