@@ -1,5 +1,6 @@
 import { Heart, Instagram, Facebook, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { slugifyCollection } from '@/lib/slugify';
 const Footer = () => {
   return <footer className="bg-luxury text-luxury-foreground py-16 px-6">
       <div className="max-w-7xl mx-auto">
@@ -28,10 +29,10 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4 text-gold">Kategorie</h4>
             <ul className="space-y-2">
-              <li><Link to="/náhrdelníky" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Náhrdelníky</Link></li>
-              <li><Link to="/náušnice" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Náušnice</Link></li>
+              <li><Link to="/nahrdelniky" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Náhrdelníky</Link></li>
+              <li><Link to="/nausnice" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Náušnice</Link></li>
               <li><Link to="/prsteny" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Prsteny</Link></li>
-              <li><Link to="/náramky" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Náramky</Link></li>
+              <li><Link to="/naramky" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Náramky</Link></li>
             </ul>
           </div>
           

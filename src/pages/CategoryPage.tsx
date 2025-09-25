@@ -5,6 +5,7 @@ import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
 import BackToHomepageButton from '@/components/BackToHomepageButton';
 import { getProductsByCollection, getVariantInventory, collectionMapping } from '@/lib/shopify';
+import { deslugifyCollection } from '@/lib/slugify';
 
 // Import product images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -14,17 +15,18 @@ import braceletImage from '@/assets/bracelet-placeholder.jpg';
 
 const CategoryPage = () => {
   const location = useLocation();
-  const category = location.pathname.substring(1); // Remove leading slash
+  const categorySlug = location.pathname.substring(1); // Remove leading slash
   const [shopifyProducts, setShopifyProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping is now imported from shopify.ts
+  // Convert slug back to Czech name for display
+  const category = deslugifyCollection(categorySlug);
 
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [category]);
+  }, [categorySlug]);
 
   // Fetch products from Shopify
   useEffect(() => {
@@ -33,8 +35,8 @@ const CategoryPage = () => {
         setIsLoading(true);
         setHasError(false);
 
-        const decodedCategory = category ? decodeURIComponent(category) : null;
-        const shopifyHandle = decodedCategory ? collectionMapping[decodedCategory as keyof typeof collectionMapping] : null;
+        // Use the slug directly as it's already the Shopify handle
+        const shopifyHandle = categorySlug;
         
         if (shopifyHandle) {
           const collection = await getProductsByCollection(shopifyHandle, 20);
@@ -63,7 +65,7 @@ const CategoryPage = () => {
                   price: firstVariant?.price ? 
                     `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                     'Cena na vyžádání',
-                  image: firstImage?.url || getFallbackImage(decodedCategory),
+                  image: firstImage?.url || getFallbackImage(category),
                   description: product.description || 'Elegantní šperk z naší kolekce',
                   handle: product.handle,
                   inventoryQuantity
@@ -86,10 +88,10 @@ const CategoryPage = () => {
       }
     };
 
-    if (category) {
+    if (categorySlug) {
       fetchShopifyProducts();
     }
-  }, [category]);
+  }, [categorySlug]);
 
   // Helper function to get fallback image
   const getFallbackImage = (category: string | null) => {
@@ -127,9 +129,8 @@ const CategoryPage = () => {
     }
   };
 
-  // URL decode the category name to handle Czech characters properly
-  const decodedCategory = category ? decodeURIComponent(category) : null;
-  const categoryData = decodedCategory ? categoryInfo[decodedCategory as keyof typeof categoryInfo] : null;
+  // Get category data using the Czech name
+  const categoryData = category ? categoryInfo[category as keyof typeof categoryInfo] : null;
 
   if (!categoryData) {
     return (
@@ -202,7 +203,7 @@ const CategoryPage = () => {
             </div>
           ) : (
             <CategoryProductSection 
-              category={decodedCategory || ''}
+              category={category || ''}
               initialProducts={displayProducts}
             />
           )}

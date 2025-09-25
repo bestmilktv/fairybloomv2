@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 import { getProductByHandle, createCart, getPrimaryCollection } from '@/lib/shopify';
+import { slugifyCollection } from '@/lib/slugify';
 import { useCart } from '@/contexts/CartContext';
 
 // Import fallback images

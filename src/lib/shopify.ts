@@ -3,6 +3,8 @@
  * Handles GraphQL requests to Shopify's Storefront API
  */
 
+import { slugify, slugifyCollection, deslugifyCollection } from './slugify';
+
 // Types for Shopify API responses
 export interface ShopifyProduct {
   id: string;
@@ -10,6 +12,7 @@ export interface ShopifyProduct {
   description: string;
   handle: string;
   availableForSale: boolean;
+  tags: string[];
   images: {
     edges: Array<{
       node: {
@@ -191,6 +194,7 @@ export async function getProductByHandle(handle: string) {
         handle
         description
         availableForSale
+        tags
         images(first: 6) {
           edges {
             node {
@@ -665,7 +669,7 @@ export async function getCustomer(customerAccessToken: string) {
 }
 
 /**
- * Collection mapping for Shopify handles to Czech category names
+ * Collection mapping for Czech category names to slugified handles
  */
 export const collectionMapping = {
   'náhrdelníky': 'nahrdelniky',
@@ -675,7 +679,7 @@ export const collectionMapping = {
 } as const;
 
 /**
- * Reverse mapping from Shopify handles to Czech names
+ * Reverse mapping from slugified handles to Czech names
  */
 export const reverseCollectionMapping = {
   'nahrdelniky': 'náhrdelníky',
@@ -685,17 +689,37 @@ export const reverseCollectionMapping = {
 } as const;
 
 /**
- * Get the primary collection for a product (first collection or fallback based on product handle)
+ * Get the primary collection for a product using tags (ignoring "Home page" tag)
  * @param product - The Shopify product
  * @returns Object with collection handle and title
  */
 export function getPrimaryCollection(product: ShopifyProduct): { handle: string; title: string } {
-  // If product has collections, use the first one
+  // First priority: Use product tags, ignoring "Home page" tag
+  if (product.tags && product.tags.length > 0) {
+    // Filter out "Home page" tag and find the first collection tag
+    const collectionTags = product.tags.filter(tag => 
+      tag.toLowerCase() !== 'home page' && 
+      (tag.includes('náhrdelník') || tag.includes('náušnice') || tag.includes('prsten') || tag.includes('náramek'))
+    );
+    
+    if (collectionTags.length > 0) {
+      const collectionTag = collectionTags[0];
+      const slugifiedHandle = slugifyCollection(collectionTag);
+      const czechTitle = deslugifyCollection(slugifiedHandle);
+      return {
+        handle: slugifiedHandle,
+        title: czechTitle
+      };
+    }
+  }
+
+  // Second priority: Use collections if available
   if (product.collections?.edges && product.collections.edges.length > 0) {
     const firstCollection = product.collections.edges[0].node;
-    const czechTitle = reverseCollectionMapping[firstCollection.handle as keyof typeof reverseCollectionMapping] || firstCollection.title;
+    const slugifiedHandle = slugifyCollection(firstCollection.title);
+    const czechTitle = deslugifyCollection(slugifiedHandle);
     return {
-      handle: firstCollection.handle,
+      handle: slugifiedHandle,
       title: czechTitle
     };
   }
@@ -703,20 +727,20 @@ export function getPrimaryCollection(product: ShopifyProduct): { handle: string;
   // Fallback: determine collection from product handle
   const productHandle = product.handle.toLowerCase();
   if (productHandle.includes('nahr') || productHandle.includes('necklace')) {
-    return { handle: 'nahrdelniky', title: 'náhrdelníky' };
+    return { handle: 'nahrdelniky', title: 'Náhrdelníky' };
   }
   if (productHandle.includes('naus') || productHandle.includes('earring')) {
-    return { handle: 'nausnice', title: 'náušnice' };
+    return { handle: 'nausnice', title: 'Náušnice' };
   }
   if (productHandle.includes('prst') || productHandle.includes('ring')) {
-    return { handle: 'prsteny', title: 'prsteny' };
+    return { handle: 'prsteny', title: 'Prsteny' };
   }
   if (productHandle.includes('nara') || productHandle.includes('bracelet')) {
-    return { handle: 'naramky', title: 'náramky' };
+    return { handle: 'naramky', title: 'Náramky' };
   }
 
   // Default fallback
-  return { handle: 'nahrdelniky', title: 'náhrdelníky' };
+  return { handle: 'nahrdelniky', title: 'Náhrdelníky' };
 }
 
 /**
