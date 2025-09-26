@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { createCart, addToCart as addToShopifyCart, getCart, updateCartLines, removeCartLines } from '@/lib/shopify'
 
 export interface CartItem {
   id: string
@@ -9,75 +10,212 @@ export interface CartItem {
   category: string
   variantId?: string // Shopify variant ID for checkout
   isShopifyProduct?: boolean // Flag to identify Shopify products
+  lineId?: string // Shopify cart line ID for updates
 }
 
 interface CartContextType {
   items: CartItem[]
-  addToCart: (item: Omit<CartItem, 'quantity'>) => void
-  removeFromCart: (id: string) => void
-  updateQuantity: (id: string, quantity: number) => void
-  clearCart: () => void
+  cartId: string | null
+  isLoading: boolean
+  addToCart: (item: Omit<CartItem, 'quantity'>) => Promise<void>
+  removeFromCart: (id: string) => Promise<void>
+  updateQuantity: (id: string, quantity: number) => Promise<void>
+  clearCart: () => Promise<void>
   getTotalPrice: () => number
   getTotalItems: () => number
+  refreshCart: () => Promise<void>
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [cartId, setCartId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Load cart from localStorage on mount
+  // Load cart ID from localStorage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('fairybloom-cart')
-    if (savedCart) {
-      try {
-        setItems(JSON.parse(savedCart))
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error)
-      }
+    const savedCartId = localStorage.getItem('fairybloom-cart-id')
+    if (savedCartId) {
+      setCartId(savedCartId)
+      // Fetch cart from Shopify
+      refreshCartFromShopify(savedCartId)
     }
   }, [])
 
-  // Save cart to localStorage whenever items change
+  // Save cart ID to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('fairybloom-cart', JSON.stringify(items))
-  }, [items])
+    if (cartId) {
+      localStorage.setItem('fairybloom-cart-id', cartId)
+    } else {
+      localStorage.removeItem('fairybloom-cart-id')
+    }
+  }, [cartId])
 
-  const addToCart = (newItem: Omit<CartItem, 'quantity'>) => {
-    setItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === newItem.id)
+  // Convert Shopify cart to local cart items
+  const convertShopifyCartToItems = (shopifyCart: any): CartItem[] => {
+    if (!shopifyCart?.lines?.edges) return []
+    
+    return shopifyCart.lines.edges.map((edge: any) => {
+      const line = edge.node
+      const variant = line.merchandise
+      const product = variant.product
+      const image = product.images?.edges?.[0]?.node?.url || ''
       
-      if (existingItem) {
-        return prevItems.map(item =>
-          item.id === newItem.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        )
+      return {
+        id: product.id,
+        name: product.title,
+        price: parseFloat(variant.price.amount),
+        image: image,
+        quantity: line.quantity,
+        category: 'Shopify Product', // You might want to get this from product tags
+        variantId: variant.id,
+        isShopifyProduct: true,
+        lineId: line.id
       }
-      
-      return [...prevItems, { ...newItem, quantity: 1 }]
     })
   }
 
-  const removeFromCart = (id: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== id))
-  }
-
-  const updateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(id)
-      return
+  // Fetch cart from Shopify
+  const refreshCartFromShopify = async (cartIdToFetch: string) => {
+    try {
+      setIsLoading(true)
+      const shopifyCart = await getCart(cartIdToFetch)
+      if (shopifyCart) {
+        const cartItems = convertShopifyCartToItems(shopifyCart)
+        setItems(cartItems)
+      }
+    } catch (error) {
+      console.error('Error fetching cart from Shopify:', error)
+      // If cart doesn't exist, clear the cart ID
+      setCartId(null)
+      setItems([])
+    } finally {
+      setIsLoading(false)
     }
-    
-    setItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, quantity } : item
-      )
-    )
   }
 
-  const clearCart = () => {
-    setItems([])
+  // Refresh cart from Shopify
+  const refreshCart = async () => {
+    if (cartId) {
+      await refreshCartFromShopify(cartId)
+    }
+  }
+
+  const addToCart = async (newItem: Omit<CartItem, 'quantity'>) => {
+    try {
+      setIsLoading(true)
+      
+      if (!newItem.variantId) {
+        throw new Error('Variant ID is required for Shopify products')
+      }
+
+      if (cartId) {
+        // Add to existing cart
+        const result = await addToShopifyCart(cartId, newItem.variantId, 1)
+        if (result.data.cartLinesAdd.userErrors.length > 0) {
+          throw new Error(result.data.cartLinesAdd.userErrors[0].message)
+        }
+        // Refresh cart from Shopify
+        await refreshCartFromShopify(cartId)
+      } else {
+        // Create new cart
+        const result = await createCart(newItem.variantId, 1)
+        if (result.data.cartCreate.userErrors.length > 0) {
+          throw new Error(result.data.cartCreate.userErrors[0].message)
+        }
+        const newCartId = result.data.cartCreate.cart.id
+        setCartId(newCartId)
+        // Refresh cart from Shopify
+        await refreshCartFromShopify(newCartId)
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const removeFromCart = async (id: string) => {
+    try {
+      setIsLoading(true)
+      
+      const item = items.find(item => item.id === id)
+      if (!item?.lineId || !cartId) {
+        throw new Error('Item or cart not found')
+      }
+
+      const result = await removeCartLines(cartId, [item.lineId])
+      if (result.data.cartLinesRemove.userErrors.length > 0) {
+        throw new Error(result.data.cartLinesRemove.userErrors[0].message)
+      }
+      
+      // Refresh cart from Shopify
+      await refreshCartFromShopify(cartId)
+    } catch (error) {
+      console.error('Error removing from cart:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const updateQuantity = async (id: string, quantity: number) => {
+    try {
+      setIsLoading(true)
+      
+      if (quantity <= 0) {
+        await removeFromCart(id)
+        return
+      }
+
+      const item = items.find(item => item.id === id)
+      if (!item?.lineId || !cartId) {
+        throw new Error('Item or cart not found')
+      }
+
+      const result = await updateCartLines(cartId, [{ id: item.lineId, quantity }])
+      if (result.data.cartLinesUpdate.userErrors.length > 0) {
+        throw new Error(result.data.cartLinesUpdate.userErrors[0].message)
+      }
+      
+      // Refresh cart from Shopify
+      await refreshCartFromShopify(cartId)
+    } catch (error) {
+      console.error('Error updating quantity:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const clearCart = async () => {
+    try {
+      setIsLoading(true)
+      
+      if (!cartId) {
+        setItems([])
+        return
+      }
+
+      const lineIds = items.map(item => item.lineId).filter(Boolean) as string[]
+      if (lineIds.length > 0) {
+        const result = await removeCartLines(cartId, lineIds)
+        if (result.data.cartLinesRemove.userErrors.length > 0) {
+          throw new Error(result.data.cartLinesRemove.userErrors[0].message)
+        }
+      }
+      
+      // Clear cart ID and items
+      setCartId(null)
+      setItems([])
+    } catch (error) {
+      console.error('Error clearing cart:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const getTotalPrice = () => {
@@ -90,12 +228,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     items,
+    cartId,
+    isLoading,
     addToCart,
     removeFromCart,
     updateQuantity,
     clearCart,
     getTotalPrice,
     getTotalItems,
+    refreshCart,
   }
 
   return (

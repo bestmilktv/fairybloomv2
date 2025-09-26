@@ -19,6 +19,7 @@ interface Product {
   image: string
   category: string
   handle?: string
+  variantId?: string
 }
 
 interface ProductRecommendationsProps {
@@ -85,7 +86,8 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                     'Cena na vyžádání',
                   image: firstImage?.url || getFallbackImage(czechCategory),
                   category: czechCategory,
-                  handle: product.handle
+                  handle: product.handle,
+                  variantId: firstVariant?.id
                 }
               })
               
@@ -114,23 +116,34 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
     fetchRecommendations()
   }, [currentProductId, currentCategory])
 
-  const handleAddToCart = (product: Product, event: React.MouseEvent) => {
+  const handleAddToCart = async (product: Product, event: React.MouseEvent) => {
     event.preventDefault() // Prevent Link navigation
     
-    const priceNumber = parseInt(product.price.replace(/[^\d]/g, ''))
-    
-    addToCart({
-      id: product.id,
-      name: product.title,
-      price: priceNumber,
-      image: product.image,
-      category: product.category,
-    })
-    
-    toast({
-      title: "Přidáno do košíku",
-      description: `${product.title} byl přidán do vašeho košíku.`,
-    })
+    try {
+      const priceNumber = parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.'))
+      
+      await addToCart({
+        id: product.id,
+        name: product.title,
+        price: priceNumber,
+        image: product.image,
+        category: product.category,
+        variantId: product.variantId,
+        isShopifyProduct: !!product.variantId, // True if we have a variant ID
+      })
+      
+      toast({
+        title: "Přidáno do košíku",
+        description: `${product.title} byl přidán do vašeho košíku.`,
+      })
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast({
+        title: "Chyba při přidávání do košíku",
+        description: "Nepodařilo se přidat produkt do košíku. Zkuste to prosím znovu.",
+        variant: "destructive",
+      })
+    }
   }
 
   if (isLoading) {

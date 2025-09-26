@@ -182,11 +182,11 @@ const DynamicProductPage = () => {
         }
       }
 
-      // Add to local cart with Shopify variant information
+      // Add to cart with Shopify variant information
       const price = parseFloat(selectedVariant.price.amount);
       const image = displayImages[0]?.url || fallbackImage;
       
-      addToLocalCart({
+      await addToLocalCart({
         id: product.id, // Use product ID as main ID
         name: product.title,
         price: price,

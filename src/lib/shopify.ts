@@ -689,6 +689,228 @@ export function getCollectionTagFromProductTags(tags: string[]): string | null {
 }
 
 /**
+ * Get cart by ID from Shopify
+ * @param cartId - The cart ID
+ * @returns Promise with cart data
+ */
+export async function getCart(cartId: string) {
+  const query = `
+    query getCart($id: ID!) {
+      cart(id: $id) {
+        id
+        checkoutUrl
+        totalQuantity
+        cost {
+          totalAmount {
+            amount
+            currencyCode
+          }
+        }
+        lines(first: 100) {
+          edges {
+            node {
+              id
+              quantity
+              merchandise {
+                ... on ProductVariant {
+                  id
+                  title
+                  price {
+                    amount
+                    currencyCode
+                  }
+                  product {
+                    id
+                    title
+                    handle
+                    images(first: 1) {
+                      edges {
+                        node {
+                          url
+                          altText
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetchShopify<{ cart: any }>(query, { id: cartId });
+    return response.data.cart;
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    throw error;
+  }
+}
+
+/**
+ * GraphQL mutation to update cart line quantities
+ * @param cartId - The cart ID
+ * @param lines - Array of line updates with id and quantity
+ * @returns Promise with updated cart data
+ */
+export async function updateCartLines(cartId: string, lines: Array<{ id: string; quantity: number }>) {
+  const mutation = `
+    mutation cartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
+      cartLinesUpdate(cartId: $cartId, lines: $lines) {
+        cart {
+          id
+          checkoutUrl
+          totalQuantity
+          cost {
+            totalAmount {
+              amount
+              currencyCode
+            }
+          }
+          lines(first: 100) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    product {
+                      id
+                      title
+                      handle
+                      images(first: 1) {
+                        edges {
+                          node {
+                            url
+                            altText
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    cartId: cartId,
+    lines: lines
+  };
+
+  try {
+    const response = await fetchShopify<{ 
+      cartLinesUpdate: { 
+        cart: any; 
+        userErrors: Array<{ field: string; message: string }> 
+      } 
+    }>(mutation, variables);
+
+    return response;
+  } catch (error) {
+    console.error('Error updating cart lines:', error);
+    throw error;
+  }
+}
+
+/**
+ * GraphQL mutation to remove lines from cart
+ * @param cartId - The cart ID
+ * @param lineIds - Array of line IDs to remove
+ * @returns Promise with updated cart data
+ */
+export async function removeCartLines(cartId: string, lineIds: string[]) {
+  const mutation = `
+    mutation cartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
+      cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
+        cart {
+          id
+          checkoutUrl
+          totalQuantity
+          cost {
+            totalAmount {
+              amount
+              currencyCode
+            }
+          }
+          lines(first: 100) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    product {
+                      id
+                      title
+                      handle
+                      images(first: 1) {
+                        edges {
+                          node {
+                            url
+                            altText
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    cartId: cartId,
+    lineIds: lineIds
+  };
+
+  try {
+    const response = await fetchShopify<{ 
+      cartLinesRemove: { 
+        cart: any; 
+        userErrors: Array<{ field: string; message: string }> 
+      } 
+    }>(mutation, variables);
+
+    return response;
+  } catch (error) {
+    console.error('Error removing cart lines:', error);
+    throw error;
+  }
+}
+
+/**
  * Get inventory quantity for a product variant
  * @param variantGid - The variant GID (e.g., "gid://shopify/ProductVariant/123456789")
  * @param variantId - Alternative: plain numeric variant ID

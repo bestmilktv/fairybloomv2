@@ -3,7 +3,6 @@ import { X, Plus, Minus, ShoppingBag, Loader2, ExternalLink } from 'lucide-react
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
-import { createCart, addToCart } from '@/lib/shopify'
 import { Link } from 'react-router-dom'
 
 interface MiniCartProps {
@@ -12,7 +11,7 @@ interface MiniCartProps {
 }
 
 export function MiniCart({ isOpen, onClose }: MiniCartProps) {
-  const { items, updateQuantity, removeFromCart, getTotalPrice, getTotalItems, clearCart } = useCart()
+  const { items, cartId, isLoading, updateQuantity, removeFromCart, getTotalPrice, getTotalItems, clearCart, refreshCart } = useCart()
   const { toast } = useToast()
   const [isCheckingOut, setIsCheckingOut] = useState(false)
 
@@ -27,45 +26,23 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
     try {
       setIsCheckingOut(true)
 
-      // Filter only Shopify products for checkout
-      const shopifyItems = items.filter(item => item.isShopifyProduct && item.variantId)
-      
-      if (shopifyItems.length === 0) {
-        // If no Shopify products, redirect to local cart page
+      // If no cartId exists, we need to create a cart first
+      if (!cartId) {
         toast({
-          title: "Přesměrování k košíku",
-          description: "Přesměrováváme vás na stránku košíku...",
+          title: "Chyba",
+          description: "Košík není k dispozici. Zkuste to prosím znovu.",
+          variant: "destructive",
         })
-        onClose()
-        window.location.href = '/cart'
         return
       }
 
-      // Convert Shopify items to cart format
-      const cartLines = shopifyItems.map(item => ({
-        merchandiseId: item.variantId!,
-        quantity: item.quantity
-      }))
-
-      // Create cart with first item
-      const cartResult = await createCart(cartLines[0].merchandiseId, cartLines[0].quantity)
+      // Get the checkout URL from the cart
+      const { getCart } = await import('@/lib/shopify')
+      const shopifyCart = await getCart(cartId)
       
-      if (cartResult.data.cartCreate.userErrors.length > 0) {
-        throw new Error(cartResult.data.cartCreate.userErrors[0].message)
+      if (!shopifyCart?.checkoutUrl) {
+        throw new Error('Checkout URL not available')
       }
-
-      // Add remaining Shopify items to cart
-      if (cartLines.length > 1) {
-        const cartId = cartResult.data.cartCreate.cart.id
-        for (let i = 1; i < cartLines.length; i++) {
-          const addResult = await addToCart(cartId, cartLines[i].merchandiseId, cartLines[i].quantity)
-          if (addResult.data.cartLinesAdd.userErrors.length > 0) {
-            throw new Error(addResult.data.cartLinesAdd.userErrors[0].message)
-          }
-        }
-      }
-
-      const cart = cartResult.data.cartCreate.cart
       
       // Show success message
       toast({
@@ -73,16 +50,11 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
         description: "Váš košík byl připraven. Přesměrováváme vás k pokladně...",
       })
 
-      // Clear local cart
-      clearCart()
-      
       // Close sidebar
       onClose()
 
       // Redirect to checkout
-      if (cart.checkoutUrl) {
-        window.location.href = cart.checkoutUrl
-      }
+      window.location.href = shopifyCart.checkoutUrl
 
     } catch (error) {
       console.error('Error during checkout:', error)
@@ -179,7 +151,8 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="h-8 w-8 p-0 hover:bg-gold/10 hover:border-gold"
+                          disabled={isLoading}
+                          className="h-8 w-8 p-0 hover:bg-gold/10 hover:border-gold disabled:opacity-50"
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
@@ -190,7 +163,8 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="h-8 w-8 p-0 hover:bg-gold/10 hover:border-gold"
+                          disabled={isLoading}
+                          className="h-8 w-8 p-0 hover:bg-gold/10 hover:border-gold disabled:opacity-50"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -200,7 +174,8 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() => removeFromCart(item.id)}
-                      className="text-muted-foreground hover:text-destructive transition-colors duration-200"
+                      disabled={isLoading}
+                      className="text-muted-foreground hover:text-destructive transition-colors duration-200 disabled:opacity-50"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -223,7 +198,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
               <div className="space-y-3">
                 <Button 
                   onClick={handleCheckout}
-                  disabled={isCheckingOut}
+                  disabled={isCheckingOut || isLoading || !cartId}
                   variant="luxury" 
                   className="w-full h-12 text-lg font-medium"
                 >
@@ -240,11 +215,21 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
                   )}
                 </Button>
                 
-                <Link to="/cart" onClick={onClose}>
-                  <Button variant="outline" className="w-full h-10 hover:bg-gold/10 hover:border-gold">
-                    Zobrazit detail košíku
-                  </Button>
-                </Link>
+                <Button 
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut || isLoading || !cartId}
+                  variant="outline" 
+                  className="w-full h-10 hover:bg-gold/10 hover:border-gold disabled:opacity-50"
+                >
+                  {isCheckingOut ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Připravuji...
+                    </>
+                  ) : (
+                    "Zobrazit detail košíku"
+                  )}
+                </Button>
               </div>
               
               <p className="text-xs text-muted-foreground text-center">

@@ -178,31 +178,48 @@ const ProductDetailPage = () => {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product || animatingToCart) return;
     
     // Start animation
     setAnimatingToCart(true);
     
-    // Add to cart
-    const priceNumber = parseInt(product.price.replace(/[^\d]/g, ''));
-    addToCart({
-      id: product.id,
-      name: product.title,
-      price: priceNumber,
-      image: product.images[0],
-      category: product.category,
-    });
-    
-    toast({
-      title: "Přidáno do košíku",
-      description: `${product.title} byl přidán do vašeho košíku.`,
-    });
-    
-    // Reset animation after delay
-    setTimeout(() => {
-      setAnimatingToCart(false);
-    }, 1000);
+    try {
+      // Get the first variant (you might want to add variant selection UI later)
+      const firstVariant = product.variants?.[0];
+      if (!firstVariant) {
+        throw new Error('No variant available for this product');
+      }
+
+      // Add to cart with variant ID
+      const priceNumber = parseFloat(firstVariant.price.amount);
+      await addToCart({
+        id: product.id,
+        name: product.title,
+        price: priceNumber,
+        image: product.images[0],
+        category: product.category,
+        variantId: firstVariant.id,
+        isShopifyProduct: true,
+      });
+      
+      toast({
+        title: "Přidáno do košíku",
+        description: `${product.title} byl přidán do vašeho košíku.`,
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: "Chyba při přidávání do košíku",
+        description: "Nepodařilo se přidat produkt do košíku. Zkuste to prosím znovu.",
+        variant: "destructive",
+      });
+    } finally {
+      // Reset animation after delay
+      setTimeout(() => {
+        setAnimatingToCart(false);
+      }, 1000);
+    }
   };
 
   if (isLoading) {

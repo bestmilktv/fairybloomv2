@@ -1,11 +1,15 @@
 import { useCart } from '@/contexts/CartContext'
 import { Button } from '@/components/ui/button'
-import { Minus, Plus, Trash2, ArrowLeft } from 'lucide-react'
+import { Minus, Plus, Trash2, ArrowLeft, Loader2, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Navigation from '@/components/Navigation'
+import { useToast } from '@/hooks/use-toast'
+import { useState } from 'react'
 
 const CartPage = () => {
-  const { items, updateQuantity, removeFromCart, getTotalPrice } = useCart()
+  const { items, cartId, isLoading, updateQuantity, removeFromCart, getTotalPrice } = useCart()
+  const { toast } = useToast()
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -13,6 +17,52 @@ const CartPage = () => {
       currency: 'CZK',
       minimumFractionDigits: 0,
     }).format(price)
+  }
+
+  // Handle checkout with Shopify
+  const handleCheckout = async () => {
+    if (items.length === 0 || isCheckingOut) return
+
+    try {
+      setIsCheckingOut(true)
+
+      // If no cartId exists, we need to create a cart first
+      if (!cartId) {
+        toast({
+          title: "Chyba",
+          description: "Košík není k dispozici. Zkuste to prosím znovu.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Get the checkout URL from the cart
+      const { getCart } = await import('@/lib/shopify')
+      const shopifyCart = await getCart(cartId)
+      
+      if (!shopifyCart?.checkoutUrl) {
+        throw new Error('Checkout URL not available')
+      }
+      
+      // Show success message
+      toast({
+        title: "Přesměrování k pokladně",
+        description: "Váš košík byl připraven. Přesměrováváme vás k pokladně...",
+      })
+
+      // Redirect to checkout
+      window.location.href = shopifyCart.checkoutUrl
+
+    } catch (error) {
+      console.error('Error during checkout:', error)
+      toast({
+        title: "Chyba při pokladně",
+        description: "Nepodařilo se připravit košík k pokladně. Zkuste to prosím znovu.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCheckingOut(false)
+    }
   }
 
   if (items.length === 0) {
@@ -80,8 +130,9 @@ const CartPage = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 rounded-full border-muted"
+                            className="h-8 w-8 rounded-full border-muted disabled:opacity-50"
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            disabled={isLoading}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
@@ -91,8 +142,9 @@ const CartPage = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 rounded-full border-muted"
+                            className="h-8 w-8 rounded-full border-muted disabled:opacity-50"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            disabled={isLoading}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -105,8 +157,9 @@ const CartPage = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive disabled:opacity-50"
                             onClick={() => removeFromCart(item.id)}
+                            disabled={isLoading}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -140,8 +193,22 @@ const CartPage = () => {
                   </div>
                 </div>
                 
-                <Button className="w-full bg-primary/90 hover:bg-primary text-primary-foreground py-3">
-                  Pokračovat k pokladně
+                <Button 
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut || isLoading || !cartId}
+                  className="w-full bg-primary/90 hover:bg-primary text-primary-foreground py-3 disabled:opacity-50"
+                >
+                  {isCheckingOut ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Připravuji pokladnu...
+                    </>
+                  ) : (
+                    <>
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Pokračovat k pokladně
+                    </>
+                  )}
                 </Button>
                 
                 <p className="text-xs text-foreground/50 text-center mt-4">
