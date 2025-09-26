@@ -20,21 +20,6 @@ const CategoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Collection mapping for Shopify - using slugified handles (these are the actual Shopify handles!)
-  const collectionMapping = {
-    'náhrdelníky': 'nahrdelniky',  // Actual Shopify handle (slugified)
-    'náušnice': 'nausnice',        // Actual Shopify handle (slugified)
-    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
-    'náramky': 'naramky'           // Actual Shopify handle (slugified)
-  };
-
-  // Reverse mapping from slugified URLs to original category names
-  const slugToCategoryMapping = {
-    'nahrdelniky': 'náhrdelníky',
-    'nausnice': 'náušnice',
-    'prsteny': 'prsteny',
-    'naramky': 'náramky'
-  };
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -49,9 +34,8 @@ const CategoryPage = () => {
         setHasError(false);
 
         const decodedCategory = category ? decodeURIComponent(category) : null;
-        // Convert slugified URL back to original category name
-        const originalCategory = decodedCategory ? slugToCategoryMapping[decodedCategory as keyof typeof slugToCategoryMapping] : null;
-        const shopifyHandle = originalCategory ? collectionMapping[originalCategory as keyof typeof collectionMapping] : null;
+        // Direct mapping from slugified URL to Shopify handle
+        const shopifyHandle = decodedCategory;
         
         
         if (shopifyHandle) {
@@ -81,7 +65,7 @@ const CategoryPage = () => {
                   price: firstVariant?.price ? 
                     `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                     'Cena na vyžádání',
-                  image: firstImage?.url || getFallbackImage(originalCategory),
+                  image: firstImage?.url || getFallbackImage(decodedCategory),
                   description: product.description || 'Elegantní šperk z naší kolekce',
                   handle: product.handle,
                   inventoryQuantity
@@ -113,22 +97,22 @@ const CategoryPage = () => {
   const getFallbackImage = (category: string | null) => {
     if (!category) return necklaceImage;
     switch (category) {
-      case 'náhrdelníky': return necklaceImage;
-      case 'náušnice': return earringsImage;
+      case 'nahrdelniky': return necklaceImage;
+      case 'nausnice': return earringsImage;
       case 'prsteny': return ringImage;
-      case 'náramky': return braceletImage;
+      case 'naramky': return braceletImage;
       default: return necklaceImage;
     }
   };
 
   // Category titles and subtitles
   const categoryInfo = {
-    'náhrdelníky': {
+    'nahrdelniky': {
       title: 'Náhrdelníky',
       subtitle: 'Elegantní náhrdelníky s květinami zachycenými v čase',
       image: necklaceImage
     },
-    'náušnice': {
+    'nausnice': {
       title: 'Náušnice',
       subtitle: 'Jemné náušnice pro každodenní eleganci',
       image: earringsImage
@@ -138,7 +122,7 @@ const CategoryPage = () => {
       subtitle: 'Jedinečné prsteny pro výjimečné okamžiky',
       image: ringImage
     },
-    'náramky': {
+    'naramky': {
       title: 'Náramky',
       subtitle: 'Stylové náramky plné přírodní krásy',
       image: braceletImage
