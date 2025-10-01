@@ -21,20 +21,10 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
 
   // Handle checkout with Shopify
   const handleCheckout = async () => {
-    if (items.length === 0 || isCheckingOut) return
+    if (items.length === 0 || isCheckingOut || !cartId) return
 
     try {
       setIsCheckingOut(true)
-
-      // If no cartId exists, we need to create a cart first
-      if (!cartId) {
-        toast({
-          title: "Chyba",
-          description: "Košík není k dispozici. Zkuste to prosím znovu.",
-          variant: "destructive",
-        })
-        return
-      }
 
       // Get the checkout URL from the cart
       const { getCart } = await import('@/lib/shopify')
@@ -212,7 +202,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
               <div className="space-y-3">
                 <Button 
                   onClick={handleCheckout}
-                  disabled={isCheckingOut || isLoading || !cartId}
+                  disabled={isCheckingOut || isLoading || !cartId || items.length === 0}
                   variant="luxury" 
                   className="w-full h-12 text-lg font-medium"
                 >
