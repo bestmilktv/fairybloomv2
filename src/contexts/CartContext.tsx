@@ -36,6 +36,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Load cart ID from localStorage on mount
   useEffect(() => {
     const savedCartId = localStorage.getItem('fairybloom-cart-id')
+    console.log('Loading cart ID from localStorage:', savedCartId); // DEBUG
     if (savedCartId) {
       setCartId(savedCartId)
       // Fetch cart from Shopify
@@ -78,11 +79,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch cart from Shopify
   const refreshCartFromShopify = async (cartIdToFetch: string) => {
+    console.log('Refreshing cart from Shopify with ID:', cartIdToFetch); // DEBUG
     try {
       setIsLoading(true)
       const shopifyCart = await getCart(cartIdToFetch)
+      console.log('Shopify cart fetched:', shopifyCart); // DEBUG
       if (shopifyCart) {
         const cartItems = convertShopifyCartToItems(shopifyCart)
+        console.log('Converted cart items:', cartItems); // DEBUG
         setItems(cartItems)
       }
     } catch (error) {
@@ -129,6 +133,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           throw new Error(result.data.cartCreate.userErrors[0].message)
         }
         const newCartId = result.data.cartCreate.cart.id
+        console.log('Setting new cart ID:', newCartId); // DEBUG
         setCartId(newCartId)
         // Refresh cart from Shopify
         await refreshCartFromShopify(newCartId)
