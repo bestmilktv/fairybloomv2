@@ -698,7 +698,7 @@ export async function getCart(cartId: string) {
     query getCart($id: ID!) {
       cart(id: $id) {
         id
-        checkoutUrl
+        webUrl
         totalQuantity
         cost {
           totalAmount {
@@ -749,7 +749,11 @@ export async function getCart(cartId: string) {
       throw new Error(`Cart with ID ${cartId} not found or expired`);
     }
     
-    return response.data.cart;
+    // Override with your custom checkout URL
+    const cart = response.data.cart;
+    cart.checkoutUrl = `https://pokladna.fairybloom.cz/checkout?cart=${encodeURIComponent(cartId)}`;
+    
+    return cart;
   } catch (error) {
     console.error('Error fetching cart:', error);
     throw error;
@@ -946,6 +950,55 @@ export async function getVariantInventory(variantGid?: string, variantId?: strin
     return data.inventory_quantity;
   } catch (error) {
     console.error('Error fetching variant inventory:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a checkout from cart
+ */
+export async function createCheckoutFromCart(cartId: string) {
+  const mutation = `
+    mutation checkoutCreate($input: CheckoutCreateInput!) {
+      checkoutCreate(input: $input) {
+        checkout {
+          id
+          webUrl
+          totalPrice {
+            amount
+            currencyCode
+          }
+        }
+        checkoutUserErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    input: {
+      lineItems: [
+        {
+          variantId: "gid://shopify/ProductVariant/123456789", // You'll need to get this from cart
+          quantity: 1
+        }
+      ]
+    }
+  };
+
+  try {
+    const response = await fetchShopify<{ 
+      checkoutCreate: { 
+        checkout: any; 
+        checkoutUserErrors: Array<{ field: string; message: string }> 
+      } 
+    }>(mutation, variables);
+
+    return response;
+  } catch (error) {
+    console.error('Error creating checkout:', error);
     throw error;
   }
 }
