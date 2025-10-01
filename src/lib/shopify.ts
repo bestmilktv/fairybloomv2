@@ -743,6 +743,12 @@ export async function getCart(cartId: string) {
 
   try {
     const response = await fetchShopify<{ cart: any }>(query, { id: cartId });
+    
+    // Check if cart exists
+    if (!response.data.cart) {
+      throw new Error(`Cart with ID ${cartId} not found or expired`);
+    }
+    
     return response.data.cart;
   } catch (error) {
     console.error('Error fetching cart:', error);

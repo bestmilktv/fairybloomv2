@@ -87,9 +87,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Error fetching cart from Shopify:', error)
-      // If cart doesn't exist, clear the cart ID
+      // If cart doesn't exist, clear the cart ID and localStorage
       setCartId(null)
       setItems([])
+      localStorage.removeItem('fairybloom-cart-id')
+      
+      // Show user-friendly error message
+      console.warn('Cart not found or expired. Creating new cart on next add to cart action.')
     } finally {
       setIsLoading(false)
     }

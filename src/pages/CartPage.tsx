@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useState } from 'react'
 
 const CartPage = () => {
-  const { items, cartId, isLoading, updateQuantity, removeFromCart, getTotalPrice } = useCart()
+  const { items, cartId, isLoading, updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart()
   const { toast } = useToast()
   const [isCheckingOut, setIsCheckingOut] = useState(false)
 
@@ -55,11 +55,25 @@ const CartPage = () => {
 
     } catch (error) {
       console.error('Error during checkout:', error)
-      toast({
-        title: "Chyba při pokladně",
-        description: "Nepodařilo se připravit košík k pokladně. Zkuste to prosím znovu.",
-        variant: "destructive",
-      })
+      
+      // Handle specific error cases
+      if (error.message.includes('not found') || error.message.includes('expired')) {
+        // Clear invalid cart and ask user to try again
+        localStorage.removeItem('fairybloom-cart-id')
+        await clearCart()
+        
+        toast({
+          title: "Košík vypršel",
+          description: "Váš košík vypršel. Zkuste přidat produkty znovu.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Chyba při pokladně",
+          description: "Nepodařilo se připravit košík k pokladně. Zkuste to prosím znovu.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsCheckingOut(false)
     }
