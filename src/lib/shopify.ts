@@ -85,7 +85,7 @@ export async function fetchShopify<T>(
     throw new Error('Missing required environment variables: VITE_SHOPIFY_STORE_DOMAIN and VITE_SHOPIFY_STOREFRONT_TOKEN');
   }
 
-  const url = `https://${domain}/api/2024-10/graphql.json`;
+  const url = `https://${domain}/api/2025-07/graphql.json`;
 
   try {
     const response = await fetch(url, {
@@ -255,7 +255,7 @@ export async function createCart(variantId: string, quantity: number = 1) {
       cartCreate(input: $input) {
         cart {
           id
-          checkoutUrl
+          webUrl
           totalQuantity
           cost {
             totalAmount {
@@ -333,7 +333,7 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
       cartLinesAdd(cartId: $cartId, lines: $lines) {
         cart {
           id
-          checkoutUrl
+          webUrl
           totalQuantity
           cost {
             totalAmount {
@@ -749,11 +749,7 @@ export async function getCart(cartId: string) {
       throw new Error(`Cart with ID ${cartId} not found or expired`);
     }
     
-    // Override with your custom checkout URL
-    const cart = response.data.cart;
-    cart.checkoutUrl = `https://pokladna.fairybloom.cz/checkout?cart=${encodeURIComponent(cartId)}`;
-    
-    return cart;
+    return response.data.cart;
   } catch (error) {
     console.error('Error fetching cart:', error);
     throw error;
@@ -772,7 +768,7 @@ export async function updateCartLines(cartId: string, lines: Array<{ id: string;
       cartLinesUpdate(cartId: $cartId, lines: $lines) {
         cart {
           id
-          checkoutUrl
+          webUrl
           totalQuantity
           cost {
             totalAmount {
@@ -852,7 +848,7 @@ export async function removeCartLines(cartId: string, lineIds: string[]) {
       cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
         cart {
           id
-          checkoutUrl
+          webUrl
           totalQuantity
           cost {
             totalAmount {
@@ -950,55 +946,6 @@ export async function getVariantInventory(variantGid?: string, variantId?: strin
     return data.inventory_quantity;
   } catch (error) {
     console.error('Error fetching variant inventory:', error);
-    throw error;
-  }
-}
-
-/**
- * Create a checkout from cart
- */
-export async function createCheckoutFromCart(cartId: string) {
-  const mutation = `
-    mutation checkoutCreate($input: CheckoutCreateInput!) {
-      checkoutCreate(input: $input) {
-        checkout {
-          id
-          webUrl
-          totalPrice {
-            amount
-            currencyCode
-          }
-        }
-        checkoutUserErrors {
-          field
-          message
-        }
-      }
-    }
-  `;
-
-  const variables = {
-    input: {
-      lineItems: [
-        {
-          variantId: "gid://shopify/ProductVariant/123456789", // You'll need to get this from cart
-          quantity: 1
-        }
-      ]
-    }
-  };
-
-  try {
-    const response = await fetchShopify<{ 
-      checkoutCreate: { 
-        checkout: any; 
-        checkoutUserErrors: Array<{ field: string; message: string }> 
-      } 
-    }>(mutation, variables);
-
-    return response;
-  } catch (error) {
-    console.error('Error creating checkout:', error);
     throw error;
   }
 }
