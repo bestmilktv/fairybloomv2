@@ -85,7 +85,7 @@ export async function fetchShopify<T>(
     throw new Error('Missing required environment variables: VITE_SHOPIFY_STORE_DOMAIN and VITE_SHOPIFY_STOREFRONT_TOKEN');
   }
 
-  const url = `https://${domain}/api/2025-01/graphql.json`;
+  const url = `https://${domain}/api/2025-07/graphql.json`;
 
   try {
     const response = await fetch(url, {
