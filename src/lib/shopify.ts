@@ -850,15 +850,8 @@ export async function getCheckoutUrl(cartId: string) {
     throw new Error('Invalid cart ID format');
   }
 
-  // Get the store domain from environment
-  const domain = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN;
-  
-  if (!domain) {
-    throw new Error('Store domain not configured');
-  }
-
-  // Create checkout URL using cart token
-  const checkoutUrl = `https://${domain}/cart/${cartToken}:1`;
+  // Use custom checkout domain instead of store domain
+  const checkoutUrl = `https://pokladna.fairybloom.cz/checkout/${cartToken}`;
   
   console.log('Generated checkout URL:', checkoutUrl) // DEBUG
   
