@@ -250,6 +250,7 @@ export async function getProductByHandle(handle: string) {
  * @returns Promise with cart data
  */
 export async function createCart(variantId: string, quantity: number = 1) {
+  console.log('Creating cart with variant ID:', variantId, 'quantity:', quantity) // DEBUG
   const mutation = `
     mutation cartCreate($input: CartInput!) {
       cartCreate(input: $input) {
@@ -313,6 +314,7 @@ export async function createCart(variantId: string, quantity: number = 1) {
       } 
     }>(mutation, variables);
 
+    console.log('Create cart response:', response) // DEBUG
     return response;
   } catch (error) {
     console.error('Error creating cart:', error);
@@ -328,6 +330,7 @@ export async function createCart(variantId: string, quantity: number = 1) {
  * @returns Promise with updated cart data
  */
 export async function addToCart(cartId: string, variantId: string, quantity: number = 1) {
+  console.log('Adding to cart:', cartId, 'variant:', variantId, 'quantity:', quantity) // DEBUG
   const mutation = `
     mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
       cartLinesAdd(cartId: $cartId, lines: $lines) {
@@ -390,6 +393,7 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
       } 
     }>(mutation, variables);
 
+    console.log('Add to cart response:', response) // DEBUG
     return response;
   } catch (error) {
     console.error('Error adding to cart:', error);

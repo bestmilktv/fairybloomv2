@@ -109,26 +109,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCart = async (newItem: Omit<CartItem, 'quantity'>) => {
     try {
       setIsLoading(true)
+      console.log('Adding to cart:', newItem) // DEBUG
       
       if (!newItem.variantId) {
         throw new Error('Variant ID is required for Shopify products')
       }
 
       if (cartId) {
+        console.log('Adding to existing cart:', cartId) // DEBUG
         // Add to existing cart
         const result = await addToShopifyCart(cartId, newItem.variantId, 1)
+        console.log('Add to cart result:', result) // DEBUG
         if (result.data.cartLinesAdd.userErrors.length > 0) {
           throw new Error(result.data.cartLinesAdd.userErrors[0].message)
         }
         // Refresh cart from Shopify
         await refreshCartFromShopify(cartId)
       } else {
+        console.log('Creating new cart with variant:', newItem.variantId) // DEBUG
         // Create new cart
         const result = await createCart(newItem.variantId, 1)
+        console.log('Create cart result:', result) // DEBUG
         if (result.data.cartCreate.userErrors.length > 0) {
           throw new Error(result.data.cartCreate.userErrors[0].message)
         }
         const newCartId = result.data.cartCreate.cart.id
+        console.log('New cart ID:', newCartId) // DEBUG
         setCartId(newCartId)
         // Refresh cart from Shopify
         await refreshCartFromShopify(newCartId)
