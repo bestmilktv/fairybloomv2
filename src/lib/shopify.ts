@@ -837,67 +837,32 @@ export async function updateCartLines(cartId: string, lines: Array<{ id: string;
 }
 
 /**
- * Create a checkout from cart
+ * Get checkout URL for cart
  * @param cartId - The cart ID
- * @returns Promise with checkout data including checkoutUrl
+ * @returns Promise with checkout URL
  */
-export async function createCheckoutFromCart(cartId: string) {
-  const mutation = `
-    mutation checkoutCreate($input: CheckoutCreateInput!) {
-      checkoutCreate(input: $input) {
-        checkout {
-          id
-          webUrl
-          totalPrice {
-            amount
-            currencyCode
-          }
-        }
-        checkoutUserErrors {
-          field
-          message
-        }
-      }
-    }
-  `;
-
-  // First, get the cart to extract line items
-  const cart = await getCart(cartId);
+export async function getCheckoutUrl(cartId: string) {
+  // Extract the cart token from the cart ID
+  // Cart ID format: gid://shopify/Cart/TOKEN
+  const cartToken = cartId.split('/').pop();
   
-  if (!cart || !cart.lines?.edges) {
-    throw new Error('Cart not found or empty');
+  if (!cartToken) {
+    throw new Error('Invalid cart ID format');
   }
 
-  const lineItems = cart.lines.edges.map((edge: any) => ({
-    variantId: edge.node.merchandise.id,
-    quantity: edge.node.quantity
-  }));
-
-  const variables = {
-    input: {
-      lineItems: lineItems
-    }
-  };
-
-  try {
-    const response = await fetchShopify<{ 
-      checkoutCreate: { 
-        checkout: any; 
-        checkoutUserErrors: Array<{ field: string; message: string }> 
-      } 
-    }>(mutation, variables);
-
-    console.log('Create checkout response:', response) // DEBUG
-
-    if (response.data.checkoutCreate.checkoutUserErrors.length > 0) {
-      throw new Error(response.data.checkoutCreate.checkoutUserErrors[0].message);
-    }
-
-    return response.data.checkoutCreate.checkout;
-  } catch (error) {
-    console.error('Error creating checkout:', error);
-    throw error;
+  // Get the store domain from environment
+  const domain = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN;
+  
+  if (!domain) {
+    throw new Error('Store domain not configured');
   }
+
+  // Create checkout URL using cart token
+  const checkoutUrl = `https://${domain}/cart/${cartToken}:1`;
+  
+  console.log('Generated checkout URL:', checkoutUrl) // DEBUG
+  
+  return checkoutUrl;
 }
 
 /**

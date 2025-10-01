@@ -26,11 +26,11 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
     try {
       setIsCheckingOut(true)
 
-      // Create checkout from cart
-      const { createCheckoutFromCart } = await import('@/lib/shopify')
-      const checkout = await createCheckoutFromCart(cartId)
+      // Get checkout URL for cart
+      const { getCheckoutUrl } = await import('@/lib/shopify')
+      const checkoutUrl = await getCheckoutUrl(cartId)
       
-      if (!checkout?.webUrl) {
+      if (!checkoutUrl) {
         throw new Error('Checkout URL not available')
       }
       
@@ -44,7 +44,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
       onClose()
 
       // Redirect to checkout
-      window.location.href = checkout.webUrl
+      window.location.href = checkoutUrl
 
     } catch (error) {
       console.error('Error during checkout:', error)
