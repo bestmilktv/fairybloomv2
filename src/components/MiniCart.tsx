@@ -23,22 +23,16 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
   const handleCheckout = async () => {
     if (items.length === 0 || isCheckingOut || !cartId) return
 
-    console.log('Starting checkout with cartId:', cartId); // DEBUG
-    console.log('Items in cart:', items); // DEBUG
-
     try {
       setIsCheckingOut(true)
 
       // Get the checkout URL from the cart
       const { getCart } = await import('@/lib/shopify')
       const shopifyCart = await getCart(cartId)
-      console.log('Checkout cart data:', shopifyCart); // DEBUG
       
       if (!shopifyCart?.checkoutUrl) {
         throw new Error('Checkout URL not available')
       }
-      
-      console.log('Redirecting to checkout URL:', shopifyCart.checkoutUrl); // DEBUG
       
       // Show success message
       toast({
@@ -49,8 +43,8 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
       // Close sidebar
       onClose()
 
-      // Open checkout in new window to avoid domain issues
-      window.open(shopifyCart.checkoutUrl, '_blank')
+      // Redirect to checkout
+      window.location.href = shopifyCart.checkoutUrl
 
     } catch (error) {
       console.error('Error during checkout:', error)

@@ -50,8 +50,8 @@ const CartPage = () => {
         description: "Váš košík byl připraven. Přesměrováváme vás k pokladně...",
       })
 
-      // Open checkout in new window to avoid domain issues
-      window.open(shopifyCart.checkoutUrl, '_blank')
+      // Redirect to checkout
+      window.location.href = shopifyCart.checkoutUrl
 
     } catch (error) {
       console.error('Error during checkout:', error)

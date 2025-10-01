@@ -250,8 +250,6 @@ export async function getProductByHandle(handle: string) {
  * @returns Promise with cart data
  */
 export async function createCart(variantId: string, quantity: number = 1) {
-  console.log('Creating cart with variant ID:', variantId); // DEBUG
-  
   const mutation = `
     mutation cartCreate($input: CartInput!) {
       cartCreate(input: $input) {
@@ -314,8 +312,6 @@ export async function createCart(variantId: string, quantity: number = 1) {
         userErrors: Array<{ field: string; message: string }> 
       } 
     }>(mutation, variables);
-
-    console.log('Cart created:', response.data.cartCreate.cart); // DEBUG
 
     return response;
   } catch (error) {
@@ -698,8 +694,6 @@ export function getCollectionTagFromProductTags(tags: string[]): string | null {
  * @returns Promise with cart data
  */
 export async function getCart(cartId: string) {
-  console.log('Getting cart with ID:', cartId); // DEBUG
-  
   const query = `
     query getCart($id: ID!) {
       cart(id: $id) {
@@ -749,7 +743,6 @@ export async function getCart(cartId: string) {
 
   try {
     const response = await fetchShopify<{ cart: any }>(query, { id: cartId });
-    console.log('Cart response:', response.data.cart); // DEBUG
     
     // Check if cart exists
     if (!response.data.cart) {
