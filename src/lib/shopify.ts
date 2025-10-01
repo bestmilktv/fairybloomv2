@@ -256,7 +256,6 @@ export async function createCart(variantId: string, quantity: number = 1) {
       cartCreate(input: $input) {
         cart {
           id
-          webUrl
           totalQuantity
           cost {
             totalAmount {
@@ -336,7 +335,6 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
       cartLinesAdd(cartId: $cartId, lines: $lines) {
         cart {
           id
-          webUrl
           totalQuantity
           cost {
             totalAmount {
@@ -702,7 +700,6 @@ export async function getCart(cartId: string) {
     query getCart($id: ID!) {
       cart(id: $id) {
         id
-        webUrl
         totalQuantity
         cost {
           totalAmount {
@@ -772,7 +769,6 @@ export async function updateCartLines(cartId: string, lines: Array<{ id: string;
       cartLinesUpdate(cartId: $cartId, lines: $lines) {
         cart {
           id
-          webUrl
           totalQuantity
           cost {
             totalAmount {
@@ -841,6 +837,70 @@ export async function updateCartLines(cartId: string, lines: Array<{ id: string;
 }
 
 /**
+ * Create a checkout from cart
+ * @param cartId - The cart ID
+ * @returns Promise with checkout data including checkoutUrl
+ */
+export async function createCheckoutFromCart(cartId: string) {
+  const mutation = `
+    mutation checkoutCreate($input: CheckoutCreateInput!) {
+      checkoutCreate(input: $input) {
+        checkout {
+          id
+          webUrl
+          totalPrice {
+            amount
+            currencyCode
+          }
+        }
+        checkoutUserErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  // First, get the cart to extract line items
+  const cart = await getCart(cartId);
+  
+  if (!cart || !cart.lines?.edges) {
+    throw new Error('Cart not found or empty');
+  }
+
+  const lineItems = cart.lines.edges.map((edge: any) => ({
+    variantId: edge.node.merchandise.id,
+    quantity: edge.node.quantity
+  }));
+
+  const variables = {
+    input: {
+      lineItems: lineItems
+    }
+  };
+
+  try {
+    const response = await fetchShopify<{ 
+      checkoutCreate: { 
+        checkout: any; 
+        checkoutUserErrors: Array<{ field: string; message: string }> 
+      } 
+    }>(mutation, variables);
+
+    console.log('Create checkout response:', response) // DEBUG
+
+    if (response.data.checkoutCreate.checkoutUserErrors.length > 0) {
+      throw new Error(response.data.checkoutCreate.checkoutUserErrors[0].message);
+    }
+
+    return response.data.checkoutCreate.checkout;
+  } catch (error) {
+    console.error('Error creating checkout:', error);
+    throw error;
+  }
+}
+
+/**
  * GraphQL mutation to remove lines from cart
  * @param cartId - The cart ID
  * @param lineIds - Array of line IDs to remove
@@ -852,7 +912,6 @@ export async function removeCartLines(cartId: string, lineIds: string[]) {
       cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
         cart {
           id
-          webUrl
           totalQuantity
           cost {
             totalAmount {

@@ -36,11 +36,11 @@ const CartPage = () => {
         return
       }
 
-      // Get the checkout URL from the cart
-      const { getCart } = await import('@/lib/shopify')
-      const shopifyCart = await getCart(cartId)
+      // Create checkout from cart
+      const { createCheckoutFromCart } = await import('@/lib/shopify')
+      const checkout = await createCheckoutFromCart(cartId)
       
-      if (!shopifyCart?.webUrl) {
+      if (!checkout?.webUrl) {
         throw new Error('Checkout URL not available')
       }
       
@@ -51,7 +51,7 @@ const CartPage = () => {
       })
 
       // Redirect to checkout
-      window.location.href = shopifyCart.webUrl
+      window.location.href = checkout.webUrl
 
     } catch (error) {
       console.error('Error during checkout:', error)
