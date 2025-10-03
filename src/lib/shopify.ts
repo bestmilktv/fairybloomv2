@@ -850,9 +850,8 @@ export async function getCheckoutUrl(cartId: string) {
     throw new Error('Invalid cart ID format');
   }
 
-  // Use Shopify's standard cart URL format
-  const domain = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN;
-  const checkoutUrl = `https://${domain}/cart/${cartToken}`;
+  // Use custom checkout subdomain with checkout path
+  const checkoutUrl = `https://pokladna.fairybloom.cz/checkout/${cartToken}`;
   
   console.log('Generated checkout URL:', checkoutUrl) // DEBUG
   
