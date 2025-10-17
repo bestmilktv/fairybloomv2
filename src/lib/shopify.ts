@@ -842,20 +842,29 @@ export async function updateCartLines(cartId: string, lines: Array<{ id: string;
  * @returns Promise with checkout URL
  */
 export async function getCheckoutUrl(cartId: string) {
-  // Extract the cart token from the cart ID
-  // Cart ID format: gid://shopify/Cart/TOKEN
-  const cartToken = cartId.split('/').pop();
-  
-  if (!cartToken) {
-    throw new Error('Invalid cart ID format');
-  }
+  // Query Shopify for the cart's checkoutUrl
+  const query = `
+    query getCart($id: ID!) {
+      cart(id: $id) {
+        checkoutUrl
+      }
+    }
+  `;
 
-  // Use custom checkout subdomain with checkout path
-  const checkoutUrl = `https://pokladna.fairybloom.cz/checkout/${cartToken}`;
-  
-  console.log('Generated checkout URL:', checkoutUrl) // DEBUG
-  
-  return checkoutUrl;
+  try {
+    const response = await fetchShopify<{ cart: { checkoutUrl: string } | null }>(query, { id: cartId });
+    
+    if (!response.data.cart || !response.data.cart.checkoutUrl) {
+      throw new Error('Cart checkout URL not available');
+    }
+    
+    console.log('Generated checkout URL:', response.data.cart.checkoutUrl) // DEBUG
+    
+    return response.data.cart.checkoutUrl;
+  } catch (error) {
+    console.error('Error fetching checkout URL:', error);
+    throw error;
+  }
 }
 
 /**
