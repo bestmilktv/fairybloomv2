@@ -858,9 +858,14 @@ export async function getCheckoutUrl(cartId: string) {
       throw new Error('Cart checkout URL not available');
     }
     
-    console.log('Generated checkout URL:', response.data.cart.checkoutUrl) // DEBUG
+    // Replace primary domain with checkout subdomain
+    let checkoutUrl = response.data.cart.checkoutUrl;
+    checkoutUrl = checkoutUrl.replace('fairybloom.cz', 'pokladna.fairybloom.cz');
+    checkoutUrl = checkoutUrl.replace('www.fairybloom.cz', 'pokladna.fairybloom.cz');
     
-    return response.data.cart.checkoutUrl;
+    console.log('Generated checkout URL:', checkoutUrl) // DEBUG
+    
+    return checkoutUrl;
   } catch (error) {
     console.error('Error fetching checkout URL:', error);
     throw error;
