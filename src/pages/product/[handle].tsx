@@ -314,7 +314,7 @@ const DynamicProductPage = () => {
             {/* Product Images */}
             <div className="space-y-4 fade-in-up relative">
               {/* Sticky Breadcrumb */}
-              <div className="sticky top-24 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 pb-4 mb-4">
+              <div className="sticky top-24 z-10 bg-background/95 backdrop-blur-sm pb-4 mb-4">
                 <nav className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <Link to="/" className="hover:text-foreground transition-colors">
                     Domů
