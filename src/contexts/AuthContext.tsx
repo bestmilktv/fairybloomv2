@@ -71,6 +71,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // OAuth was successful, fetch customer data
       await refreshUser()
       
+      // Try to associate existing cart with newly authenticated customer
+      const cartId = localStorage.getItem('fairybloom-cart-id');
+      if (cartId && result.accessToken) {
+        try {
+          const { associateCustomerWithCart } = await import('@/lib/shopify');
+          await associateCustomerWithCart(cartId, result.accessToken);
+          console.log('Existing cart associated with authenticated customer');
+        } catch (error) {
+          console.error('Error associating existing cart:', error);
+          // Don't fail login if cart association fails
+        }
+      }
+      
       return { success: true }
     } catch (error) {
       console.error('SSO login error:', error)

@@ -36,6 +36,33 @@ const CartPage = () => {
         return
       }
 
+      // Try to associate authenticated customer with cart
+      const { isCustomerAuthenticated } = await import('@/lib/customerAccountApi');
+      const isAuth = await isCustomerAuthenticated();
+      
+      if (isAuth) {
+        try {
+          // Get access token
+          const tokenResponse = await fetch('/api/auth/token', {
+            method: 'GET',
+            credentials: 'include',
+          });
+
+          if (tokenResponse.ok) {
+            const { accessToken } = await tokenResponse.json();
+            
+            // Associate customer with cart
+            const { associateCustomerWithCart } = await import('@/lib/shopify');
+            await associateCustomerWithCart(cartId, accessToken);
+            
+            console.log('Customer associated with cart for checkout');
+          }
+        } catch (error) {
+          console.error('Error associating customer with cart:', error);
+          // Continue with checkout even if association fails
+        }
+      }
+
       // Get checkout URL for cart
       const { getCheckoutUrl } = await import('@/lib/shopify')
       const checkoutUrl = await getCheckoutUrl(cartId)

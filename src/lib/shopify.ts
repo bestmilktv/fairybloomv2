@@ -603,6 +603,64 @@ export async function getCheckoutUrl(cartId: string) {
 }
 
 /**
+ * Associate customer access token with cart for automatic checkout login
+ * @param cartId - The cart ID
+ * @param customerAccessToken - The customer access token (shcat_...)
+ * @returns Promise with updated cart data
+ */
+export async function associateCustomerWithCart(cartId: string, customerAccessToken: string) {
+  const mutation = `
+    mutation cartBuyerIdentityUpdate($cartId: ID!, $buyerIdentity: CartBuyerIdentityInput!) {
+      cartBuyerIdentityUpdate(cartId: $cartId, buyerIdentity: $buyerIdentity) {
+        cart {
+          id
+          buyerIdentity {
+            email
+            customer {
+              id
+              email
+              firstName
+              lastName
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    cartId: cartId,
+    buyerIdentity: {
+      customerAccessToken: customerAccessToken
+    }
+  };
+
+  try {
+    const response = await fetchShopify<{ 
+      cartBuyerIdentityUpdate: { 
+        cart: any; 
+        userErrors: Array<{ field: string; message: string }> 
+      } 
+    }>(mutation, variables);
+
+    if (response.data.cartBuyerIdentityUpdate.userErrors.length > 0) {
+      console.error('Cart buyer identity update errors:', response.data.cartBuyerIdentityUpdate.userErrors);
+      throw new Error('Failed to associate customer with cart');
+    }
+
+    console.log('Customer associated with cart:', response.data.cartBuyerIdentityUpdate.cart);
+    return response.data.cartBuyerIdentityUpdate.cart;
+  } catch (error) {
+    console.error('Error associating customer with cart:', error);
+    throw error;
+  }
+}
+
+/**
  * Verify authentication status before checkout
  * This ensures the customer is logged in and cookies are properly set
  * @returns Promise<boolean> True if customer is authenticated
