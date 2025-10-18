@@ -124,48 +124,37 @@ async function fetchCustomerAccount<T>(
 }
 
 /**
- * Fetch customer profile data
+ * Fetch customer profile data via backend API
  * @returns {Promise<CustomerAccountCustomer | null>} Customer data or null if not authenticated
  */
 export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | null> {
-  const query = `
-    query getCustomer {
-      customer {
-        id
-        emailAddress
-        firstName
-        lastName
-        defaultAddress {
-          id
-          address1
-          address2
-          city
-          province
-          zip
-          country
-          phone
-        }
-        addresses(first: 10) {
-          edges {
-            node {
-              id
-              address1
-              address2
-              city
-              province
-              zip
-              country
-              phone
-            }
-          }
-        }
-      }
-    }
-  `;
-
   try {
-    const response = await fetchCustomerAccount<{ customer: CustomerAccountCustomer | null }>(query);
-    return response.data.customer;
+    const response = await fetch('/api/auth/customer', {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Not authenticated
+        return null;
+      }
+      throw new Error(`Failed to fetch customer profile: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Transform backend response to match our interface
+    return {
+      id: data.id,
+      emailAddress: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      defaultAddress: data.defaultAddress,
+      addresses: {
+        edges: (data.addresses || []).map((addr: any) => ({ node: addr }))
+      }
+    };
   } catch (error) {
     console.error('Error fetching customer profile:', error);
     return null;
@@ -295,13 +284,16 @@ export async function fetchCustomerOrder(orderId: string): Promise<CustomerAccou
 }
 
 /**
- * Check if customer is authenticated by making a simple API call
+ * Check if customer is authenticated by checking backend
  * @returns {Promise<boolean>} True if authenticated
  */
 export async function isCustomerAuthenticated(): Promise<boolean> {
   try {
-    const customer = await fetchCustomerProfile();
-    return customer !== null;
+    const response = await fetch('/api/auth/customer', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    return response.ok;
   } catch (error) {
     return false;
   }

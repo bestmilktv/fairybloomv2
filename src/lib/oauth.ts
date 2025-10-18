@@ -60,9 +60,22 @@ export async function initiateOAuthFlow(): Promise<OAuthResult> {
         throw new OAuthError('Failed to generate valid PKCE parameters', 'OAUTH_ERROR');
       }
 
-      // Store parameters in sessionStorage for callback verification
-      sessionStorage.setItem('oauth_code_verifier', codeVerifier);
-      sessionStorage.setItem('oauth_state', state);
+      // Store parameters on server via init endpoint
+      const initResponse = await fetch('/api/auth/init', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          state,
+          codeVerifier
+        })
+      });
+
+      if (!initResponse.ok) {
+        throw new OAuthError('Failed to initialize OAuth session', 'OAUTH_ERROR');
+      }
 
       // Build authorization URL
       const authUrl = buildAuthorizationUrl(codeChallenge, state);
@@ -169,10 +182,6 @@ function handleOAuthCallback(
   if (type === 'OAUTH_SUCCESS') {
     // Clean up
     cleanupOAuthFlow();
-    
-    // Clear stored parameters
-    sessionStorage.removeItem('oauth_code_verifier');
-    sessionStorage.removeItem('oauth_state');
 
     resolve({
       success: true,
@@ -183,10 +192,6 @@ function handleOAuthCallback(
   } else if (type === 'OAUTH_ERROR') {
     // Clean up
     cleanupOAuthFlow();
-    
-    // Clear stored parameters
-    sessionStorage.removeItem('oauth_code_verifier');
-    sessionStorage.removeItem('oauth_state');
 
     reject(new OAuthError(error || 'OAuth authentication failed', 'OAUTH_ERROR'));
   }

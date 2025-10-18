@@ -61,10 +61,13 @@ export default async function handler(req, res) {
       `);
     }
 
-    // Verify state parameter (CSRF protection)
+    // Get state and code_verifier from cookies
     const storedState = getTempCookie(req, 'oauth_state');
-    if (!storedState || storedState !== state) {
-      console.error('Invalid state parameter');
+    const codeVerifier = getTempCookie(req, 'oauth_code_verifier');
+
+    if (!storedState || !codeVerifier) {
+      console.error('Missing oauth_state or oauth_code_verifier in cookies');
+      console.log('Cookies:', req.headers.cookie);
       return res.status(400).send(`
         <!DOCTYPE html>
         <html>
@@ -76,8 +79,8 @@ export default async function handler(req, res) {
             if (window.opener) {
               window.opener.postMessage({
                 type: 'OAUTH_ERROR',
-                error: 'Invalid state parameter'
-              }, '${process.env.VITE_APP_URL || 'http://localhost:8080'}');
+                error: 'Missing authentication session. Please try again.'
+              }, '${process.env.VITE_APP_URL || 'https://fairybloom.cz'}');
               window.close();
             }
           </script>
@@ -86,10 +89,9 @@ export default async function handler(req, res) {
       `);
     }
 
-    // Get code_verifier from temporary cookie
-    const codeVerifier = getTempCookie(req, 'oauth_code_verifier');
-    if (!codeVerifier) {
-      console.error('Missing code_verifier');
+    // Verify state parameter (CSRF protection)
+    if (storedState !== state) {
+      console.error('Invalid state parameter', { storedState, state });
       return res.status(400).send(`
         <!DOCTYPE html>
         <html>
@@ -101,8 +103,8 @@ export default async function handler(req, res) {
             if (window.opener) {
               window.opener.postMessage({
                 type: 'OAUTH_ERROR',
-                error: 'Missing code verifier'
-              }, '${process.env.VITE_APP_URL || 'http://localhost:8080'}');
+                error: 'Invalid state parameter - CSRF check failed'
+              }, '${process.env.VITE_APP_URL || 'https://fairybloom.cz'}');
               window.close();
             }
           </script>
