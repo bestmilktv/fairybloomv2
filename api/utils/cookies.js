@@ -22,7 +22,7 @@ export function setAuthCookie(res, token, expiresAt, customerData = null) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
+    sameSite: 'None', // Změna z 'Lax' na 'None' pro cross-subdomain sharing
     domain: process.env.NODE_ENV === 'production' ? '.fairybloom.cz' : 'localhost',
     path: '/',
     expires: new Date(expiresAt)
@@ -71,7 +71,7 @@ export function clearAuthCookie(res) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
+    sameSite: 'None', // Změna z 'Lax' na 'None' pro cross-subdomain sharing
     domain: process.env.NODE_ENV === 'production' ? '.fairybloom.cz' : 'localhost',
     path: '/',
     expires: new Date(0) // Expire immediately
@@ -101,7 +101,7 @@ export function setTempCookie(res, key, value, maxAge = 600) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
+    sameSite: 'None', // Změna z 'Lax' na 'None' pro cross-subdomain sharing
     domain: process.env.NODE_ENV === 'production' ? '.fairybloom.cz' : 'localhost',
     path: '/',
     maxAge: maxAge
