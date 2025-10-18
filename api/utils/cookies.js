@@ -8,8 +8,17 @@
  * @param {Object} res - Response object
  * @param {string} token - Access token to store
  * @param {string} expiresAt - ISO string of expiration time
+ * @param {Object} customerData - Customer data from JWT (optional)
  */
-export function setAuthCookie(res, token, expiresAt) {
+export function setAuthCookie(res, token, expiresAt, customerData = null) {
+  const cookieValue = JSON.stringify({
+    access_token: token,
+    expires_at: expiresAt,
+    customer: customerData
+  });
+  
+  const encodedValue = Buffer.from(cookieValue).toString('base64');
+  
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -21,7 +30,7 @@ export function setAuthCookie(res, token, expiresAt) {
 
   // Set the cookie
   res.setHeader('Set-Cookie', [
-    `shopify_access_token=${token}; ${Object.entries(cookieOptions)
+    `shopify_access_token=${encodedValue}; ${Object.entries(cookieOptions)
       .map(([key, value]) => {
         if (typeof value === 'boolean') {
           return value ? key : '';
@@ -34,16 +43,24 @@ export function setAuthCookie(res, token, expiresAt) {
 }
 
 /**
- * Get authentication token from cookie
+ * Get authentication data from cookie
  * @param {Object} req - Request object
- * @returns {string|null} - Access token or null if not found
+ * @returns {Object|null} - Auth data object { access_token, expires_at, customer } or null if not found
  */
 export function getAuthCookie(req) {
   const cookies = req.headers.cookie;
   if (!cookies) return null;
 
   const tokenMatch = cookies.match(/shopify_access_token=([^;]+)/);
-  return tokenMatch ? tokenMatch[1] : null;
+  if (!tokenMatch) return null;
+  
+  try {
+    const decoded = Buffer.from(tokenMatch[1], 'base64').toString('utf-8');
+    return JSON.parse(decoded);
+  } catch (error) {
+    console.error('Failed to decode auth cookie:', error);
+    return null;
+  }
 }
 
 /**

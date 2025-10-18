@@ -8,24 +8,6 @@ interface User {
   firstName: string
   lastName: string
   email: string
-  defaultAddress?: {
-    id: string
-    address1: string
-    address2?: string
-    city: string
-    zip: string
-    country: string
-    phone?: string
-  } | null
-  addresses?: Array<{
-    id: string
-    address1: string
-    address2?: string
-    city: string
-    zip: string
-    country: string
-    phone?: string
-  }>
 }
 
 // Authentication context interface
@@ -122,9 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: customerData.id,
           firstName: customerData.firstName,
           lastName: customerData.lastName,
-          email: customerData.emailAddress,
-          defaultAddress: customerData.defaultAddress,
-          addresses: customerData.addresses.edges.map(edge => edge.node)
+          email: customerData.email
         })
       } else {
         setUser(null)

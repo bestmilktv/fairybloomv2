@@ -226,8 +226,31 @@ export default async function handler(req, res) {
     // Calculate expiration time
     const expiresAt = new Date(Date.now() + (expires_in * 1000)).toISOString();
 
-    // Set secure HTTP-only cookie
-    setAuthCookie(res, access_token, expiresAt);
+    // Dekódovat id_token (JWT) pro získání zákaznických dat
+    let customerData = null;
+    if (id_token) {
+      try {
+        // JWT má 3 části: header.payload.signature
+        const payloadBase64 = id_token.split('.')[1];
+        const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf-8');
+        const payload = JSON.parse(payloadJson);
+        
+        // Extrahovat zákaznická data z JWT
+        customerData = {
+          email: payload.email,
+          firstName: payload.given_name || '',
+          lastName: payload.family_name || '',
+          sub: payload.sub // Shopify customer ID
+        };
+        
+        console.log('Decoded customer data from JWT:', customerData);
+      } catch (error) {
+        console.error('Failed to decode id_token:', error);
+      }
+    }
+
+    // Set secure HTTP-only cookie with customer data
+    setAuthCookie(res, access_token, expiresAt, customerData);
 
     // Clear temporary cookies
     res.setHeader('Set-Cookie', [

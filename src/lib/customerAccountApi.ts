@@ -6,15 +6,9 @@
 // Types for Customer Account API responses
 export interface CustomerAccountCustomer {
   id: string;
-  emailAddress: string;
   firstName: string;
   lastName: string;
-  defaultAddress?: CustomerAccountAddress | null;
-  addresses: {
-    edges: Array<{
-      node: CustomerAccountAddress;
-    }>;
-  };
+  email: string;
 }
 
 export interface CustomerAccountAddress {
@@ -135,25 +129,13 @@ export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | 
 
     if (!response.ok) {
       if (response.status === 401) {
-        // Not authenticated
         return null;
       }
       throw new Error(`Failed to fetch customer profile: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    // Transform backend response to match our interface
-    return {
-      id: data.id,
-      emailAddress: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      defaultAddress: data.defaultAddress,
-      addresses: {
-        edges: (data.addresses || []).map((addr: any) => ({ node: addr }))
-      }
-    };
+    return data;
   } catch (error) {
     console.error('Error fetching customer profile:', error);
     return null;
