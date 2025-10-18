@@ -26,7 +26,8 @@ export default async function handler(req, res) {
     }
     
     // Query Shopify Customer Account API
-    const customerAccountUrl = `https://ucet.fairybloom.cz/api/unstable/graphql`;
+    // Try different Customer Account API endpoints
+    const customerAccountUrl = `https://shopify.com/${shopId}/account/customer/api/2023-10/graphql.json`;
     
     const query = `
       query getCustomer {
