@@ -179,7 +179,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
               to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`}
               className="group block"
             >
-              <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform group-hover:-translate-y-2">
+              <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform group-hover:-translate-y-2 h-full flex flex-col">
                 {/* Image */}
                 <div className="aspect-square overflow-hidden bg-muted">
                   <img
@@ -190,12 +190,12 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                 </div>
                 
                 {/* Content */}
-                <div className="p-6">
-                  <h3 className="font-serif text-xl font-semibold text-luxury mb-2 group-hover:text-gold transition-colors duration-300">
+                <div className="p-6 flex flex-col flex-grow">
+                  <h3 className="font-serif text-xl font-semibold text-luxury mb-4 group-hover:text-gold transition-colors duration-300 line-clamp-2 min-h-[3.5rem]">
                     {product.title}
                   </h3>
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mt-auto">
                     <span className="text-2xl font-semibold text-gold font-serif">
                       {product.price}
                     </span>
@@ -203,7 +203,6 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                       variant="premium" 
                       size="sm"
                       onClick={(e) => handleAddToCart(product, e)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                     >
                       Přidat do košíku
                     </Button>
