@@ -316,29 +316,26 @@ const ProductDetailPage = () => {
         </div>
       </div>
       
-      {/* Breadcrumb */}
-      <div className="px-6 py-6">
-        <div className="max-w-7xl mx-auto">
-          <nav className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-foreground transition-colors">
-              Domů
-            </Link>
-            <span>/</span>
-            <Link to={product.categoryPath} className="hover:text-foreground transition-colors">
-              {product.category}
-            </Link>
-            <span>/</span>
-            <span className="text-foreground">{product.title}</span>
-          </nav>
-        </div>
-      </div>
-
       {/* Product Details */}
       <div className="px-6 pb-12">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Product Images */}
-            <div className="space-y-4">
+            <div className="space-y-4 relative">
+              {/* Sticky Breadcrumb */}
+              <div className="sticky top-24 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 pb-4 mb-4">
+                <nav className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <Link to="/" className="hover:text-foreground transition-colors">
+                    Domů
+                  </Link>
+                  <span>/</span>
+                  <Link to={product.categoryPath} className="hover:text-foreground transition-colors">
+                    {product.category}
+                  </Link>
+                  <span>/</span>
+                  <span className="text-foreground">{product.title}</span>
+                </nav>
+              </div>
               <div className="aspect-square overflow-hidden rounded-2xl bg-muted">
                 <img
                   ref={productImageRef}

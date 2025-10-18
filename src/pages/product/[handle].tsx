@@ -310,20 +310,26 @@ const DynamicProductPage = () => {
             />
           </div>
           
-          {/* Breadcrumb */}
-          <div className="mb-8 fade-in-up">
-            <Link 
-              to="/" 
-              className="inline-flex items-center text-muted-foreground hover:text-gold transition-colors duration-300"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Zpět na hlavní stránku
-            </Link>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             {/* Product Images */}
-            <div className="space-y-4 fade-in-up">
+            <div className="space-y-4 fade-in-up relative">
+              {/* Sticky Breadcrumb */}
+              <div className="sticky top-24 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 pb-4 mb-4">
+                <nav className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <Link to="/" className="hover:text-foreground transition-colors">
+                    Domů
+                  </Link>
+                  <span>/</span>
+                  <Link 
+                    to={primaryCollection ? `/${collectionMapping[primaryCollection.handle as keyof typeof collectionMapping] || primaryCollection.handle}` : '/nahrdelniky'} 
+                    className="hover:text-foreground transition-colors"
+                  >
+                    {primaryCollection?.title || 'Produkty'}
+                  </Link>
+                  <span>/</span>
+                  <span className="text-foreground">{product.title}</span>
+                </nav>
+              </div>
               {/* Main Image */}
               <div className="aspect-square bg-muted rounded-2xl overflow-hidden">
                 <img
