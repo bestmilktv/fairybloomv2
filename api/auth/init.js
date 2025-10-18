@@ -12,9 +12,12 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('OAuth init request:', { method: req.method, body: req.body });
+    
     const { state, codeVerifier } = req.body;
 
     if (!state || !codeVerifier) {
+      console.error('Missing required parameters:', { state: !!state, codeVerifier: !!codeVerifier });
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
@@ -22,6 +25,7 @@ export default async function handler(req, res) {
     setTempCookie(res, 'oauth_state', state, 600);
     setTempCookie(res, 'oauth_code_verifier', codeVerifier, 600);
 
+    console.log('OAuth init success - cookies set');
     return res.status(200).json({ success: true });
 
   } catch (error) {

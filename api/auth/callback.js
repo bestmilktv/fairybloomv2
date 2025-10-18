@@ -67,7 +67,9 @@ export default async function handler(req, res) {
 
     if (!storedState || !codeVerifier) {
       console.error('Missing oauth_state or oauth_code_verifier in cookies');
-      console.log('Cookies:', req.headers.cookie);
+      console.log('All cookies:', req.headers.cookie);
+      console.log('Looking for oauth_state:', storedState);
+      console.log('Looking for oauth_code_verifier:', codeVerifier);
       return res.status(400).send(`
         <!DOCTYPE html>
         <html>
