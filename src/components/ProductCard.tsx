@@ -57,7 +57,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity }
         </h3>
         
         {description && (
-          <p className="text-muted-foreground mb-4 leading-relaxed line-clamp-3 flex-grow">
+          <p className="text-muted-foreground mb-4 leading-relaxed line-clamp-3 flex-grow text-justify">
             {truncateDescription(description)}
           </p>
         )}
