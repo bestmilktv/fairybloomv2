@@ -26,8 +26,8 @@ export default async function handler(req, res) {
     }
     
     // Query Shopify Customer Account API
-    // Try different Customer Account API endpoints
-    const customerAccountUrl = `https://shopify.com/${shopId}/account/customer/api/2023-10/graphql.json`;
+    // Use the redirected URL that works
+    const customerAccountUrl = `https://shopify.com/${shopId}/account/api/unstable/graphql`;
     
     const query = `
       query getCustomer {
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': accessToken, // Remove Bearer prefix - token already has shcat_ prefix
       },
       body: JSON.stringify({ query })
     });
