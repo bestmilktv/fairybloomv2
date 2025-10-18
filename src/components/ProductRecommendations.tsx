@@ -148,7 +148,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
 
   if (isLoading) {
     return (
-      <div className="mt-16 pt-16 border-t border-border">
+      <div className="mt-16 pt-16 pb-16 border-t border-border">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-3xl font-serif font-bold text-luxury mb-8 text-center">
             Mohlo by se vám líbit
@@ -166,7 +166,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
   if (recommendations.length === 0) return null
 
   return (
-    <div className="mt-16 pt-16 border-t border-border">
+    <div className="mt-16 pt-16 pb-16 border-t border-border">
       <div className="max-w-7xl mx-auto px-6">
         <h2 className="text-3xl font-serif font-bold text-luxury mb-8 text-center">
           Mohlo by se vám líbit
