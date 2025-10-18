@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { createCustomer, loginCustomer, getCustomer } from '@/lib/shopify'
+import { initiateOAuthFlow, OAuthResult } from '@/lib/oauth'
+import { fetchCustomerProfile, logoutCustomer, isCustomerAuthenticated } from '@/lib/customerAccountApi'
 
 // User interface for authenticated customer
 interface User {
@@ -8,86 +9,61 @@ interface User {
   lastName: string
   email: string
   defaultAddress?: {
+    id: string
     address1: string
+    address2?: string
     city: string
     zip: string
     country: string
+    phone?: string
   } | null
-}
-
-// Registration data interface
-interface RegisterData {
-  firstName: string
-  lastName: string
-  email: string
-  password: string
-  passwordConfirmation: string
-  acceptsMarketing: boolean
-  address: {
+  addresses?: Array<{
+    id: string
     address1: string
+    address2?: string
     city: string
     zip: string
     country: string
-  }
+    phone?: string
+  }>
 }
 
 // Authentication context interface
 interface AuthContextType {
   user: User | null
-  token: string | null
   isAuthenticated: boolean
   loading: boolean
-  register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  logout: () => void
+  loginWithSSO: () => Promise<{ success: boolean; error?: string }>
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 // Create the authentication context
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Local storage key for customer token
-const TOKEN_STORAGE_KEY = 'shopifyCustomerToken'
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Computed property for authentication status
-  const isAuthenticated = !!token && !!user
+  const isAuthenticated = !!user
 
   /**
-   * Initialize authentication state from localStorage on app start
+   * Initialize authentication state by checking if user is authenticated
    */
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY)
-        if (storedToken) {
-          setToken(storedToken)
-          
-          // Fetch complete customer data using the stored token
-          const customerData = await getCustomer(storedToken)
-          if (customerData) {
-            setUser({
-              id: 'customer-id', // Shopify doesn't expose customer ID in Storefront API
-              firstName: customerData.firstName,
-              lastName: customerData.lastName,
-              email: customerData.email,
-              defaultAddress: customerData.defaultAddress
-            })
-          } else {
-            // If we can't fetch customer data, the token might be invalid
-            localStorage.removeItem(TOKEN_STORAGE_KEY)
-            setToken(null)
-            setUser(null)
-          }
+        setLoading(true)
+        
+        // Check if customer is authenticated via Customer Account API
+        const isAuth = await isCustomerAuthenticated()
+        if (isAuth) {
+          // Fetch customer data
+          await refreshUser()
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
-        // Clear invalid token
-        localStorage.removeItem(TOKEN_STORAGE_KEY)
-        setToken(null)
         setUser(null)
       } finally {
         setLoading(false)
@@ -98,134 +74,96 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   /**
-   * Register a new customer account
-   * Creates customer account and automatically logs them in
+   * Login with Shopify SSO using OAuth 2.0 + PKCE
    */
-  const register = async (data: RegisterData): Promise<{ success: boolean; error?: string }> => {
+  const loginWithSSO = async (): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true)
 
-      // Create customer account
-      const createResult = await createCustomer(data)
+      const result = await initiateOAuthFlow()
       
-      if (!createResult.success) {
-        const errorMessage = createResult.errors?.[0]?.message || 'Registration failed'
-        return { success: false, error: errorMessage }
+      if (!result.success) {
+        return { success: false, error: result.error || 'SSO login failed' }
       }
 
-      // Automatically log in the newly created customer
-      const loginResult = await loginCustomer(data.email, data.password)
+      // OAuth was successful, fetch customer data
+      await refreshUser()
       
-      if (!loginResult.success) {
-        const errorMessage = loginResult.errors?.[0]?.message || 'Auto-login failed after registration'
-        return { success: false, error: errorMessage }
-      }
-
-      // Store token and fetch complete customer data
-      const accessToken = loginResult.accessToken
-      localStorage.setItem(TOKEN_STORAGE_KEY, accessToken)
-      setToken(accessToken)
-      
-      // Fetch complete customer data using the access token
-      const customerData = await getCustomer(accessToken)
-      if (customerData) {
-        setUser({
-          id: createResult.customerId,
-          firstName: customerData.firstName,
-          lastName: customerData.lastName,
-          email: customerData.email,
-          defaultAddress: customerData.defaultAddress
-        })
-      } else {
-        // Fallback to registration data if customer data fetch fails
-        setUser({
-          id: createResult.customerId,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          defaultAddress: data.address
-        })
-      }
-
       return { success: true }
     } catch (error) {
-      console.error('Registration error:', error)
-      return { success: false, error: 'Registration failed. Please try again.' }
+      console.error('SSO login error:', error)
+      let errorMessage = 'SSO login failed. Please try again.'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Popup was blocked')) {
+          errorMessage = 'Popup was blocked. Please allow popups for this site and try again.'
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Login timed out. Please try again.'
+        } else if (error.message.includes('cancelled')) {
+          errorMessage = 'Login was cancelled.'
+        }
+      }
+      
+      return { success: false, error: errorMessage }
     } finally {
       setLoading(false)
     }
   }
 
   /**
-   * Login an existing customer
+   * Refresh user data from Customer Account API
    */
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const refreshUser = async (): Promise<void> => {
     try {
-      setLoading(true)
-
-      const result = await loginCustomer(email, password)
+      const customerData = await fetchCustomerProfile()
       
-      if (!result.success) {
-        const errorMessage = result.errors?.[0]?.message || 'Login failed'
-        return { success: false, error: errorMessage }
-      }
-
-      // Store token and fetch complete customer data
-      const accessToken = result.accessToken
-      localStorage.setItem(TOKEN_STORAGE_KEY, accessToken)
-      setToken(accessToken)
-      
-      // Fetch complete customer data using the access token
-      const customerData = await getCustomer(accessToken)
       if (customerData) {
         setUser({
-          id: 'customer-id', // Shopify doesn't expose customer ID in Storefront API
+          id: customerData.id,
           firstName: customerData.firstName,
           lastName: customerData.lastName,
-          email: customerData.email,
-          defaultAddress: customerData.defaultAddress
+          email: customerData.emailAddress,
+          defaultAddress: customerData.defaultAddress,
+          addresses: customerData.addresses.edges.map(edge => edge.node)
         })
       } else {
-        // Fallback to basic user info if customer data fetch fails
-        setUser({
-          id: 'customer-id',
-          firstName: 'Customer',
-          lastName: 'User',
-          email: email
-        })
+        setUser(null)
       }
-
-      return { success: true }
     } catch (error) {
-      console.error('Login error:', error)
-      return { success: false, error: 'Login failed. Please try again.' }
-    } finally {
-      setLoading(false)
+      console.error('Error refreshing user data:', error)
+      setUser(null)
     }
   }
 
   /**
    * Logout the current customer
-   * Clears token and user state
+   * Clears authentication and user state
    */
-  const logout = () => {
+  const logout = async (): Promise<void> => {
     try {
-      localStorage.removeItem(TOKEN_STORAGE_KEY)
-      setToken(null)
+      setLoading(true)
+      
+      // Call logout endpoint to clear server-side cookies
+      await logoutCustomer()
+      
+      // Clear local state
       setUser(null)
     } catch (error) {
       console.error('Logout error:', error)
+      // Even if server logout fails, clear local state
+      setUser(null)
+    } finally {
+      setLoading(false)
     }
   }
 
   const value: AuthContextType = {
     user,
-    token,
     isAuthenticated,
     loading,
-    register,
-    login,
+    loginWithSSO,
     logout,
+    refreshUser,
   }
 
   return (

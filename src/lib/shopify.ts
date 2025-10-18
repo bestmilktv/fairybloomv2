@@ -399,279 +399,9 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
   }
 }
 
-/**
- * Create a new customer account using Shopify Storefront API
- * CHANGED: Now uses two-step process - create customer first, then add address
- * @param customerData - Customer registration data
- * @param customerData.firstName - Customer's first name
- * @param customerData.lastName - Customer's last name
- * @param customerData.email - Customer's email address
- * @param customerData.password - Customer's password
- * @param customerData.passwordConfirmation - Customer's password confirmation (frontend validation only)
- * @param customerData.acceptsMarketing - Whether customer accepts marketing emails
- * @param customerData.address - Customer's address object with address1, city, zip, country
- * @returns Promise with success status and customer ID or error details
- */
-export async function createCustomer({
-  firstName,
-  lastName,
-  email,
-  password,
-  passwordConfirmation, // CHANGED: Keep for frontend validation but don't send to API
-  acceptsMarketing,
-  address
-}: {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  passwordConfirmation: string;
-  acceptsMarketing: boolean;
-  address: {
-    address1: string;
-    city: string;
-    zip: string;
-    country: string;
-  };
-}) {
-  // CHANGED: Step 1 - Create customer with only allowed fields (no passwordConfirmation or addresses)
-  const customerCreateMutation = `
-    mutation customerCreate($input: CustomerCreateInput!) {
-      customerCreate(input: $input) {
-        customer {
-          id
-        }
-        userErrors {
-          field
-          message
-        }
-      }
-    }
-  `;
-
-  // CHANGED: Only send allowed fields to CustomerCreateInput
-  const customerCreateVariables = {
-    input: {
-      firstName,
-      lastName,
-      email,
-      password,
-      acceptsMarketing
-      // CHANGED: Removed passwordConfirmation and addresses from customer creation
-    }
-  };
-
-  try {
-    // Step 1: Create the customer
-    const customerResponse = await fetchShopify<{
-      customerCreate: {
-        customer: { id: string } | null;
-        userErrors: Array<{ field: string; message: string }>;
-      };
-    }>(customerCreateMutation, customerCreateVariables);
-
-    const { customer, userErrors } = customerResponse.data.customerCreate;
-
-    if (userErrors && userErrors.length > 0) {
-      console.error("Shopify customerCreate userErrors:", userErrors);
-      return {
-        success: false,
-        errors: userErrors
-      };
-    }
-
-    if (!customer) {
-      return {
-        success: false,
-        errors: [{ field: 'general', message: 'Customer creation failed' }]
-      };
-    }
-
-    // CHANGED: Step 2 - Create customer address using customerAccessToken
-    const addressCreateMutation = `
-      mutation customerAddressCreate($customerAccessToken: String!, $address: MailingAddressInput!) {
-        customerAddressCreate(customerAccessToken: $customerAccessToken, address: $address) {
-          customerAddress {
-            id
-          }
-          customerUserErrors {
-            field
-            message
-          }
-        }
-      }
-    `;
-
-    // CHANGED: Get customer access token for address creation
-    const loginResult = await loginCustomer(email, password);
-    if (!loginResult.success) {
-      console.error("Failed to get customer access token for address creation:", loginResult.errors);
-      // Customer was created but we couldn't add address - still return success
-      return {
-        success: true,
-        customerId: customer.id,
-        warning: "Customer created but address could not be added"
-      };
-    }
-
-    const addressCreateVariables = {
-      customerAccessToken: loginResult.accessToken,
-      address: {
-        address1: address.address1,
-        city: address.city,
-        zip: address.zip,
-        country: address.country
-      }
-    };
-
-    // Step 2: Create the customer address
-    const addressResponse = await fetchShopify<{
-      customerAddressCreate: {
-        customerAddress: { id: string } | null;
-        customerUserErrors: Array<{ field: string; message: string }>;
-      };
-    }>(addressCreateMutation, addressCreateVariables);
-
-    const { customerAddress, customerUserErrors } = addressResponse.data.customerAddressCreate;
-
-    if (customerUserErrors && customerUserErrors.length > 0) {
-      console.error("Shopify customerAddressCreate userErrors:", customerUserErrors);
-      // Customer was created but address failed - still return success
-      return {
-        success: true,
-        customerId: customer.id,
-        warning: "Customer created but address could not be added"
-      };
-    }
-
-    return {
-      success: true,
-      customerId: customer.id
-    };
-  } catch (error) {
-    console.error('Error creating customer:', error);
-    return {
-      success: false,
-      errors: [{ field: 'general', message: 'Failed to create customer account' }]
-    };
-  }
-}
-
-/**
- * Login a customer using email and password
- * @param email - Customer's email address
- * @param password - Customer's password
- * @returns Promise with success status, access token, and expiration or error details
- */
-export async function loginCustomer(email: string, password: string) {
-  const mutation = `
-    mutation customerAccessTokenCreate($input: CustomerAccessTokenCreateInput!) {
-      customerAccessTokenCreate(input: $input) {
-        customerAccessToken {
-          accessToken
-          expiresAt
-        }
-        customerUserErrors {
-          field
-          message
-        }
-      }
-    }
-  `;
-
-  const variables = {
-    input: {
-      email,
-      password
-    }
-  };
-
-  try {
-    const response = await fetchShopify<{
-      customerAccessTokenCreate: {
-        customerAccessToken: {
-          accessToken: string;
-          expiresAt: string;
-        } | null;
-        customerUserErrors: Array<{ field: string; message: string }>;
-      };
-    }>(mutation, variables);
-
-    const { customerAccessToken, customerUserErrors } = response.data.customerAccessTokenCreate;
-
-    if (customerUserErrors && customerUserErrors.length > 0) {
-      return {
-        success: false,
-        errors: customerUserErrors
-      };
-    }
-
-    if (!customerAccessToken) {
-      return {
-        success: false,
-        errors: [{ field: 'general', message: 'Login failed' }]
-      };
-    }
-
-    return {
-      success: true,
-      accessToken: customerAccessToken.accessToken,
-      expiresAt: customerAccessToken.expiresAt
-    };
-  } catch (error) {
-    console.error('Error logging in customer:', error);
-    return {
-      success: false,
-      errors: [{ field: 'general', message: 'Failed to login customer' }]
-    };
-  }
-}
-
-/**
- * Get customer information using customer access token
- * @param customerAccessToken - The customer access token
- * @returns Promise with customer data including name, email, and default address
- */
-export async function getCustomer(customerAccessToken: string) {
-  const query = `
-    query getCustomer($customerAccessToken: String!) {
-      customer(customerAccessToken: $customerAccessToken) {
-        firstName
-        lastName
-        email
-        defaultAddress {
-          address1
-          city
-          zip
-          country
-        }
-      }
-    }
-  `;
-
-  try {
-    const response = await fetchShopify<{
-      customer: {
-        firstName: string;
-        lastName: string;
-        email: string;
-        defaultAddress: {
-          address1: string;
-          city: string;
-          zip: string;
-          country: string;
-        } | null;
-      } | null;
-    }>(query, {
-      customerAccessToken,
-    });
-
-    return response.data.customer;
-  } catch (error) {
-    console.error('Error fetching customer:', error);
-    return null;
-  }
-}
+// Note: Customer authentication functions have been removed.
+// Authentication is now handled via Shopify Customer Account API with OAuth 2.0 + PKCE.
+// See src/lib/customerAccountApi.ts and src/lib/oauth.ts for the new implementation.
 
 /**
  * Extract the correct collection tag from product tags, ignoring "Home page" tag
@@ -869,6 +599,25 @@ export async function getCheckoutUrl(cartId: string) {
   } catch (error) {
     console.error('Error fetching checkout URL:', error);
     throw error;
+  }
+}
+
+/**
+ * Verify authentication status before checkout
+ * This ensures the customer is logged in and cookies are properly set
+ * @returns Promise<boolean> True if customer is authenticated
+ */
+export async function verifyCheckoutAuthentication(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/customer', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error verifying checkout authentication:', error);
+    return false;
   }
 }
 
