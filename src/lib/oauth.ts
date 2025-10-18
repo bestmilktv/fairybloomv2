@@ -16,7 +16,7 @@ const OAUTH_CONFIG = {
   clientId: import.meta.env.VITE_SHOPIFY_OAUTH_CLIENT_ID,
   shopId: import.meta.env.VITE_SHOPIFY_SHOP_ID,
   appUrl: import.meta.env.VITE_APP_URL || 'https://localhost:8080',
-  scopes: ['openid', 'email', 'profile'],
+  scopes: ['openid', 'email'],
   responseType: 'code',
   codeChallengeMethod: 'S256'
 };
