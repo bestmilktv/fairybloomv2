@@ -381,7 +381,7 @@ const DynamicProductPage = () => {
               {/* Description */}
               {product.description && (
                 <div 
-                  className="text-xl text-muted-foreground leading-relaxed prose prose-lg max-w-none"
+                  className="text-xl text-muted-foreground leading-relaxed prose prose-lg max-w-none text-justify"
                   dangerouslySetInnerHTML={{ __html: product.description }}
                 />
               )}

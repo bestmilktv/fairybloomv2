@@ -401,7 +401,7 @@ const ProductDetailPage = () => {
 
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-foreground">Popis</h3>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-muted-foreground leading-relaxed text-justify">
                   {product.fullDescription}
                 </p>
               </div>
