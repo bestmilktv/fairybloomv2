@@ -61,27 +61,41 @@ export default async function handler(req, res) {
       `);
     }
 
-    // Get state and code_verifier from query parameters
+    // Get state and code_verifier from sessionStorage via JavaScript
+    // We'll read them in the HTML page and pass them to the server
     const storedState = req.query.stored_state;
     const codeVerifier = req.query.code_verifier;
 
     if (!storedState || !codeVerifier) {
-      console.error('Missing stored_state or code_verifier in query parameters');
-      console.log('Query params:', req.query);
-      return res.status(400).send(`
+      console.error('Missing stored_state or code_verifier - will read from sessionStorage');
+      // Return HTML that reads from sessionStorage and makes another request
+      return res.status(200).send(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Authentication Error</title>
+          <title>Processing Authentication...</title>
         </head>
         <body>
           <script>
-            if (window.opener) {
-              window.opener.postMessage({
-                type: 'OAUTH_ERROR',
-                error: 'Missing authentication parameters. Please try again.'
-              }, '${process.env.VITE_APP_URL || 'https://www.fairybloom.cz'}');
-              window.close();
+            // Read from sessionStorage
+            const storedState = sessionStorage.getItem('oauth_state');
+            const codeVerifier = sessionStorage.getItem('oauth_code_verifier');
+            
+            if (!storedState || !codeVerifier) {
+              console.error('Missing oauth parameters in sessionStorage');
+              if (window.opener) {
+                window.opener.postMessage({
+                  type: 'OAUTH_ERROR',
+                  error: 'Missing authentication session. Please try again.'
+                }, '${process.env.VITE_APP_URL || 'https://www.fairybloom.cz'}');
+                window.close();
+              }
+            } else {
+              // Make request to callback with parameters
+              const url = new URL(window.location);
+              url.searchParams.set('stored_state', storedState);
+              url.searchParams.set('code_verifier', codeVerifier);
+              window.location.href = url.toString();
             }
           </script>
         </body>

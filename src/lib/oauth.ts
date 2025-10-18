@@ -60,8 +60,12 @@ export async function initiateOAuthFlow(): Promise<OAuthResult> {
         throw new OAuthError('Failed to generate valid PKCE parameters', 'OAUTH_ERROR');
       }
 
-      // Build authorization URL with state and code_verifier as parameters
-      const authUrl = buildAuthorizationUrl(codeChallenge, state, codeVerifier);
+      // Store parameters in sessionStorage (will be accessible in popup)
+      sessionStorage.setItem('oauth_code_verifier', codeVerifier);
+      sessionStorage.setItem('oauth_state', state);
+
+      // Build authorization URL
+      const authUrl = buildAuthorizationUrl(codeChallenge, state);
 
       // Open popup window
       oauthPopup = window.open(
@@ -121,15 +125,14 @@ export async function initiateOAuthFlow(): Promise<OAuthResult> {
  * Build Shopify OAuth authorization URL
  * @param {string} codeChallenge - PKCE code challenge
  * @param {string} state - CSRF state parameter
- * @param {string} codeVerifier - PKCE code verifier
  * @returns {string} Complete authorization URL
  */
-function buildAuthorizationUrl(codeChallenge: string, state: string, codeVerifier: string): string {
+function buildAuthorizationUrl(codeChallenge: string, state: string): string {
   const params = new URLSearchParams({
     client_id: OAUTH_CONFIG.clientId,
     scope: OAUTH_CONFIG.scopes.join(' '),
     response_type: OAUTH_CONFIG.responseType,
-    redirect_uri: `${OAUTH_CONFIG.appUrl}/api/auth/callback?stored_state=${encodeURIComponent(state)}&code_verifier=${encodeURIComponent(codeVerifier)}`,
+    redirect_uri: `${OAUTH_CONFIG.appUrl}/api/auth/callback`,
     state: state,
     code_challenge: codeChallenge,
     code_challenge_method: OAUTH_CONFIG.codeChallengeMethod
@@ -166,6 +169,10 @@ function handleOAuthCallback(
   if (type === 'OAUTH_SUCCESS') {
     // Clean up
     cleanupOAuthFlow();
+    
+    // Clear stored parameters
+    sessionStorage.removeItem('oauth_code_verifier');
+    sessionStorage.removeItem('oauth_state');
 
     resolve({
       success: true,
@@ -176,6 +183,10 @@ function handleOAuthCallback(
   } else if (type === 'OAUTH_ERROR') {
     // Clean up
     cleanupOAuthFlow();
+    
+    // Clear stored parameters
+    sessionStorage.removeItem('oauth_code_verifier');
+    sessionStorage.removeItem('oauth_state');
 
     reject(new OAuthError(error || 'OAuth authentication failed', 'OAUTH_ERROR'));
   }
