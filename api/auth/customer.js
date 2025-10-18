@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     }
     
     // Query Shopify Customer Account API
-    const customerAccountUrl = `https://shopify.com/${shopId}/account/customer/api/unstable/graphql`;
+    const customerAccountUrl = `https://ucet.fairybloom.cz/api/unstable/graphql`;
     
     const query = `
       query getCustomer {
@@ -65,12 +65,13 @@ export default async function handler(req, res) {
 
     console.log('Fetching customer from:', customerAccountUrl);
     console.log('Using token:', accessToken ? 'present' : 'missing');
+    console.log('Token format:', accessToken ? accessToken.substring(0, 20) + '...' : 'none');
     
     const response = await fetch(customerAccountUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': accessToken,
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ query })
     });
