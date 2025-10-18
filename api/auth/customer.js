@@ -19,14 +19,11 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No authentication token found' });
     }
 
-    // Get shop ID from environment
-    const shopId = process.env.SHOPIFY_SHOP_ID;
-    if (!shopId) {
-      return res.status(500).json({ error: 'Server configuration error' });
-    }
-
+    // Get customer account domain from environment
+    const customerAccountDomain = 'ucet.fairybloom.cz';
+    
     // Query Shopify Customer Account API
-    const customerAccountUrl = `https://shopify.com/${shopId}/account/customer/api/unstable/graphql`;
+    const customerAccountUrl = `https://${customerAccountDomain}/api/unstable/graphql`;
     
     const query = `
       query getCustomer {
