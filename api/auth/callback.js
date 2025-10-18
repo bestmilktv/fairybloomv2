@@ -61,15 +61,13 @@ export default async function handler(req, res) {
       `);
     }
 
-    // Get state and code_verifier from cookies
-    const storedState = getTempCookie(req, 'oauth_state');
-    const codeVerifier = getTempCookie(req, 'oauth_code_verifier');
+    // Get state and code_verifier from query parameters
+    const storedState = req.query.stored_state;
+    const codeVerifier = req.query.code_verifier;
 
     if (!storedState || !codeVerifier) {
-      console.error('Missing oauth_state or oauth_code_verifier in cookies');
-      console.log('All cookies:', req.headers.cookie);
-      console.log('Looking for oauth_state:', storedState);
-      console.log('Looking for oauth_code_verifier:', codeVerifier);
+      console.error('Missing stored_state or code_verifier in query parameters');
+      console.log('Query params:', req.query);
       return res.status(400).send(`
         <!DOCTYPE html>
         <html>
@@ -81,7 +79,7 @@ export default async function handler(req, res) {
             if (window.opener) {
               window.opener.postMessage({
                 type: 'OAUTH_ERROR',
-                error: 'Missing authentication session. Please try again.'
+                error: 'Missing authentication parameters. Please try again.'
               }, '${process.env.VITE_APP_URL || 'https://www.fairybloom.cz'}');
               window.close();
             }

@@ -60,25 +60,8 @@ export async function initiateOAuthFlow(): Promise<OAuthResult> {
         throw new OAuthError('Failed to generate valid PKCE parameters', 'OAUTH_ERROR');
       }
 
-      // Store parameters on server via init endpoint
-      const initResponse = await fetch('/api/auth/init', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          state,
-          codeVerifier
-        })
-      });
-
-      if (!initResponse.ok) {
-        throw new OAuthError('Failed to initialize OAuth session', 'OAUTH_ERROR');
-      }
-
-      // Build authorization URL
-      const authUrl = buildAuthorizationUrl(codeChallenge, state);
+      // Build authorization URL with state and code_verifier as parameters
+      const authUrl = buildAuthorizationUrl(codeChallenge, state, codeVerifier);
 
       // Open popup window
       oauthPopup = window.open(
@@ -138,14 +121,15 @@ export async function initiateOAuthFlow(): Promise<OAuthResult> {
  * Build Shopify OAuth authorization URL
  * @param {string} codeChallenge - PKCE code challenge
  * @param {string} state - CSRF state parameter
+ * @param {string} codeVerifier - PKCE code verifier
  * @returns {string} Complete authorization URL
  */
-function buildAuthorizationUrl(codeChallenge: string, state: string): string {
+function buildAuthorizationUrl(codeChallenge: string, state: string, codeVerifier: string): string {
   const params = new URLSearchParams({
     client_id: OAUTH_CONFIG.clientId,
     scope: OAUTH_CONFIG.scopes.join(' '),
     response_type: OAUTH_CONFIG.responseType,
-    redirect_uri: `${OAUTH_CONFIG.appUrl}/api/auth/callback`,
+    redirect_uri: `${OAUTH_CONFIG.appUrl}/api/auth/callback?stored_state=${encodeURIComponent(state)}&code_verifier=${encodeURIComponent(codeVerifier)}`,
     state: state,
     code_challenge: codeChallenge,
     code_challenge_method: OAUTH_CONFIG.codeChallengeMethod
