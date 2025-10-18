@@ -69,8 +69,7 @@ export interface CustomerAccountApiResponse<T> {
 
 // Configuration
 const SHOP_ID = import.meta.env.VITE_SHOPIFY_SHOP_ID;
-const CUSTOMER_ACCOUNT_DOMAIN = 'ucet.fairybloom.cz';
-const CUSTOMER_ACCOUNT_URL = `https://${CUSTOMER_ACCOUNT_DOMAIN}/api/unstable/graphql`;
+const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/api/unstable/graphql`;
 
 /**
  * Make authenticated request to Customer Account API

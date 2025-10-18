@@ -19,11 +19,14 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No authentication token found' });
     }
 
-    // Get customer account domain from environment
-    const customerAccountDomain = 'ucet.fairybloom.cz';
+    // Get shop ID from environment
+    const shopId = process.env.SHOPIFY_SHOP_ID;
+    if (!shopId) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
     
     // Query Shopify Customer Account API
-    const customerAccountUrl = `https://${customerAccountDomain}/api/unstable/graphql`;
+    const customerAccountUrl = `https://shopify.com/${shopId}/account/customer/api/unstable/graphql`;
     
     const query = `
       query getCustomer {
@@ -60,22 +63,30 @@ export default async function handler(req, res) {
       }
     `;
 
+    console.log('Fetching customer from:', customerAccountUrl);
+    console.log('Using token:', accessToken ? 'present' : 'missing');
+    
     const response = await fetch(customerAccountUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': accessToken,
       },
       body: JSON.stringify({ query })
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Customer Account API error:', response.status, errorText);
+      
       if (response.status === 401) {
         return res.status(401).json({ error: 'Invalid or expired token' });
       }
-      const errorText = await response.text();
-      console.error('Customer Account API error:', response.status, errorText);
-      return res.status(500).json({ error: 'Failed to fetch customer data' });
+      
+      return res.status(response.status).json({ 
+        error: 'Failed to fetch customer data',
+        details: errorText.substring(0, 500) // Limit error details
+      });
     }
 
     const result = await response.json();
