@@ -269,11 +269,20 @@ export default async function handler(req, res) {
       <body>
         <script>
           if (window.opener) {
+            // Store customer data in localStorage for checkout sharing
+            const customerData = ${customerData ? JSON.stringify(customerData) : 'null'};
+            if (customerData) {
+              localStorage.setItem('fairybloom_authenticated', 'true');
+              localStorage.setItem('fairybloom_customer', JSON.stringify(customerData));
+              localStorage.setItem('fairybloom_auth_timestamp', Date.now().toString());
+            }
+            
             window.opener.postMessage({
               type: 'OAUTH_SUCCESS',
               access_token: '${access_token}',
               expires_at: '${expiresAt}',
-              id_token: '${id_token || ''}'
+              id_token: '${id_token || ''}',
+              customer: customerData
             }, '${process.env.VITE_APP_URL || 'http://localhost:8080'}');
             window.close();
           } else {
