@@ -80,7 +80,7 @@ export default async function handler(req, res) {
               window.opener.postMessage({
                 type: 'OAUTH_ERROR',
                 error: 'Missing authentication session. Please try again.'
-              }, '${process.env.VITE_APP_URL || 'https://fairybloom.cz'}');
+              }, '${process.env.VITE_APP_URL || 'https://www.fairybloom.cz'}');
               window.close();
             }
           </script>
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
               window.opener.postMessage({
                 type: 'OAUTH_ERROR',
                 error: 'Invalid state parameter - CSRF check failed'
-              }, '${process.env.VITE_APP_URL || 'https://fairybloom.cz'}');
+              }, '${process.env.VITE_APP_URL || 'https://www.fairybloom.cz'}');
               window.close();
             }
           </script>
