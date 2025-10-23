@@ -46,7 +46,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     );
   }
 
-  // Create extended array for seamless infinity loop (Netflix style)
+  // Create extended array for seamless infinity loop
   const extendedProducts = [
     ...products.slice(-3), // Last 3 products at the beginning
     ...products,            // Original products
@@ -98,48 +98,44 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }, 1000);
   };
 
-  // Calculate transform for smooth sliding
+  // Calculate transform for CSS Grid
   const calculateTransform = () => {
-    // Each product card is 320px wide + 24px gap = 344px total
-    const cardWidth = 320;
+    const itemWidth = 380;
     const gap = 24;
-    const totalWidth = cardWidth + gap;
+    const totalItemWidth = itemWidth + gap;
     
-    // We want to show 5 products: [side] [main1] [main2] [main3] [side]
-    // So we need to offset by (currentIndex - 1) to center the view
-    const offset = (currentIndex - 1) * totalWidth;
+    // Offset by (currentIndex - 1) to show 1 side item on the left
+    const offset = (currentIndex - 1) * totalItemWidth;
     
     return `translateX(-${offset}px)`;
   };
 
   return (
-    <div className="relative w-full flex justify-center">
-      {/* Carousel Container */}
-      <div className="overflow-hidden" style={{ width: '1640px' }}>
+    <div className="carousel-wrapper">
+      {/* Carousel Viewport */}
+      <div className="carousel-viewport">
         <div 
-          className={`flex gap-6 ${isTransitioning ? 'transition-transform duration-1000 ease-out' : ''}`}
+          className={`carousel-track ${isTransitioning ? 'carousel-slide' : ''}`}
           style={{
             transform: calculateTransform(),
           }}
         >
           {extendedProducts.map((product, index) => {
-            // Calculate relative position to current view
+            // Determine product position relative to current view
             const relativePosition = index - currentIndex;
             
-            // Determine visibility and styling
-            const isMainProduct = relativePosition >= 0 && relativePosition <= 2; // Center 3 products
-            const isSideProduct = relativePosition === -1 || relativePosition === 3; // Side products
+            // Define which products are main (center 3) vs side
+            const isMainProduct = relativePosition >= 0 && relativePosition <= 2; // Positions 0, 1, 2
+            const isSideProduct = relativePosition === -1 || relativePosition === 3; // Positions -1, 3
             const isVisible = relativePosition >= -1 && relativePosition <= 3; // Show 5 total
 
             return (
               <div
                 key={`${product.id}-${index}`}
-                className="flex-shrink-0"
+                className={`carousel-item ${isMainProduct ? 'is-main' : isSideProduct ? 'is-side' : ''}`}
                 style={{
-                  width: '320px',
-                  opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.3,
+                  opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.2,
                   transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)',
-                  transition: isTransitioning ? 'opacity 1000ms ease-out, transform 1000ms ease-out' : 'none',
                 }}
               >
                 <Link 
@@ -166,7 +162,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       {/* Navigation Arrows */}
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-30
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-30
                    w-12 h-12 md:w-14 md:h-14 rounded-full
                    bg-background/90 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
@@ -187,7 +183,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-30
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-30
                    w-12 h-12 md:w-14 md:h-14 rounded-full
                    bg-background/90 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
