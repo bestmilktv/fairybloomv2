@@ -278,6 +278,8 @@ html {
 .carousel-viewport {
   overflow: hidden;
   width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .carousel-track {

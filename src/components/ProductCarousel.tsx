@@ -100,12 +100,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Offset pro zobrazení 5 produktů (1 + 3 + 1)
     const offset = (currentIndex - 1) * totalWidth;
     
-    // Centrování v viewportu
-    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
-    const carouselWidth = 5 * cardWidth + 4 * gap; // 1696px
-    const centerOffset = (viewportWidth - carouselWidth) / 2;
-    
-    return `translateX(calc(-${offset}px + ${centerOffset}px))`;
+    return `translateX(-${offset}px)`;
   };
 
   return (
