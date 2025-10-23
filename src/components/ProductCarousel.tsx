@@ -18,7 +18,7 @@ interface ProductCarouselProps {
 }
 
 const ProductCarousel = ({ products }: ProductCarouselProps) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(3);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // If we have 3 or fewer products, show them in a simple grid
@@ -48,80 +48,68 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   // Create extended array for seamless infinity loop
   const extendedProducts = [
-    ...products.slice(-3), // Last 3 products at the beginning
-    ...products,            // Original products
-    ...products.slice(0, 3) // First 3 products at the end
+    ...products.slice(-3),  // Last 3 at beginning
+    ...products,            // Originals
+    ...products.slice(0, 3) // First 3 at end
   ];
-
-  const startOffset = 3; // Start at original products
-
-  // Initialize to start position
-  useEffect(() => {
-    setCurrentIndex(startOffset);
-  }, [startOffset]);
 
   const nextSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    
     setCurrentIndex((prev) => prev + 3);
     
     setTimeout(() => {
-      setIsTransitioning(false);
-      
       // Seamless reset - jump back to equivalent position in originals
       setCurrentIndex((current) => {
-        if (current >= startOffset + products.length) {
-          return startOffset + (current - startOffset - products.length);
+        if (current >= 3 + products.length) {
+          return 3 + (current - 3 - products.length);
         }
         return current;
       });
+      setIsTransitioning(false);
     }, 1000);
   };
 
   const prevSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    
     setCurrentIndex((prev) => prev - 3);
     
     setTimeout(() => {
-      setIsTransitioning(false);
-      
       // Seamless reset - jump to equivalent position at the end
       setCurrentIndex((current) => {
-        if (current < startOffset) {
-          return startOffset + products.length - (startOffset - current);
+        if (current < 3) {
+          return 3 + products.length - (3 - current);
         }
         return current;
       });
+      setIsTransitioning(false);
     }, 1000);
   };
 
-  // Calculate transform for CSS Grid
+  // Calculate transform for perfect centering
   const calculateTransform = () => {
-    const itemWidth = 380;
+    const cardWidth = 320;
     const gap = 24;
-    const totalItemWidth = itemWidth + gap;
+    const totalWidth = cardWidth + gap; // 344px
     
-    // We want to show 5 products: [side] [main1] [main2] [main3] [side]
-    // So we need to offset by (currentIndex - 1) to center the view
-    const offset = (currentIndex - 1) * totalItemWidth;
+    // Offset pro zobrazení 5 produktů (1 + 3 + 1)
+    const offset = (currentIndex - 1) * totalWidth;
     
-    // Center the carousel in the viewport
+    // Centrování v viewportu
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
-    const carouselWidth = 5 * itemWidth + 4 * gap; // 5 products + 4 gaps
+    const carouselWidth = 5 * cardWidth + 4 * gap; // 1696px
     const centerOffset = (viewportWidth - carouselWidth) / 2;
     
     return `translateX(calc(-${offset}px + ${centerOffset}px))`;
   };
 
   return (
-    <div className="carousel-wrapper">
+    <div className="carousel-container">
       {/* Carousel Viewport */}
       <div className="carousel-viewport">
         <div 
-          className={`carousel-track ${isTransitioning ? 'carousel-slide' : ''}`}
+          className={`carousel-track ${isTransitioning ? 'transition-transform duration-1000 ease-out' : ''}`}
           style={{
             transform: calculateTransform(),
           }}
@@ -133,12 +121,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             // Define which products are main (center 3) vs side
             const isMainProduct = relativePosition >= 0 && relativePosition <= 2; // Positions 0, 1, 2
             const isSideProduct = relativePosition === -1 || relativePosition === 3; // Positions -1, 3
-            const isVisible = relativePosition >= -1 && relativePosition <= 3; // Show 5 total
 
             return (
               <div
                 key={`${product.id}-${index}`}
-                className={`carousel-item ${isMainProduct ? 'is-main' : isSideProduct ? 'is-side' : ''}`}
+                className="carousel-item"
                 style={{
                   opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.2,
                   transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)',
