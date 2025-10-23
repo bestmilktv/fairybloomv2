@@ -57,14 +57,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    setCurrentIndex((prev) => {
-      const next = prev + 3;
-      // If we go past the original products, reset to beginning of originals
-      if (next >= 3 + products.length) {
-        return 3;
-      }
-      return next;
-    });
+    setCurrentIndex((prev) => prev + 3);
     
     setTimeout(() => {
       setIsTransitioning(false);
@@ -75,14 +68,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    setCurrentIndex((prev) => {
-      const prevIndex = prev - 3;
-      // If we go before the original products, jump to end of originals
-      if (prevIndex < 3) {
-        return 3 + products.length - 3;
-      }
-      return prevIndex;
-    });
+    setCurrentIndex((prev) => prev - 3);
     
     setTimeout(() => {
       setIsTransitioning(false);
@@ -95,8 +81,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const gap = 32; // Increased gap for better spacing
     const totalWidth = cardWidth + gap; // 352px
     
-    // Offset to show 1 side product on the left
-    const offset = (currentIndex - 1) * totalWidth;
+    // Use modulo for true infinity - no reset needed
+    const adjustedIndex = currentIndex % extendedProducts.length;
+    const offset = (adjustedIndex - 1) * totalWidth;
     
     return `translateX(-${offset}px)`;
   };
