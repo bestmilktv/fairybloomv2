@@ -55,7 +55,7 @@ const Index = () => {
           
           
           try {
-            const collection = await getProductsByCollection(shopifyHandle, 3);
+            const collection = await getProductsByCollection(shopifyHandle, 50);
             
             if (collection && collection.products?.edges) {
               const products = collection.products.edges.map(edge => {

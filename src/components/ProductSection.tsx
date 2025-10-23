@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import ProductCard from './ProductCard';
+import ProductCarousel from './ProductCarousel';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { createProductPath } from '@/lib/slugify';
 
 interface Product {
   id: string;
@@ -42,25 +41,9 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
           </p>
         </div>
         
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {products.map((product, index) => (
-            <div key={product.id} className={`fade-in-up-delayed`} style={{ animationDelay: `${index * 0.1}s` }}>
-              <Link 
-                to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
-                className="group cursor-pointer fade-in-up block"
-              >
-                <ProductCard
-                  id={product.id}
-                  title={product.title}
-                  price={product.price}
-                  image={product.image}
-                  description={product.description}
-                  inventoryQuantity={product.inventoryQuantity}
-                />
-              </Link>
-            </div>
-          ))}
+        {/* Products Carousel */}
+        <div className="mb-12">
+          <ProductCarousel products={products} />
         </div>
         
         {/* View More Button */}
