@@ -88,8 +88,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Calculate transform - simple offset with centering
   const calculateTransform = () => {
     const cardWidth = 320;
-    const gap = 24;
-    const totalWidth = cardWidth + gap; // 344px
+    const gap = 32; // Increased gap for better spacing
+    const totalWidth = cardWidth + gap; // 352px
     
     // Offset to show 1 side product on the left
     const offset = (currentIndex - 1) * totalWidth;
@@ -100,11 +100,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   return (
     <div className="relative w-full flex justify-center">
       {/* Carousel Container with fixed width */}
-      <div className="relative" style={{ width: '1696px', maxWidth: '90vw' }}>
+      <div className="relative" style={{ width: '1728px', maxWidth: '90vw' }}>
         {/* Carousel Viewport */}
         <div className="overflow-hidden">
           <div 
-            className="flex gap-6"
+            className="flex gap-8"
             style={{
               transform: calculateTransform(),
               transition: isTransitioning ? 'transform 1000ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
