@@ -57,15 +57,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    const newIndex = currentIndex + 3;
-    setCurrentIndex(newIndex);
+    setCurrentIndex((prev) => prev + 3);
     
     setTimeout(() => {
       setIsTransitioning(false);
-      // Seamless reset after animation
-      if (newIndex >= 3 + products.length) {
-        setCurrentIndex(3 + (newIndex - 3 - products.length));
-      }
     }, 1000);
   };
 
@@ -73,15 +68,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    const newIndex = currentIndex - 3;
-    setCurrentIndex(newIndex);
+    setCurrentIndex((prev) => prev - 3);
     
     setTimeout(() => {
       setIsTransitioning(false);
-      // Seamless reset after animation
-      if (newIndex < 3) {
-        setCurrentIndex(3 + products.length - (3 - newIndex));
-      }
     }, 1000);
   };
 
@@ -91,8 +81,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const gap = 32; // Increased gap for better spacing
     const totalWidth = cardWidth + gap; // 352px
     
-    // Offset to show 1 side product on the left
-    const offset = (currentIndex - 1) * totalWidth;
+    // Use modulo for true infinity loop
+    const adjustedIndex = currentIndex % extendedProducts.length;
+    const offset = (adjustedIndex - 1) * totalWidth;
     
     return `translateX(-${offset}px)`;
   };
@@ -153,7 +144,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         {/* Navigation Arrows */}
         <button
           onClick={prevSlide}
-          className="absolute -left-6 top-1/2 -translate-y-1/2 z-30
+          className="absolute -left-8 top-1/2 -translate-y-1/2 z-30
                      w-12 h-12 md:w-14 md:h-14 rounded-full
                      bg-background/90 backdrop-blur-sm border border-border/50
                      flex items-center justify-center
@@ -174,7 +165,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
         <button
           onClick={nextSlide}
-          className="absolute -right-6 top-1/2 -translate-y-1/2 z-30
+          className="absolute -right-8 top-1/2 -translate-y-1/2 z-30
                      w-12 h-12 md:w-14 md:h-14 rounded-full
                      bg-background/90 backdrop-blur-sm border border-border/50
                      flex items-center justify-center
