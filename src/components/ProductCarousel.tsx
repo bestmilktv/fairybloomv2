@@ -105,16 +105,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const gap = 24;
     const totalWidth = cardWidth + gap;
     
-    // Offset by (currentIndex - 1) to show 1 side product on the left
+    // We want to show 5 products: [side] [main1] [main2] [main3] [side]
+    // So we need to offset by (currentIndex - 1) to center the view
     const offset = (currentIndex - 1) * totalWidth;
     
     return `translateX(-${offset}px)`;
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full flex justify-center">
       {/* Carousel Container */}
-      <div className="overflow-hidden">
+      <div className="overflow-hidden" style={{ width: '1640px' }}>
         <div 
           className={`flex gap-6 ${isTransitioning ? 'transition-transform duration-1000 ease-out' : ''}`}
           style={{
