@@ -76,7 +76,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         }
         return current;
       });
-    }, 600);
+    }, 1000);
   };
 
   const prevSlide = () => {
@@ -95,7 +95,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         }
         return current;
       });
-    }, 600);
+    }, 1000);
   };
 
   // Calculate transform for smooth sliding
@@ -116,7 +116,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       {/* Carousel Container */}
       <div className="overflow-hidden">
         <div 
-          className={`flex gap-6 ${isTransitioning ? 'transition-transform duration-600 ease-in-out' : ''}`}
+          className={`flex gap-6 ${isTransitioning ? 'transition-transform duration-1000 ease-out' : ''}`}
           style={{
             transform: calculateTransform(),
           }}
@@ -136,9 +136,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 className="flex-shrink-0"
                 style={{
                   width: '320px',
-                  opacity: isMainProduct ? 1 : isSideProduct ? 0.6 : 0.3,
-                  transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.9)' : 'scale(0.8)',
-                  transition: isTransitioning ? 'opacity 600ms ease-in-out, transform 600ms ease-in-out' : 'none',
+                  opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.3,
+                  transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)',
+                  transition: isTransitioning ? 'opacity 1000ms ease-out, transform 1000ms ease-out' : 'none',
                 }}
               >
                 <Link 
