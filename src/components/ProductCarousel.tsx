@@ -56,35 +56,39 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const nextSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentIndex((prev) => prev + 3);
+    
+    const newIndex = currentIndex + 3;
+    setCurrentIndex(newIndex);
     
     setTimeout(() => {
-      // Seamless reset - jump back to equivalent position in originals
-      setCurrentIndex((current) => {
-        if (current >= 3 + products.length) {
-          return 3 + (current - 3 - products.length);
-        }
-        return current;
-      });
       setIsTransitioning(false);
     }, 1000);
+    
+    // Seamless reset after animation completes
+    setTimeout(() => {
+      if (newIndex >= 3 + products.length) {
+        setCurrentIndex(3 + (newIndex - 3 - products.length));
+      }
+    }, 1010);
   };
 
   const prevSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentIndex((prev) => prev - 3);
+    
+    const newIndex = currentIndex - 3;
+    setCurrentIndex(newIndex);
     
     setTimeout(() => {
-      // Seamless reset - jump to equivalent position at the end
-      setCurrentIndex((current) => {
-        if (current < 3) {
-          return 3 + products.length - (3 - current);
-        }
-        return current;
-      });
       setIsTransitioning(false);
     }, 1000);
+    
+    // Seamless reset after animation completes
+    setTimeout(() => {
+      if (newIndex < 3) {
+        setCurrentIndex(3 + products.length - (3 - newIndex));
+      }
+    }, 1010);
   };
 
   // Calculate transform for perfect centering
@@ -109,9 +113,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       {/* Carousel Viewport */}
       <div className="carousel-viewport">
         <div 
-          className={`carousel-track ${isTransitioning ? 'transition-transform duration-1000 ease-out' : ''}`}
+          className="carousel-track"
           style={{
             transform: calculateTransform(),
+            transition: isTransitioning ? 'transform 1000ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
           }}
         >
           {extendedProducts.map((product, index) => {
