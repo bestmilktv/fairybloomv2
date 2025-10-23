@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import ProductCard from './ProductCard';
 import { createProductPath } from '@/lib/slugify';
 
@@ -50,62 +49,72 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const nextSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentIndex((prev) => (prev + 3) % products.length);
-    setTimeout(() => setIsTransitioning(false), 200);
+    setCurrentIndex((prev) => {
+      const next = prev + 3;
+      // Loop back to start if we've gone past the end
+      return next >= products.length ? 0 : next;
+    });
+    setTimeout(() => setIsTransitioning(false), 600);
   };
 
   const prevSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentIndex((prev) => (prev - 3 + products.length) % products.length);
-    setTimeout(() => setIsTransitioning(false), 200);
+    setCurrentIndex((prev) => {
+      const previous = prev - 3;
+      // Loop to end if we've gone before the start
+      if (previous < 0) {
+        // Find the last valid starting position
+        const remainder = products.length % 3;
+        return remainder === 0 ? products.length - 3 : products.length - remainder;
+      }
+      return previous;
+    });
+    setTimeout(() => setIsTransitioning(false), 600);
   };
 
-  // Get the 5 products to display (2 before, 3 current, 2 after)
-  const getVisibleProducts = () => {
-    const visibleProducts = [];
-    for (let i = -2; i <= 2; i++) {
-      const index = (currentIndex + i + products.length) % products.length;
-      visibleProducts.push({
-        ...products[index],
-        position: i, // -2, -1, 0, 1, 2
-      });
-    }
-    return visibleProducts;
-  };
+  // Create an extended array for smooth infinity loop
+  // We need extra products on both sides for the side preview effect
+  const extendedProducts = [
+    ...products.slice(-2), // Last 2 products at the beginning
+    ...products,
+    ...products.slice(0, 5), // First 5 products at the end
+  ];
 
-  const visibleProducts = getVisibleProducts();
+  // Calculate the offset - we start at index 2 because we added 2 products at the beginning
+  const offset = currentIndex + 2;
 
   return (
-    <div className="relative">
-      {/* Carousel Container */}
-      <div className="relative overflow-hidden">
-        <div className="flex items-center justify-center gap-6 md:gap-8">
-          {visibleProducts.map((product, index) => {
-            const position = product.position;
-            const isMain = Math.abs(position) <= 1; // -1, 0, 1 are main products
-            const isSide = Math.abs(position) === 2; // -2, 2 are side products
+    <div className="relative px-4 md:px-8 lg:px-12">
+      {/* Carousel Container with overflow hidden */}
+      <div className="overflow-hidden">
+        <div 
+          className={`flex gap-6 ${isTransitioning ? 'transition-transform duration-600 ease-in-out' : ''}`}
+          style={{
+            transform: `translateX(calc(-${offset * (100 / 3)}% - ${offset * 1.5}rem))`,
+          }}
+        >
+          {extendedProducts.map((product, index) => {
+            // Calculate which products should be visible and styled
+            const positionFromCenter = index - offset - 1; // -2 to 2 range for 5 visible items
+            const isMainProduct = positionFromCenter >= -1 && positionFromCenter <= 1; // Center 3 products
+            const isSideProduct = Math.abs(positionFromCenter) === 2; // Side products
 
             return (
               <div
-                key={`${product.id}-${currentIndex}-${position}`}
-                className={`
-                  transition-all duration-200 ease-in-out transform
-                  ${isMain ? 'z-20 scale-100 opacity-100' : ''}
-                  ${isSide ? 'z-10 scale-75 opacity-60' : ''}
-                `}
+                key={`${product.id}-${index}`}
+                className={`flex-shrink-0 transition-all duration-600 ease-in-out`}
                 style={{
-                  transform: `translateX(${position * 8}px)`,
+                  width: 'calc(33.333% - 1rem)',
+                  opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.3,
+                  transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.85)' : 'scale(0.75)',
                 }}
               >
                 <Link 
                   to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
                   className="group cursor-pointer block"
                 >
-                  <div className={`
-                    transition-all duration-300 ease-in-out
-                    ${isMain ? 'hover:scale-105' : 'hover:scale-110'}
-                  `}>
+                  <div className="transition-transform duration-300 ease-in-out hover:scale-105">
                     <ProductCard
                       id={product.id}
                       title={product.title}
@@ -125,9 +134,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       {/* Navigation Arrows */}
       <button
         onClick={prevSlide}
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-8 z-30
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-30
                    w-12 h-12 md:w-14 md:h-14 rounded-full
-                   bg-background/80 backdrop-blur-sm border border-border/50
+                   bg-background/90 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
                    hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                    transition-all duration-300 ease-in-out
@@ -146,9 +155,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       <button
         onClick={nextSlide}
-        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-8 z-30
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-30
                    w-12 h-12 md:w-14 md:h-14 rounded-full
-                   bg-background/80 backdrop-blur-sm border border-border/50
+                   bg-background/90 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
                    hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                    transition-all duration-300 ease-in-out
@@ -164,15 +173,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
-
-      {/* Product Counter */}
-      <div className="text-center mt-8">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm">
-          <span className="text-sm text-muted-foreground">
-            {Math.floor(currentIndex / 3) + 1} / {Math.ceil(products.length / 3)}
-          </span>
-        </div>
-      </div>
     </div>
   );
 };
