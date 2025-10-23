@@ -57,17 +57,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    setCurrentIndex((prev) => prev + 3);
+    setCurrentIndex((prev) => (prev + 3) % extendedProducts.length);
     
     setTimeout(() => {
       setIsTransitioning(false);
-      // Seamless reset after animation
-      setCurrentIndex((current) => {
-        if (current >= 3 + products.length) {
-          return 3 + (current - 3 - products.length);
-        }
-        return current;
-      });
     }, 1000);
   };
 
@@ -75,17 +68,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    setCurrentIndex((prev) => prev - 3);
+    setCurrentIndex((prev) => (prev - 3 + extendedProducts.length) % extendedProducts.length);
     
     setTimeout(() => {
       setIsTransitioning(false);
-      // Seamless reset after animation
-      setCurrentIndex((current) => {
-        if (current < 3) {
-          return 3 + products.length - (3 - current);
-        }
-        return current;
-      });
     }, 1000);
   };
 
@@ -95,8 +81,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const gap = 32; // Increased gap for better spacing
     const totalWidth = cardWidth + gap; // 352px
     
-    // Offset to show 1 side product on the left
-    const offset = (currentIndex - 1) * totalWidth;
+    // Use modulo for true infinity - no reset needed
+    const adjustedIndex = currentIndex % extendedProducts.length;
+    const offset = (adjustedIndex - 1) * totalWidth;
     
     return `translateX(-${offset}px)`;
   };
