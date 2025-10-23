@@ -18,7 +18,7 @@ interface ProductCarouselProps {
 }
 
 const ProductCarousel = ({ products }: ProductCarouselProps) => {
-  const [currentIndex, setCurrentIndex] = useState(3); // Start at original products
+  const [currentIndex, setCurrentIndex] = useState(0); // Start at beginning of infinite array
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // If we have 3 or fewer products, show them in a simple grid
@@ -46,18 +46,23 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     );
   }
 
-  // Create extended array for seamless infinity loop
-  const extendedProducts = [
-    ...products.slice(-3),  // Last 3 at beginning
-    ...products,            // Originals
-    ...products.slice(0, 3) // First 3 at end
-  ];
+  // Create truly infinite products array - repeat products to ensure we never run out
+  const createInfiniteProducts = () => {
+    const repeatedProducts = [];
+    // Repeat products 10 times to ensure we never run out
+    for (let i = 0; i < 10; i++) {
+      repeatedProducts.push(...products);
+    }
+    return repeatedProducts;
+  };
+  
+  const extendedProducts = createInfiniteProducts();
 
   const nextSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    setCurrentIndex((prev) => (prev + 3) % extendedProducts.length);
+    setCurrentIndex((prev) => prev + 3);
     
     setTimeout(() => {
       setIsTransitioning(false);
@@ -68,7 +73,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    setCurrentIndex((prev) => (prev - 3 + extendedProducts.length) % extendedProducts.length);
+    setCurrentIndex((prev) => prev - 3);
     
     setTimeout(() => {
       setIsTransitioning(false);
@@ -81,9 +86,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const gap = 32; // Increased gap for better spacing
     const totalWidth = cardWidth + gap; // 352px
     
-    // Use modulo for true infinity - no reset needed
-    const adjustedIndex = currentIndex % extendedProducts.length;
-    const offset = (adjustedIndex - 1) * totalWidth;
+    // Simple offset - no modulo needed since we have truly infinite array
+    const offset = (currentIndex - 1) * totalWidth;
     
     return `translateX(-${offset}px)`;
   };
