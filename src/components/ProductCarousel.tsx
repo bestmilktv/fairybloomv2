@@ -86,10 +86,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         <div 
           className="flex gap-6"
           style={{
-            transform: `translateX(-${currentIndex * 344}px)`,
+            transform: `translateX(calc(50% - ${currentIndex * 344}px - 688px))`,
             transition: isTransitioning ? 'transform 1000ms ease-out' : 'none',
             width: 'max-content',
-            margin: '0 auto',
           }}
         >
           {extendedProducts.map((product, index) => {
