@@ -116,13 +116,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const productWidth = 320; // px
     const gap = 24; // 1.5rem = 24px
     const totalWidth = productWidth + gap;
-    return `translateX(-${offset * totalWidth}px)`;
+    // Center the carousel by offsetting by half the visible width
+    const visibleWidth = 5 * productWidth + 4 * gap; // 5 products + 4 gaps
+    const centerOffset = visibleWidth / 2 - productWidth / 2; // Center on middle product
+    return `translateX(calc(-${offset * totalWidth}px + ${centerOffset}px))`;
   };
 
   return (
     <div className="relative px-4 md:px-8 lg:px-16 py-4">
       {/* Carousel Container */}
-      <div className="overflow-hidden">
+      <div className="overflow-hidden flex justify-center">
         <div 
           className={`flex gap-6 ${isTransitioning ? 'carousel-slide' : ''}`}
           style={{
