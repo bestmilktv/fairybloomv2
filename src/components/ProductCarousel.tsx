@@ -46,14 +46,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     );
   }
 
-  // Create extended array for seamless infinity loop
+  // Create extended array for seamless infinity loop (Netflix style)
   const extendedProducts = [
-    ...products.slice(-products.length),  // Clone at the beginning
-    ...products,                          // Original products
-    ...products.slice(0, products.length) // Clone at the end
+    ...products.slice(-3), // Last 3 products at the beginning
+    ...products,            // Original products
+    ...products.slice(0, 3) // First 3 products at the end
   ];
 
-  const startOffset = products.length; // Start at originals
+  const startOffset = 3; // Start at original products
 
   // Initialize to start position
   useEffect(() => {
@@ -69,14 +69,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setTimeout(() => {
       setIsTransitioning(false);
       
-      // Seamless reset check
+      // Seamless reset - jump back to equivalent position in originals
       setCurrentIndex((current) => {
         if (current >= startOffset + products.length) {
           return startOffset + (current - startOffset - products.length);
         }
         return current;
       });
-    }, 610); // Slightly after transition completes
+    }, 600);
   };
 
   const prevSlide = () => {
@@ -88,54 +88,57 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setTimeout(() => {
       setIsTransitioning(false);
       
-      // Seamless reset check
+      // Seamless reset - jump to equivalent position at the end
       setCurrentIndex((current) => {
         if (current < startOffset) {
           return startOffset + products.length - (startOffset - current);
         }
         return current;
       });
-    }, 610); // Slightly after transition completes
+    }, 600);
   };
 
-  // Calculate transform for CSS Grid
+  // Calculate transform for smooth sliding
   const calculateTransform = () => {
-    const itemWidth = 380;
+    // Each product card is 320px wide + 24px gap = 344px total
+    const cardWidth = 320;
     const gap = 24;
-    const totalItemWidth = itemWidth + gap;
+    const totalWidth = cardWidth + gap;
     
-    // Offset by (currentIndex - 1) to show 1 side item on the left
-    const offset = (currentIndex - 1) * totalItemWidth;
+    // Offset by (currentIndex - 1) to show 1 side product on the left
+    const offset = (currentIndex - 1) * totalWidth;
     
     return `translateX(-${offset}px)`;
   };
 
   return (
-    <div className="carousel-wrapper">
-      {/* Carousel Viewport */}
-      <div className="carousel-viewport">
+    <div className="relative w-full">
+      {/* Carousel Container */}
+      <div className="overflow-hidden">
         <div 
-          className={`carousel-track ${isTransitioning ? 'carousel-slide' : ''}`}
+          className={`flex gap-6 ${isTransitioning ? 'transition-transform duration-600 ease-in-out' : ''}`}
           style={{
             transform: calculateTransform(),
           }}
         >
           {extendedProducts.map((product, index) => {
-            // Determine product position relative to current view
+            // Calculate relative position to current view
             const relativePosition = index - currentIndex;
             
-            // Define which products are main (center 3) vs side
-            const isMainProduct = relativePosition >= 0 && relativePosition <= 2; // Positions 0, 1, 2
-            const isSideProduct = relativePosition === -1 || relativePosition === 3; // Positions -1, 3
+            // Determine visibility and styling
+            const isMainProduct = relativePosition >= 0 && relativePosition <= 2; // Center 3 products
+            const isSideProduct = relativePosition === -1 || relativePosition === 3; // Side products
             const isVisible = relativePosition >= -1 && relativePosition <= 3; // Show 5 total
 
             return (
               <div
                 key={`${product.id}-${index}`}
-                className={`carousel-item ${isMainProduct ? 'is-main' : isSideProduct ? 'is-side' : ''}`}
+                className="flex-shrink-0"
                 style={{
-                  opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.2,
-                  transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.8)' : 'scale(0.7)',
+                  width: '320px',
+                  opacity: isMainProduct ? 1 : isSideProduct ? 0.6 : 0.3,
+                  transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.9)' : 'scale(0.8)',
+                  transition: isTransitioning ? 'opacity 600ms ease-in-out, transform 600ms ease-in-out' : 'none',
                 }}
               >
                 <Link 
@@ -162,7 +165,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       {/* Navigation Arrows */}
       <button
         onClick={prevSlide}
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-30
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-30
                    w-12 h-12 md:w-14 md:h-14 rounded-full
                    bg-background/90 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
@@ -183,7 +186,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       <button
         onClick={nextSlide}
-        className="absolute right-0 top-1/2 -translate-y-1/2 z-30
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-30
                    w-12 h-12 md:w-14 md:h-14 rounded-full
                    bg-background/90 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
