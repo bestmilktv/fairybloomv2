@@ -104,10 +104,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const gap = 24;
     const totalItemWidth = itemWidth + gap;
     
-    // Offset by (currentIndex - 1) to show 1 side item on the left
+    // We want to show 5 products: [side] [main1] [main2] [main3] [side]
+    // So we need to offset by (currentIndex - 1) to center the view
     const offset = (currentIndex - 1) * totalItemWidth;
     
-    return `translateX(-${offset}px)`;
+    // Center the carousel in the viewport
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const carouselWidth = 5 * itemWidth + 4 * gap; // 5 products + 4 gaps
+    const centerOffset = (viewportWidth - carouselWidth) / 2;
+    
+    return `translateX(calc(-${offset}px + ${centerOffset}px))`;
   };
 
   return (
