@@ -50,18 +50,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const nextSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentIndex((prev) => (prev + 1) % products.length);
-    setTimeout(() => setIsTransitioning(false), 500);
+    setCurrentIndex((prev) => (prev + 3) % products.length);
+    setTimeout(() => setIsTransitioning(false), 200);
   };
 
   const prevSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentIndex((prev) => (prev - 1 + products.length) % products.length);
-    setTimeout(() => setIsTransitioning(false), 500);
+    setCurrentIndex((prev) => (prev - 3 + products.length) % products.length);
+    setTimeout(() => setIsTransitioning(false), 200);
   };
 
-  // Get the 5 products to display (2 before, 1 current, 2 after)
+  // Get the 5 products to display (2 before, 3 current, 2 after)
   const getVisibleProducts = () => {
     const visibleProducts = [];
     for (let i = -2; i <= 2; i++) {
@@ -80,25 +80,22 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     <div className="relative">
       {/* Carousel Container */}
       <div className="relative overflow-hidden">
-        <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
+        <div className="flex items-center justify-center gap-6 md:gap-8">
           {visibleProducts.map((product, index) => {
             const position = product.position;
-            const isCenter = position === 0;
-            const isSide = Math.abs(position) === 1;
-            const isEdge = Math.abs(position) === 2;
+            const isMain = Math.abs(position) <= 1; // -1, 0, 1 are main products
+            const isSide = Math.abs(position) === 2; // -2, 2 are side products
 
             return (
               <div
                 key={`${product.id}-${currentIndex}-${position}`}
                 className={`
-                  transition-all duration-500 ease-in-out transform
-                  ${isCenter ? 'z-20 scale-100 opacity-100' : ''}
-                  ${isSide ? 'z-10 scale-90 opacity-70' : ''}
-                  ${isEdge ? 'z-0 scale-75 opacity-40' : ''}
-                  ${isTransitioning ? 'pointer-events-none' : 'pointer-events-auto'}
+                  transition-all duration-200 ease-in-out transform
+                  ${isMain ? 'z-20 scale-100 opacity-100' : ''}
+                  ${isSide ? 'z-10 scale-75 opacity-60' : ''}
                 `}
                 style={{
-                  transform: `translateX(${position * 20}px) ${isCenter ? 'scale(1)' : isSide ? 'scale(0.9)' : 'scale(0.75)'}`,
+                  transform: `translateX(${position * 8}px)`,
                 }}
               >
                 <Link 
@@ -107,8 +104,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 >
                   <div className={`
                     transition-all duration-300 ease-in-out
-                    ${isCenter ? 'hover:scale-105' : 'hover:scale-110'}
-                    ${isEdge ? 'cursor-pointer' : ''}
+                    ${isMain ? 'hover:scale-105' : 'hover:scale-110'}
                   `}>
                     <ProductCard
                       id={product.id}
@@ -129,16 +125,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       {/* Navigation Arrows */}
       <button
         onClick={prevSlide}
-        disabled={isTransitioning}
         className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-8 z-30
                    w-12 h-12 md:w-14 md:h-14 rounded-full
                    bg-background/80 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
                    hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                    transition-all duration-300 ease-in-out
-                   disabled:opacity-50 disabled:cursor-not-allowed
                    group"
-        aria-label="Předchozí produkt"
+        aria-label="Předchozí produkty"
       >
         <svg 
           className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground group-hover:text-gold transition-colors duration-300" 
@@ -152,16 +146,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       <button
         onClick={nextSlide}
-        disabled={isTransitioning}
         className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-8 z-30
                    w-12 h-12 md:w-14 md:h-14 rounded-full
                    bg-background/80 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
                    hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                    transition-all duration-300 ease-in-out
-                   disabled:opacity-50 disabled:cursor-not-allowed
                    group"
-        aria-label="Další produkt"
+        aria-label="Další produkty"
       >
         <svg 
           className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground group-hover:text-gold transition-colors duration-300" 
@@ -177,7 +169,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       <div className="text-center mt-8">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm">
           <span className="text-sm text-muted-foreground">
-            {currentIndex + 1} / {products.length}
+            {Math.floor(currentIndex / 3) + 1} / {Math.ceil(products.length / 3)}
           </span>
         </div>
       </div>
