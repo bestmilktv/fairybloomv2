@@ -57,17 +57,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    setCurrentIndex((prev) => prev + 3);
+    const newIndex = currentIndex + 3;
+    setCurrentIndex(newIndex);
     
     setTimeout(() => {
       setIsTransitioning(false);
-      // Seamless reset
-      setCurrentIndex((current) => {
-        if (current >= 3 + products.length) {
-          return 3 + (current - 3 - products.length);
-        }
-        return current;
-      });
+      // Seamless reset after animation
+      if (newIndex >= 3 + products.length) {
+        setCurrentIndex(3 + (newIndex - 3 - products.length));
+      }
     }, 1000);
   };
 
@@ -75,17 +73,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    setCurrentIndex((prev) => prev - 3);
+    const newIndex = currentIndex - 3;
+    setCurrentIndex(newIndex);
     
     setTimeout(() => {
       setIsTransitioning(false);
-      // Seamless reset
-      setCurrentIndex((current) => {
-        if (current < 3) {
-          return 3 + products.length - (3 - current);
-        }
-        return current;
-      });
+      // Seamless reset after animation
+      if (newIndex < 3) {
+        setCurrentIndex(3 + products.length - (3 - newIndex));
+      }
     }, 1000);
   };
 
@@ -157,7 +153,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         {/* Navigation Arrows */}
         <button
           onClick={prevSlide}
-          className="absolute -left-16 top-1/2 -translate-y-1/2 z-30
+          className="absolute -left-6 top-1/2 -translate-y-1/2 z-30
                      w-12 h-12 md:w-14 md:h-14 rounded-full
                      bg-background/90 backdrop-blur-sm border border-border/50
                      flex items-center justify-center
@@ -178,7 +174,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
         <button
           onClick={nextSlide}
-          className="absolute -right-16 top-1/2 -translate-y-1/2 z-30
+          className="absolute -right-6 top-1/2 -translate-y-1/2 z-30
                      w-12 h-12 md:w-14 md:h-14 rounded-full
                      bg-background/90 backdrop-blur-sm border border-border/50
                      flex items-center justify-center
