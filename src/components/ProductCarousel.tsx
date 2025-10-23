@@ -106,14 +106,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // Calculate the translateX value
-  // We want to show 5 products at a time, with the middle 3 being the focus
-  // So we offset by 1 product to the left to center the view on products at index, index+1, index+2
+  // We want to show 5 products: [prev] [current] [current+1] [current+2] [next]
+  // Each product is 320px + 1.5rem gap
   const calculateTransform = () => {
-    // Each product takes up 20% of the container width (5 products = 100%)
-    // We want to show: [prev] [current] [current+1] [current+2] [next]
-    // So we need to offset by (currentIndex - 1) products
+    // We want to center the view on the current product (index 1 of 5 visible)
+    // So we need to offset by (currentIndex - 1) to show the right products
     const offset = currentIndex - 1;
-    return `translateX(calc(-${offset * 20}% - ${offset * 1.5}rem))`;
+    // Each product is 320px + 1.5rem gap
+    const productWidth = 320; // px
+    const gap = 24; // 1.5rem = 24px
+    const totalWidth = productWidth + gap;
+    return `translateX(-${offset * totalWidth}px)`;
   };
 
   return (
@@ -124,6 +127,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           className={`flex gap-6 ${isTransitioning ? 'carousel-slide' : ''}`}
           style={{
             transform: calculateTransform(),
+            width: 'max-content', // Ensure container fits content
           }}
         >
           {extendedProducts.map((product, index) => {
@@ -139,7 +143,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 key={`${product.id}-${index}`}
                 className="flex-shrink-0"
                 style={{
-                  width: 'calc(20% - 1.2rem)', // 5 products = 20% each
+                  width: '320px', // Fixed width for consistent sizing
                   opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.2,
                   transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.85)' : 'scale(0.7)',
                   transition: isTransitioning ? 'opacity 600ms ease-in-out, transform 600ms ease-in-out' : 'none',
