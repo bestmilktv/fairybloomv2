@@ -46,75 +46,101 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     );
   }
 
+  // Create extended array for seamless infinity loop
+  const cloneCount = Math.max(5, Math.ceil(products.length / 2));
+  const extendedProducts = [
+    ...products.slice(-cloneCount), // Last products at the beginning
+    ...products,                    // Original products
+    ...products.slice(0, cloneCount) // First products at the end
+  ];
+
+  const startOffset = cloneCount;
+  const totalProducts = products.length;
+
   const nextSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
+    
     setCurrentIndex((prev) => {
-      const next = prev + 3;
-      // Loop back to start if we've gone past the end
-      return next >= products.length ? 0 : next;
+      const nextIndex = prev + 3;
+      // If we've gone past the original products, reset to start
+      if (nextIndex >= startOffset + totalProducts) {
+        return startOffset;
+      }
+      return nextIndex;
     });
+    
     setTimeout(() => setIsTransitioning(false), 600);
   };
 
   const prevSlide = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
+    
     setCurrentIndex((prev) => {
-      const previous = prev - 3;
-      // Loop to end if we've gone before the start
-      if (previous < 0) {
-        // Find the last valid starting position
-        const remainder = products.length % 3;
-        return remainder === 0 ? products.length - 3 : products.length - remainder;
+      const prevIndex = prev - 3;
+      // If we've gone before the start, jump to the end
+      if (prevIndex < startOffset) {
+        return startOffset + totalProducts - 3;
       }
-      return previous;
+      return prevIndex;
     });
+    
     setTimeout(() => setIsTransitioning(false), 600);
   };
 
-  // Create an extended array for smooth infinity loop
-  // We need extra products on both sides for the side preview effect
-  const extendedProducts = [
-    ...products.slice(-2), // Last 2 products at the beginning
-    ...products,
-    ...products.slice(0, 5), // First 5 products at the end
-  ];
+  // Calculate which products should be visible (5 total: 1 + 3 + 1)
+  const getVisibleProducts = () => {
+    const visibleProducts = [];
+    for (let i = -1; i <= 3; i++) {
+      const index = currentIndex + i;
+      if (index >= 0 && index < extendedProducts.length) {
+        const product = extendedProducts[index];
+        visibleProducts.push({
+          ...product,
+          position: i, // -1, 0, 1, 2, 3
+        });
+      }
+    }
+    return visibleProducts;
+  };
 
-  // Calculate the offset - we start at index 2 because we added 2 products at the beginning
-  const offset = currentIndex + 2;
+  const visibleProducts = getVisibleProducts();
 
   return (
     <div className="relative px-4 md:px-8 lg:px-12">
-      {/* Carousel Container with overflow hidden */}
+      {/* Carousel Container */}
       <div className="overflow-hidden">
         <div 
-          className={`flex gap-6 ${isTransitioning ? 'transition-transform duration-600 ease-in-out' : ''}`}
+          className={`flex gap-6 ${isTransitioning ? 'carousel-slide' : ''}`}
           style={{
-            transform: `translateX(calc(-${offset * (100 / 3)}% - ${offset * 1.5}rem))`,
+            transform: `translateX(calc(-${currentIndex * (100 / 5)}% - ${currentIndex * 1.5}rem))`,
           }}
         >
-          {extendedProducts.map((product, index) => {
-            // Calculate which products should be visible and styled
-            const positionFromCenter = index - offset - 1; // -2 to 2 range for 5 visible items
-            const isMainProduct = positionFromCenter >= -1 && positionFromCenter <= 1; // Center 3 products
-            const isSideProduct = Math.abs(positionFromCenter) === 2; // Side products
+          {visibleProducts.map((product, index) => {
+            const position = product.position;
+            const isMainProduct = position >= 0 && position <= 2; // Positions 0, 1, 2 (center 3)
+            const isSideProduct = position === -1 || position === 3; // Positions -1, 3 (sides)
 
             return (
               <div
-                key={`${product.id}-${index}`}
-                className={`flex-shrink-0 transition-all duration-600 ease-in-out`}
+                key={`${product.id}-${currentIndex}-${position}`}
+                className="flex-shrink-0 carousel-item"
                 style={{
-                  width: 'calc(33.333% - 1rem)',
-                  opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.3,
-                  transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.85)' : 'scale(0.75)',
+                  width: 'calc(20% - 1.2rem)', // 5 products = 20% each
                 }}
               >
                 <Link 
                   to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
                   className="group cursor-pointer block"
                 >
-                  <div className="transition-transform duration-300 ease-in-out hover:scale-105">
+                  <div 
+                    className="transition-transform duration-300 ease-in-out hover:scale-105"
+                    style={{
+                      opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.3,
+                      transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.85)' : 'scale(0.75)',
+                    }}
+                  >
                     <ProductCard
                       id={product.id}
                       title={product.title}
