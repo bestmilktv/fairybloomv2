@@ -112,6 +112,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               // Define which products are main (center 3) vs side
               const isMainProduct = relativePosition >= 0 && relativePosition <= 2;
               const isSideProduct = relativePosition === -1 || relativePosition === 3;
+              const isVisible = relativePosition >= -1 && relativePosition <= 3;
 
               return (
                 <div
@@ -119,9 +120,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   className="flex-shrink-0"
                   style={{
                     width: '320px',
-                    opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0.2,
+                    opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0,
                     transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)',
-                    transition: 'transform 1000ms ease-out, opacity 1000ms ease-out',
+                    transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
+                    visibility: isVisible ? 'visible' : 'hidden',
                   }}
                 >
                   <Link 
