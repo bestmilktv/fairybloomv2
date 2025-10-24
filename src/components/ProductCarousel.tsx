@@ -18,7 +18,7 @@ interface ProductCarouselProps {
 }
 
 const ProductCarousel = ({ products }: ProductCarouselProps) => {
-  const [currentIndex, setCurrentIndex] = useState(0); // Start at beginning of infinite array
+  const [currentIndex, setCurrentIndex] = useState(1); // Start at position 1 to show 5 products (1 side + 3 main + 1 side)
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // If we have 3 or fewer products, show them in a simple grid
@@ -86,7 +86,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const gap = 32; // Increased gap for better spacing
     const totalWidth = cardWidth + gap; // 352px
     
-    // Simple offset - no modulo needed since we have truly infinite array
+    // Offset to show 1 side product on the left, 3 main in center, 1 side on right
     const offset = (currentIndex - 1) * totalWidth;
     
     return `translateX(-${offset}px)`;
