@@ -9,6 +9,7 @@ export interface ShopifyProduct {
   title: string;
   description: string;
   handle: string;
+  createdAt?: string;
   availableForSale: boolean;
   tags: string[];
   images: {
@@ -141,6 +142,7 @@ export async function getProductsByCollection(handle: string, first: number = 20
               title
               description
               handle
+              createdAt
               tags
               images(first: 5) {
                 edges {

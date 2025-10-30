@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Navigation from '@/components/Navigation';
 import CategoryProductSection from '@/components/CategoryProductSection';
@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import { getProductsByCollection, getVariantInventory } from '@/lib/shopify';
 import BackToHomepageButton from '@/components/BackToHomepageButton';
 import { createCollectionHandle } from '@/lib/slugify';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Import product images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -15,10 +16,12 @@ import braceletImage from '@/assets/bracelet-placeholder.jpg';
 
 const CategoryPage = () => {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const category = location.pathname.substring(1); // Remove leading slash
   const [shopifyProducts, setShopifyProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [sort, setSort] = useState<string>(() => searchParams.get('razeni') || 'nejoblibenejsi');
 
 
   // Scroll to top when page loads
@@ -65,10 +68,12 @@ const CategoryPage = () => {
                   price: firstVariant?.price ? 
                     `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                     'Cena na vyžádání',
+                  priceAmount: firstVariant?.price ? parseFloat(firstVariant.price.amount) : null,
                   image: firstImage?.url || getFallbackImage(decodedCategory),
                   description: product.description || 'Elegantní šperk z naší kolekce',
                   handle: product.handle,
-                  inventoryQuantity
+                  inventoryQuantity,
+                  createdAt: product.createdAt || null
                 };
               })
             );
@@ -145,8 +150,36 @@ const CategoryPage = () => {
     );
   }
 
-  // Use Shopify products
-  const displayProducts = shopifyProducts;
+  // Sync sort to URL when changed
+  useEffect(() => {
+    const current = searchParams.get('razeni') || 'nejoblibenejsi';
+    if (current !== sort) {
+      const next = new URLSearchParams(searchParams);
+      next.set('razeni', sort);
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort]);
+
+  // Use Shopify products and apply sorting
+  const displayProducts = (() => {
+    const products = [...shopifyProducts];
+    switch (sort) {
+      case 'nejlevnejsi':
+        return products.sort((a, b) => (a.priceAmount ?? Infinity) - (b.priceAmount ?? Infinity));
+      case 'nejdrazsi':
+        return products.sort((a, b) => (b.priceAmount ?? -Infinity) - (a.priceAmount ?? -Infinity));
+      case 'nejnovejsi':
+        return products.sort((a, b) => {
+          const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bd - ad;
+        });
+      case 'nejoblibenejsi':
+      default:
+        return products; // Keep original API order
+    }
+  })();
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,6 +201,27 @@ const CategoryPage = () => {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             {categoryData.subtitle}
           </p>
+        </div>
+      </section>
+
+      {/* Toolbar: Sorting */}
+      <section className="px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-end">
+            <div className="w-56">
+              <Select value={sort} onValueChange={(v) => setSort(v)}>
+                <SelectTrigger className="h-11 rounded-full border-muted/60 bg-background/60 backdrop-blur text-sm">
+                  <SelectValue placeholder="Seřadit" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-muted/60">
+                  <SelectItem value="nejoblibenejsi">Nejoblíbenější</SelectItem>
+                  <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
+                  <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
+                  <SelectItem value="nejnovejsi">Nejnovější</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       </section>
 
