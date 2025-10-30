@@ -5,7 +5,7 @@ import ProductSection from '@/components/ProductSection';
 import Slideshow from '@/components/Slideshow';
 import Footer from '@/components/Footer';
 import { getProductsByCollection } from '@/lib/shopify';
-import { createCollectionHandle, createCollectionPath } from '@/lib/slugify';
+import { createCollectionPath } from '@/lib/slugify';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -170,7 +170,7 @@ const Index = () => {
             title={category.title}
             subtitle={category.subtitle}
             products={category.products}
-            categoryPath={`/${category.id}`}
+            categoryPath={createCollectionPath(category.id)}
           />
         ))
       )}
