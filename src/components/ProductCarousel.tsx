@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import { createProductPath } from '@/lib/slugify';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from '@/components/ui/carousel';
 
 interface Product {
   id: string;
@@ -18,8 +24,39 @@ interface ProductCarouselProps {
 }
 
 const ProductCarousel = ({ products }: ProductCarouselProps) => {
-  const [currentIndex, setCurrentIndex] = useState(1); // Start at position 1 to show 5 products (1 side + 3 main + 1 side)
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [embla, setEmbla] = useState<CarouselApi | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1920);
+
+  // Determine visible items count per breakpoint
+  const visibleCount = useMemo(() => {
+    if (viewportWidth < 768) return 1; // mobile
+    if (viewportWidth < 1024) return 2; // tablet
+    if (viewportWidth < 1280) return 3; // small notebook
+    if (viewportWidth < 1536) return 4; // desktop
+    return 5; // large desktop
+  }, [viewportWidth]);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const onSelect = useCallback(() => {
+    if (!embla) return;
+    setSelectedIndex(embla.selectedScrollSnap());
+  }, [embla]);
+
+  useEffect(() => {
+    if (!embla) return;
+    onSelect();
+    embla.on('select', onSelect);
+    embla.on('reInit', onSelect);
+    return () => {
+      embla.off('select', onSelect);
+    };
+  }, [embla, onSelect]);
 
   // If we have 3 or fewer products, show them in a simple grid
   if (products.length <= 3) {
@@ -46,91 +83,38 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     );
   }
 
-  // Create truly infinite products array - repeat products to ensure we never run out
-  const createInfiniteProducts = () => {
-    const repeatedProducts = [];
-    // Repeat products 10 times to ensure we never run out
-    for (let i = 0; i < 10; i++) {
-      repeatedProducts.push(...products);
-    }
-    return repeatedProducts;
-  };
-  
-  const extendedProducts = createInfiniteProducts();
-
-  const nextSlide = () => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    
-    setCurrentIndex((prev) => prev + 3);
-    
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 1000);
-  };
-
-  const prevSlide = () => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    
-    setCurrentIndex((prev) => prev - 3);
-    
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 1000);
-  };
-
-  // Calculate transform - simple offset with centering
-  const calculateTransform = () => {
-    const cardWidth = 320;
-    const gap = 32; // Increased gap for better spacing
-    const totalWidth = cardWidth + gap; // 352px
-    
-    // Offset to show 1 side product on the left, 3 main in center, 1 side on right
-    const offset = (currentIndex - 1) * totalWidth;
-    
-    return `translateX(-${offset}px)`;
-  };
+  // Center index approximation within current viewport
+  const centerIndex = useMemo(() => selectedIndex + Math.floor((visibleCount - 1) / 2), [selectedIndex, visibleCount]);
 
   return (
-    <div className="relative w-full flex justify-center">
-      {/* Carousel Container with fixed width */}
-      <div className="relative" style={{ width: '1728px', maxWidth: '90vw' }}>
-        {/* Carousel Viewport */}
-        <div className="overflow-hidden">
-          <div 
-            className="flex gap-8"
-            style={{
-              transform: calculateTransform(),
-              transition: isTransitioning ? 'transform 1000ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
-            }}
-          >
-            {extendedProducts.map((product, index) => {
-              // Calculate relative position to current view
-              const relativePosition = index - currentIndex;
-              
-              // Define which products are main (center 3) vs side
-              const isMainProduct = relativePosition >= 0 && relativePosition <= 2;
-              const isSideProduct = relativePosition === -1 || relativePosition === 3;
-              const isVisible = relativePosition >= -1 && relativePosition <= 3;
-
+    <div className="relative w-full">
+      <div className="relative px-4 sm:px-6">
+        <Carousel
+          className="w-full"
+          setApi={setEmbla}
+          opts={{ align: 'center', loop: true, containScroll: 'trimSnaps' }}
+        >
+          <CarouselContent className="gap-2 sm:gap-4">
+            {products.map((product, index) => {
+              const isEdgeLeft = index === selectedIndex;
+              const isEdgeRight = index === selectedIndex + (visibleCount - 1);
+              const isCenter = index === centerIndex;
+              const dimSide = !isCenter && (isEdgeLeft || isEdgeRight);
               return (
-                <div
-                  key={`${product.id}-${index}`}
-                  className="flex-shrink-0"
-                  style={{
-                    width: '320px',
-                    opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0,
-                    transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)',
-                    transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
-                    visibility: isVisible ? 'visible' : 'hidden',
-                  }}
+                <CarouselItem
+                  key={product.id}
+                  className="basis-[72%] sm:basis-[60%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 2xl:basis-1/5"
                 >
-                  <Link 
-                    to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
-                    className="group cursor-pointer block"
+                  <Link
+                    to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`}
+                    className="block"
                   >
-                    <div className="transition-transform duration-300 ease-in-out hover:scale-105">
+                    <div
+                      className={[
+                        'transition-transform transition-opacity duration-300',
+                        dimSide ? 'opacity-60 scale-95' : 'opacity-100 scale-100',
+                      ].join(' ')}
+                    >
                       <ProductCard
                         id={product.id}
                         title={product.title}
@@ -141,54 +125,31 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                       />
                     </div>
                   </Link>
-                </div>
+                </CarouselItem>
               );
             })}
+          </CarouselContent>
+
+          {/* Mobile/Tablet overlay arrows */}
+          <div className="pointer-events-none absolute inset-y-0 left-2 right-2 flex items-center justify-between sm:left-3 sm:right-3 md:hidden">
+            <button
+              type="button"
+              onClick={() => embla?.scrollPrev()}
+              className="pointer-events-auto w-10 h-10 rounded-full bg-background/90 border border-border/50 flex items-center justify-center shadow-sm"
+              aria-label="Předchozí produkty"
+            >
+              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => embla?.scrollNext()}
+              className="pointer-events-auto w-10 h-10 rounded-full bg-background/90 border border-border/50 flex items-center justify-center shadow-sm"
+              aria-label="Další produkty"
+            >
+              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
           </div>
-        </div>
-
-        {/* Navigation Arrows */}
-        <button
-          onClick={prevSlide}
-          className="absolute -left-8 top-1/2 -translate-y-1/2 z-30
-                     w-12 h-12 md:w-14 md:h-14 rounded-full
-                     bg-background/90 backdrop-blur-sm border border-border/50
-                     flex items-center justify-center
-                     hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
-                     transition-all duration-300 ease-in-out
-                     group"
-          aria-label="Předchozí produkty"
-        >
-          <svg 
-            className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground group-hover:text-gold transition-colors duration-300" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <button
-          onClick={nextSlide}
-          className="absolute -right-8 top-1/2 -translate-y-1/2 z-30
-                     w-12 h-12 md:w-14 md:h-14 rounded-full
-                     bg-background/90 backdrop-blur-sm border border-border/50
-                     flex items-center justify-center
-                     hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
-                     transition-all duration-300 ease-in-out
-                     group"
-          aria-label="Další produkty"
-        >
-          <svg 
-            className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground group-hover:text-gold transition-colors duration-300" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+        </Carousel>
       </div>
     </div>
   );
