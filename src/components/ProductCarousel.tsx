@@ -207,7 +207,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   return (
     <div className="relative w-full">
-      <div className="relative px-[10vw] sm:px-6">
+      <div className="relative px-[3.3vw] sm:px-4 md:px-3 lg:px-4 xl:px-6">
         <Carousel
           className="w-full"
           setApi={setEmbla}
