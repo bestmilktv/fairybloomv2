@@ -226,7 +226,7 @@ const CategoryPage = () => {
       </section>
 
       {/* Products Grid */}
-      <section className="py-16 px-6">
+      <section className="pt-8 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
           {isLoading ? (
             <div className="text-center">
