@@ -214,7 +214,7 @@ const CategoryPage = () => {
                   <SelectValue placeholder="Seřadit" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-muted/60">
-                  <SelectItem value="nejoblibenejsi">Nejoblíbenější</SelectItem>
+                  <SelectItem value="nejoblibenejsi">Nejprodávanější</SelectItem>
                   <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
                   <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
                   <SelectItem value="nejnovejsi">Nejnovější</SelectItem>

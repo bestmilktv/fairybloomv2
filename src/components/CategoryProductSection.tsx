@@ -18,7 +18,11 @@ interface CategoryProductSectionProps {
 }
 
 const CategoryProductSection = ({ category, initialProducts }: CategoryProductSectionProps) => {
-  const [products] = useState(initialProducts);
+  const [products, setProducts] = useState(initialProducts);
+
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
