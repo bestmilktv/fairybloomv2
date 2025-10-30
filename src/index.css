@@ -121,14 +121,15 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "kern" 1;
     overflow-x: hidden;
+    overflow-y: auto;
     width: 100%;
+    height: 100%;
     position: relative;
     /* Ensure page always starts at the very top */
     scroll-behavior: auto;
   }
   
   html {
-    overflow-y: auto;
     overflow-x: hidden;
     /* Ensure page always starts at the very top */
     scroll-behavior: auto;
@@ -322,9 +323,4 @@
   flex-shrink: 0;
   width: 320px;
   transition: transform 1000ms ease-out, opacity 1000ms ease-out;
-}
-
-/* Smooth scrolling for the entire page */
-html {
-  scroll-behavior: smooth;
 }
