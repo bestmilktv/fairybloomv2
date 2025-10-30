@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { getProductsByCollection } from '@/lib/shopify';
 
 interface Slide {
@@ -15,7 +14,7 @@ interface Slide {
 
 const Slideshow = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [slideshowRef, slideshowVisible] = useScrollAnimation();
+  const slideshowRef = useRef<HTMLElement>(null);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -116,6 +115,32 @@ const Slideshow = () => {
     fetchSlideshowData();
   }, []);
 
+  // Initialize scroll animation
+  useEffect(() => {
+    if (!slideshowRef.current) return;
+
+    const observerOptions = {
+      threshold: 0.15,
+      rootMargin: '0px 0px -80px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, observerOptions);
+
+    observer.observe(slideshowRef.current);
+
+    return () => {
+      if (slideshowRef.current) {
+        observer.unobserve(slideshowRef.current);
+      }
+    };
+  }, []);
+
   // Auto-advance slides
   useEffect(() => {
     const timer = setInterval(() => {
@@ -137,7 +162,7 @@ const Slideshow = () => {
     return (
       <section 
         ref={slideshowRef}
-        className={`py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30 scroll-fade-in ${slideshowVisible ? 'visible' : ''}`}
+        className="py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30 apple-fade-in"
       >
         <div className="max-w-7xl mx-auto">
           <div className="relative overflow-hidden rounded-3xl bg-card shadow-2xl">
@@ -157,7 +182,7 @@ const Slideshow = () => {
   return (
     <section 
       ref={slideshowRef}
-      className={`py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30 scroll-fade-in ${slideshowVisible ? 'visible' : ''}`}
+      className="py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30 apple-fade-in"
     >
       <div className="max-w-7xl mx-auto">
         <div className="relative overflow-hidden rounded-3xl bg-card shadow-2xl">
@@ -179,7 +204,7 @@ const Slideshow = () => {
                   
                   {/* Content */}
                   <div className="relative z-10 max-w-2xl mx-auto text-center px-8">
-                    <div className={`fade-in-up ${index === currentSlide ? 'animate-fade-in' : ''}`}>
+                    <div>
                       <p className="text-gold font-medium mb-2 tracking-wide text-sm uppercase">
                         {slide.subtitle}
                       </p>

@@ -175,10 +175,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {products.map((product, index) => (
-          <div key={product.id} className={`fade-in-up-delayed`} style={{ animationDelay: `${index * 0.1}s` }}>
+          <div 
+            key={product.id} 
+            className="apple-fade-in" 
+            style={{ transitionDelay: `${index * 0.1}s` }}
+          >
             <Link 
               to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
-              className="group cursor-pointer fade-in-up block"
+              className="group cursor-pointer block"
             >
               <ProductCard
                 id={product.id}
