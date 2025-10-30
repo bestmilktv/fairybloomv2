@@ -2,11 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fix navbar shifting when dropdowns open */
-html {
-  overflow-y: scroll;
-}
-
 /* Premium jewelry design system inspired by nature and luxury */
 
 @layer base {

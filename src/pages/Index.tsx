@@ -152,6 +152,11 @@ const Index = () => {
         const isInNav = el.closest('nav');
         
         if (!isInHero && !isInNav) {
+          // Check if element is already in viewport and make it visible immediately
+          const rect = el.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            el.classList.add('visible');
+          }
           observer?.observe(el);
         }
       });
