@@ -207,7 +207,7 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-start fade-in-up">
             <div className="w-56">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-muted/60 bg-background/60 backdrop-blur text-sm">
