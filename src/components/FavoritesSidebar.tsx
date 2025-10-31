@@ -157,15 +157,15 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
         onClick={onClose}
       />
       
-      {/* Favorites Sidebar Panel - Left side */}
-      <div className={`fixed top-0 left-0 h-screen w-96 min-w-[400px] max-w-[500px] bg-background border-r border-border shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`} style={{ position: 'fixed', top: 0, left: 0, height: '100vh' }}>
+      {/* Favorites Sidebar Panel - Right side */}
+      <div className={`fixed top-0 right-0 h-screen w-96 min-w-[400px] max-w-[500px] bg-background border-l border-border shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        isOpen ? 'translate-x-0' : 'translate-x-full'
+      }`} style={{ position: 'fixed', top: 0, right: 0, height: '100vh' }}>
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-background to-primary/5">
             <h2 className="text-xl font-serif font-semibold text-luxury">
-              Oblíbené ({favorites.length})
+              Oblíbené produkty: ({favorites.length})
             </h2>
             <Button
               variant="ghost"
