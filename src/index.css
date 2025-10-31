@@ -117,18 +117,22 @@
     @apply border-border;
   }
 
+  /* Explicitly prevent scroll containers - ensure only document scroll */
+  html {
+    overflow-x: hidden;
+    overflow-y: visible;
+    height: auto;
+    /* Ensure page always starts at the very top */
+    scroll-behavior: auto;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "kern" 1;
     overflow-x: hidden;
+    overflow-y: visible;
     width: 100%;
-    position: relative;
-    /* Ensure page always starts at the very top */
-    scroll-behavior: auto;
-  }
-  
-  html {
-    overflow-x: hidden;
+    height: auto;
     /* Ensure page always starts at the very top */
     scroll-behavior: auto;
   }
@@ -148,11 +152,13 @@
     max-width: 100%;
   }
 
-  /* Ensure root element doesn't cause overflow */
+  /* Ensure root element doesn't cause overflow or create scroll container */
   #root {
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    overflow-y: visible;
+    height: auto;
   }
 
   /* Ensure dropdown doesn't affect layout */
@@ -182,6 +188,14 @@
     width: 100%;
     position: fixed;
     will-change: auto;
+  }
+
+  /* Explicitly prevent scroll containers on root elements - use !important to override any conflicting styles */
+  html,
+  body,
+  #root {
+    overflow-y: visible !important;
+    height: auto !important;
   }
 }
 
