@@ -18,11 +18,8 @@ const Index = () => {
   const [productCategories, setProductCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  
-  // Scroll animation hooks
   const [brandValuesRef, brandValuesVisible] = useScrollAnimation();
   const [newsletterRef, newsletterVisible] = useScrollAnimation();
-  const [errorRef, errorVisible] = useScrollAnimation();
 
   // Collection mapping for Shopify - using slugified handles (these are the actual Shopify handles!)
   const collectionMapping = {
@@ -183,7 +180,7 @@ const Index = () => {
 
       {/* Error message (optional) */}
       {hasError && (
-        <div ref={errorRef} className={`py-8 px-6 bg-yellow-50 border-l-4 border-yellow-400 scroll-fade-in ${errorVisible ? 'visible' : ''}`}>
+        <div className="py-8 px-6 bg-yellow-50 border-l-4 border-yellow-400">
           <div className="max-w-7xl mx-auto">
             <div className="flex">
               <div className="ml-3">
@@ -197,9 +194,12 @@ const Index = () => {
       )}
       
       {/* Brand Values Section */}
-      <section ref={brandValuesRef} className={`py-20 px-6 bg-background scroll-fade-in ${brandValuesVisible ? 'visible' : ''}`}>
+      <section 
+        ref={brandValuesRef}
+        className={`py-20 px-6 bg-background scroll-fade-in ${brandValuesVisible ? 'visible' : ''}`}
+      >
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16 fade-in-up">
             <h2 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-6 tracking-wide">
               Proč si vybrat Fairy Bloom
             </h2>
@@ -209,7 +209,7 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div className="text-center">
+            <div className="text-center fade-in-up-delayed" style={{ animationDelay: '0.1s' }}>
               <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -221,7 +221,7 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="text-center">
+            <div className="text-center fade-in-up-delayed" style={{ animationDelay: '0.2s' }}>
               <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -233,7 +233,7 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="text-center">
+            <div className="text-center fade-in-up-delayed" style={{ animationDelay: '0.3s' }}>
               <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
@@ -251,9 +251,12 @@ const Index = () => {
       <Slideshow />
 
       {/* Newsletter Signup Section */}
-      <section ref={newsletterRef} className={`py-20 px-6 bg-gradient-to-br from-background to-primary/5 scroll-fade-in ${newsletterVisible ? 'visible' : ''}`}>
+      <section 
+        ref={newsletterRef}
+        className={`py-20 px-6 bg-gradient-to-br from-background to-primary/5 scroll-fade-in ${newsletterVisible ? 'visible' : ''}`}
+      >
         <div className="max-w-2xl mx-auto text-center">
-          <div>
+          <div className="fade-in-up">
             <h2 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-6 tracking-wide">
               Objevte nové kolekce jako první
             </h2>
