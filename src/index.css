@@ -248,47 +248,51 @@
     @apply text-foreground/80 leading-relaxed;
   }
   
-  /* Disabled fade-in animations - make everything visible immediately */
+  /* Apple-style fade-in animations for scroll-triggered content */
   .apple-fade-in {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 1s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .apple-fade-in.visible {
-    opacity: 1 !important;
-    transform: none !important;
+    opacity: 1;
+    transform: translateY(0);
   }
 
-  /* Legacy fade-in classes - disabled, everything visible */
+  /* Legacy fade-in classes - keep for backward compatibility but improve */
   .fade-in-up {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   
   .fade-in-up-delayed {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .fade-in-up.visible,
   .fade-in-up-delayed.visible {
-    opacity: 1 !important;
-    transform: none !important;
+    opacity: 1;
+    transform: translateY(0);
   }
 
-  /* Scroll-triggered fade-in - disabled */
+  /* Scroll-triggered fade-in with Apple-style easing */
   .scroll-fade-in {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 1s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .scroll-fade-in.visible {
-    opacity: 1 !important;
-    transform: none !important;
+    opacity: 1;
+    transform: translateY(0);
   }
   
   .smooth-scroll {
