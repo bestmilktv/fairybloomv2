@@ -6,6 +6,7 @@ import Slideshow from '@/components/Slideshow';
 import Footer from '@/components/Footer';
 import { getProductsByCollection } from '@/lib/shopify';
 import { createCollectionPath } from '@/lib/slugify';
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -17,6 +18,8 @@ const Index = () => {
   const [productCategories, setProductCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [brandValuesRef, brandValuesVisible] = useScrollAnimation();
+  const [newsletterRef, newsletterVisible] = useScrollAnimation();
 
   // Collection mapping for Shopify - using slugified handles (these are the actual Shopify handles!)
   const collectionMapping = {
@@ -191,7 +194,10 @@ const Index = () => {
       )}
       
       {/* Brand Values Section */}
-      <section className="py-20 px-6 bg-background">
+      <section 
+        ref={brandValuesRef}
+        className={`py-20 px-6 bg-background scroll-fade-in ${brandValuesVisible ? 'visible' : ''}`}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 fade-in-up">
             <h2 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-6 tracking-wide">
@@ -245,7 +251,10 @@ const Index = () => {
       <Slideshow />
 
       {/* Newsletter Signup Section */}
-      <section className="py-20 px-6 bg-gradient-to-br from-background to-primary/5">
+      <section 
+        ref={newsletterRef}
+        className={`py-20 px-6 bg-gradient-to-br from-background to-primary/5 scroll-fade-in ${newsletterVisible ? 'visible' : ''}`}
+      >
         <div className="max-w-2xl mx-auto text-center">
           <div className="fade-in-up">
             <h2 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-6 tracking-wide">
