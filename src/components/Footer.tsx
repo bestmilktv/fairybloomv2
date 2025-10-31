@@ -1,14 +1,7 @@
 import { Heart, Instagram, Facebook, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-
 const Footer = () => {
-  const [footerRef, footerVisible] = useScrollAnimation();
-  
-  return <footer 
-    ref={footerRef}
-    className={`bg-luxury text-luxury-foreground py-16 px-6 scroll-fade-in ${footerVisible ? 'visible' : ''}`}
-  >
+  return <footer className="bg-luxury text-luxury-foreground py-16 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
