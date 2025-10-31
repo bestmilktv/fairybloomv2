@@ -121,55 +121,6 @@ const Index = () => {
     fetchShopifyProducts();
   }, []);
 
-  // Initialize scroll-triggered animations for elements below the fold
-  useEffect(() => {
-    let observer: IntersectionObserver | null = null;
-    let timeoutId: NodeJS.Timeout;
-
-    // Wait a bit for DOM to be ready, especially after products load
-    timeoutId = setTimeout(() => {
-      const observerOptions = {
-        threshold: 0.15,
-        rootMargin: '0px 0px -80px 0px'
-      };
-
-      observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      }, observerOptions);
-
-      // Observe all elements with fade-in classes (but skip hero/nav - they should be static)
-      const elements = document.querySelectorAll('.apple-fade-in, .fade-in-up:not(nav *):not(header *), .fade-in-up-delayed, .scroll-fade-in');
-      elements.forEach((el) => {
-        // Skip if element is in hero section (first screen)
-        const section = el.closest('section');
-        const isInHero = section && 
-                        section.classList.contains('min-h-screen') && 
-                        section.querySelector('.relative.min-h-screen');
-        const isInNav = el.closest('nav');
-        
-        if (!isInHero && !isInNav) {
-          // Check if element is already in viewport and make it visible immediately
-          const rect = el.getBoundingClientRect();
-          if (rect.top < window.innerHeight && rect.bottom > 0) {
-            el.classList.add('visible');
-          }
-          observer?.observe(el);
-        }
-      });
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (observer) {
-        observer.disconnect();
-      }
-    };
-  }, [productCategories, isLoading]);
-
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
