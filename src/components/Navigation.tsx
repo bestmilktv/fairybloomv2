@@ -2,19 +2,23 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, UserCheck, LogOut, Package, Settings } from 'lucide-react';
+import { ShoppingCart, User, UserCheck, LogOut, Package, Settings, Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { MiniCart } from '@/components/MiniCart';
+import { FavoritesSidebar } from '@/components/FavoritesSidebar';
 import { createCollectionPath } from '@/lib/slugify';
 import logo from '@/assets/logo.png';
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [miniCartOpen, setMiniCartOpen] = useState(false);
+  const [favoritesSidebarOpen, setFavoritesSidebarOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const { getTotalItems } = useCart();
+  const { getFavoriteCount } = useFavorites();
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -66,7 +70,7 @@ const Navigation = () => {
               </Link>)}
           </div>
 
-          {/* Account & Cart */}
+          {/* Account, Favorites & Cart */}
           <div className="flex items-center space-x-4">
             {isAuthenticated && user ? (
               <DropdownMenu>
@@ -123,6 +127,19 @@ const Navigation = () => {
               variant="ghost" 
               size="icon" 
               className="text-foreground/80 hover:text-gold relative"
+              onClick={() => setFavoritesSidebarOpen(true)}
+            >
+              <Heart className="h-5 w-5" />
+              {getFavoriteCount() > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                  {getFavoriteCount()}
+                </span>
+              )}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-foreground/80 hover:text-gold relative"
               onClick={() => setMiniCartOpen(true)}
               data-cart-icon
             >
@@ -145,6 +162,11 @@ const Navigation = () => {
       <MiniCart 
         isOpen={miniCartOpen}
         onClose={() => setMiniCartOpen(false)}
+      />
+      
+      <FavoritesSidebar 
+        isOpen={favoritesSidebarOpen}
+        onClose={() => setFavoritesSidebarOpen(false)}
       />
     </nav>;
 };

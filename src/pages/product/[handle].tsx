@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle, createCart } from '@/lib/shopify';
 import { useCart } from '@/contexts/CartContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 import { createCollectionHandle } from '@/lib/slugify';
 
@@ -64,6 +65,7 @@ const DynamicProductPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { addToCart: addToLocalCart } = useCart();
+  const { isFavorite, addToFavorites, removeFromFavorites, isLoading: favoritesLoading } = useFavorites();
   const [product, setProduct] = useState<ShopifyProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -211,6 +213,36 @@ const DynamicProductPage = () => {
       });
     } finally {
       setIsAddingToCart(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!product || favoritesLoading) return;
+
+    const productId = product.id;
+    const isCurrentlyFavorite = isFavorite(productId);
+
+    try {
+      if (isCurrentlyFavorite) {
+        await removeFromFavorites(productId);
+        toast({
+          title: "Odebráno z oblíbených",
+          description: `${product.title} byl odebrán z vašich oblíbených.`,
+        });
+      } else {
+        await addToFavorites(productId);
+        toast({
+          title: "Přidáno do oblíbených",
+          description: `${product.title} byl přidán do vašich oblíbených.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se aktualizovat oblíbené. Zkuste to prosím znovu.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -439,8 +471,24 @@ const DynamicProductPage = () => {
                     'Přidat do košíku'
                   )}
                 </Button>
-                <Button variant="outline" size="lg" className="aspect-square p-0">
-                  <Heart className="h-5 w-5" />
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className={`aspect-square p-0 transition-all duration-300 ${
+                    isFavorite(product.id)
+                      ? 'border-red-500 hover:border-red-600 bg-red-50 dark:bg-red-950/20'
+                      : 'hover:border-gold'
+                  }`}
+                  onClick={handleToggleFavorite}
+                  disabled={favoritesLoading}
+                >
+                  <Heart 
+                    className={`h-5 w-5 transition-all duration-300 ${
+                      isFavorite(product.id)
+                        ? 'fill-red-500 text-red-500 scale-110'
+                        : ''
+                    }`}
+                  />
                 </Button>
               </div>
 

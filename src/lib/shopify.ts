@@ -246,6 +246,69 @@ export async function getProductByHandle(handle: string) {
 }
 
 /**
+ * Get a single product by ID (GID)
+ * @param productId - The product ID (GID format: gid://shopify/Product/...)
+ * @returns Promise with product data
+ */
+export async function getProductById(productId: string) {
+  const query = `
+    query getProductById($id: ID!) {
+      node(id: $id) {
+        ... on Product {
+          id
+          title
+          handle
+          description
+          availableForSale
+          tags
+          images(first: 6) {
+            edges {
+              node {
+                url
+                altText
+              }
+            }
+          }
+          variants(first: 5) {
+            edges {
+              node {
+                id
+                title
+                availableForSale
+                price {
+                  amount
+                  currencyCode
+                }
+              }
+            }
+          }
+          collections(first: 5) {
+            edges {
+              node {
+                id
+                title
+                handle
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetchShopify<{ node: ShopifyProduct | null }>(query, {
+      id: productId,
+    });
+
+    return response.data.node;
+  } catch (error) {
+    console.error(`Error fetching product by ID "${productId}":`, error);
+    return null;
+  }
+}
+
+/**
  * GraphQL mutation to create a new cart
  * @param variantId - The variant ID to add to cart
  * @param quantity - Quantity to add (default: 1)
