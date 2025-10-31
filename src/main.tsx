@@ -77,18 +77,32 @@ function removeScrollContainers() {
     }
   });
   
-  // Explicitly handle html, body, and #root
+  // Explicitly handle html, body, and #root - ensure only body scrolls
   const html = document.documentElement;
   const body = document.body;
   const root = document.getElementById('root');
   
-  [html, body, root].forEach(element => {
-    if (element) {
-      element.style.setProperty('overflow-y', 'visible', 'important');
-      element.style.setProperty('height', 'auto', 'important');
-      element.style.setProperty('max-height', 'none', 'important');
-    }
-  });
+  // html must NOT scroll - prevent double scrollbar
+  if (html) {
+    html.style.setProperty('overflow-y', 'hidden', 'important');
+    html.style.setProperty('overflow-x', 'hidden', 'important');
+    html.style.setProperty('height', '100%', 'important');
+  }
+  
+  // body handles all scrolling
+  if (body) {
+    body.style.setProperty('overflow-y', 'auto', 'important');
+    body.style.setProperty('overflow-x', 'hidden', 'important');
+    body.style.setProperty('height', 'auto', 'important');
+    body.style.setProperty('min-height', '100%', 'important');
+  }
+  
+  // root should not create scroll container
+  if (root) {
+    root.style.setProperty('overflow-y', 'visible', 'important');
+    root.style.setProperty('height', 'auto', 'important');
+    root.style.setProperty('max-height', 'none', 'important');
+  }
 }
 
 // Run immediately
@@ -115,12 +129,18 @@ const observer = new MutationObserver(() => {
   removeScrollContainers();
 });
 
-// Start observing after root is created
+// Start observing immediately and after React renders
 const rootElement = document.getElementById('root');
 if (rootElement) {
   observer.observe(document.body, {
     childList: true,
     subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'class']
+  });
+  
+  // Also observe html element changes
+  observer.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['style', 'class']
   });

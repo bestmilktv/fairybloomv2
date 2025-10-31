@@ -117,11 +117,11 @@
     @apply border-border;
   }
 
-  /* Explicitly prevent scroll containers - ensure only document scroll */
+  /* Explicitly prevent scroll containers - ensure only body scrolls, not html */
   html {
     overflow-x: hidden;
-    overflow-y: visible;
-    height: auto;
+    overflow-y: hidden;
+    height: 100%;
     /* Ensure page always starts at the very top */
     scroll-behavior: auto;
   }
@@ -130,9 +130,10 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "kern" 1;
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: auto;
     width: 100%;
     height: auto;
+    min-height: 100%;
     /* Ensure page always starts at the very top */
     scroll-behavior: auto;
   }
@@ -191,8 +192,16 @@
   }
 
   /* Explicitly prevent scroll containers on root elements - use !important to override any conflicting styles */
-  html,
-  body,
+  html {
+    overflow-y: hidden !important;
+    height: 100% !important;
+  }
+  
+  body {
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+  
   #root {
     overflow-y: visible !important;
     height: auto !important;
@@ -372,8 +381,19 @@
    These rules MUST be outside @layer to override everything
    ==================================================================== */
 
-html,
-body,
+html {
+  overflow-y: hidden !important;
+  height: 100% !important;
+  max-height: none !important;
+}
+
+body {
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100% !important;
+  max-height: none !important;
+}
+
 #root {
   overflow-y: visible !important;
   height: auto !important;
