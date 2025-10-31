@@ -420,7 +420,7 @@ const DynamicProductPage = () => {
               {/* Add to Cart Button */}
               <div className="flex space-x-4">
                 <Button 
-                  variant="luxury" 
+                  variant="gold" 
                   size="lg" 
                   className="flex-1"
                   onClick={handleAddToCart}

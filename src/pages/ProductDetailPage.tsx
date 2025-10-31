@@ -408,14 +408,16 @@ const ProductDetailPage = () => {
 
               <div className="flex items-center space-x-4">
                 <Button 
+                  variant="gold"
+                  size="lg"
                   onClick={handleAddToCart}
                   disabled={animatingToCart || (inventory !== null && inventory === 0)}
-                  className={`px-8 py-4 text-lg font-medium transition-all duration-300 ${
+                  className={`${
                     animatingToCart
                       ? 'bg-green-600 hover:bg-green-700'
                       : (inventory !== null && inventory === 0)
                         ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/25'
+                        : ''
                   }`}
                 >
                   {animatingToCart 

@@ -1,8 +1,6 @@
 import { Button } from '@/components/ui/button';
-import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import heroImage from '@/assets/hero-jewelry.jpg';
 const Hero = () => {
-  const [heroRef, heroVisible] = useScrollAnimation();
   const scrollToProducts = () => {
     const element = document.getElementById('nahrdelníky');
     if (element) {
@@ -12,14 +10,14 @@ const Hero = () => {
       });
     }
   };
-  return <section ref={heroRef} className={`relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-secondary/30 to-accent/20 scroll-fade-in ${heroVisible ? 'visible' : ''}`}>
+  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-secondary/30 to-accent/20">
       {/* Background Image */}
       <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{
       backgroundImage: `linear-gradient(rgba(35, 25, 15, 0.3), rgba(35, 25, 15, 0.2)), url(${heroImage})`
     }} />
       
       {/* Content */}
-      <div className="relative z-10 text-center max-w-4xl mx-auto px-6 fade-in-up">
+      <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
         <h2 className="text-5xl md:text-7xl font-serif font-bold text-luxury-foreground mb-6 tracking-wide">
           Přírodní krása zachycená v čase
         </h2>

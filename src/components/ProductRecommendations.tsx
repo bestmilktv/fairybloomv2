@@ -200,7 +200,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                       {product.price}
                     </span>
                     <Button 
-                      variant="premium" 
+                      variant="gold" 
                       size="sm"
                       onClick={(e) => handleAddToCart(product, e)}
                     >
