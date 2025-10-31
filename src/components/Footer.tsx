@@ -1,37 +1,7 @@
-import { useEffect, useRef } from 'react';
 import { Heart, Instagram, Facebook, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 const Footer = () => {
-  const footerRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (!footerRef.current) return;
-
-    const observerOptions = {
-      threshold: 0.15,
-      rootMargin: '0px 0px -80px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, observerOptions);
-
-    observer.observe(footerRef.current);
-
-    return () => {
-      if (footerRef.current) {
-        observer.unobserve(footerRef.current);
-      }
-    };
-  }, []);
-
-  return (
-    <footer ref={footerRef} className="bg-luxury text-luxury-foreground py-16 px-6 apple-fade-in">
+  return <footer className="bg-luxury text-luxury-foreground py-16 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
@@ -85,8 +55,6 @@ const Footer = () => {
           </p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;

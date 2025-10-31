@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import ProductCarousel from './ProductCarousel';
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
 interface Product {
   id: string;
@@ -21,46 +22,17 @@ interface ProductSectionProps {
 }
 
 const ProductSection = ({ id, title, subtitle, products, categoryPath }: ProductSectionProps) => {
-  const sectionRef = useRef<HTMLElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.15,
-      rootMargin: '0px 0px -80px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, observerOptions);
-
-    // Observe all animatable elements in this section
-    if (headerRef.current) observer.observe(headerRef.current);
-    if (carouselRef.current) observer.observe(carouselRef.current);
-    if (buttonRef.current) observer.observe(buttonRef.current);
-
-    return () => {
-      if (headerRef.current) observer.unobserve(headerRef.current);
-      if (carouselRef.current) observer.unobserve(carouselRef.current);
-      if (buttonRef.current) observer.unobserve(buttonRef.current);
-    };
-  }, []);
+  const [sectionRef, sectionVisible] = useScrollAnimation();
   
   return (
     <section 
       id={id} 
       ref={sectionRef}
-      className="py-5 px-6"
+      className={`py-5 px-6 scroll-fade-in ${sectionVisible ? 'visible' : ''}`}
     >
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
-        <div ref={headerRef} className="text-center mb-16 apple-fade-in">
+        <div className="text-center mb-16 fade-in-up">
           <h2 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-4 tracking-wide">
             {title}
           </h2>
@@ -70,12 +42,12 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
         </div>
         
         {/* Products Carousel */}
-        <div ref={carouselRef} className="mb-12 apple-fade-in" style={{ transitionDelay: '0.1s' }}>
+        <div className="mb-12">
           <ProductCarousel products={products} />
         </div>
         
         {/* View More Button */}
-        <div ref={buttonRef} className="text-center apple-fade-in" style={{ transitionDelay: '0.2s' }}>
+        <div className="text-center fade-in-up">
           <Link to={categoryPath}>
             <Button variant="premium" size="lg">
               Zobrazit více

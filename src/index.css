@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fix navbar shifting when dropdowns open */
+html {
+  overflow-y: scroll;
+}
+
 /* Premium jewelry design system inspired by nature and luxury */
 
 @layer base {
@@ -117,23 +122,20 @@
     @apply border-border;
   }
 
-  /* Explicitly prevent scroll containers - ensure only body scrolls, not html */
-  html {
-    overflow-x: hidden;
-    overflow-y: hidden;
-    height: auto;
-    /* Ensure page always starts at the very top */
-    scroll-behavior: auto;
-  }
-
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "kern" 1;
     overflow-x: hidden;
-    overflow-y: auto;
     width: 100%;
-    height: auto;
-    min-height: 100%;
+    position: relative;
+    /* Ensure page always starts at the very top */
+    scroll-behavior: auto;
+  }
+  
+  html {
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
     /* Ensure page always starts at the very top */
     scroll-behavior: auto;
   }
@@ -153,13 +155,11 @@
     max-width: 100%;
   }
 
-  /* Ensure root element doesn't cause overflow or create scroll container */
+  /* Ensure root element doesn't cause overflow */
   #root {
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
-    overflow-y: visible;
-    height: auto;
   }
 
   /* Ensure dropdown doesn't affect layout */
@@ -190,52 +190,6 @@
     position: fixed;
     will-change: auto;
   }
-
-  /* Explicitly prevent scroll containers on root elements - use !important to override any conflicting styles */
-  html {
-    overflow-y: hidden !important;
-    height: auto !important;
-  }
-  
-  body {
-    overflow-y: auto !important;
-    height: auto !important;
-  }
-  
-  #root {
-    overflow-y: visible !important;
-    height: auto !important;
-  }
-
-  /* Prevent any wrapper divs from creating scroll containers - target all possible provider wrappers */
-  #root > *,
-  #root > * > *,
-  #root > * > * > *,
-  body > div,
-  html > body > div {
-    overflow-y: visible !important;
-  }
-
-  /* Explicitly prevent min-h-screen elements from creating scroll containers */
-  .min-h-screen,
-  [class*="min-h-screen"] {
-    overflow-y: visible !important;
-    height: auto !important;
-    max-height: none !important;
-  }
-
-  /* Prevent any element with height viewport from creating scroll containers */
-  [class*="h-screen"],
-  [class*="h-\[100vh\]"],
-  [style*="height: 100vh"],
-  [style*="height:100vh"] {
-    overflow-y: visible !important;
-  }
-
-  /* Nuclear option: Prevent ALL divs from creating scroll containers (except those that explicitly need it) */
-  div:not([class*="overflow-y-auto"]):not([class*="overflow-auto"]):not([class*="overflow-y-scroll"]) {
-    overflow-y: visible !important;
-  }
 }
 
 /* Premium typography and animations */
@@ -248,46 +202,22 @@
     @apply text-foreground/80 leading-relaxed;
   }
   
-  /* Apple-style fade-in animations for scroll-triggered content */
-  .apple-fade-in {
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 1s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  }
-
-  .apple-fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  /* Legacy fade-in classes - keep for backward compatibility but improve */
   .fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
     opacity: 0;
     transform: translateY(30px);
-    transition: opacity 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   
   .fade-in-up-delayed {
+    animation: fadeInUp 0.8s ease-out 0.2s forwards;
     opacity: 0;
     transform: translateY(30px);
-    transition: opacity 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
-  .fade-in-up.visible,
-  .fade-in-up-delayed.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  /* Scroll-triggered fade-in with Apple-style easing */
   .scroll-fade-in {
     opacity: 0;
     transform: translateY(40px);
-    transition: opacity 1s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .scroll-fade-in.visible {
@@ -309,19 +239,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-/* Respect reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  .apple-fade-in,
-  .fade-in-up,
-  .fade-in-up-delayed,
-  .scroll-fade-in {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-    animation: none !important;
   }
 }
 
@@ -376,65 +293,7 @@
   transition: transform 1000ms ease-out, opacity 1000ms ease-out;
 }
 
-/* ====================================================================
-   CRITICAL: Prevent second scrollbar - highest priority rules
-   These rules MUST be outside @layer to override everything
-   ==================================================================== */
-
+/* Smooth scrolling for the entire page */
 html {
-  overflow-y: hidden !important;
-  height: auto !important;
-  max-height: none !important;
-}
-
-body {
-  overflow-y: auto !important;
-  height: auto !important;
-  min-height: 100% !important;
-  max-height: none !important;
-}
-
-#root {
-  overflow-y: visible !important;
-  height: auto !important;
-  max-height: none !important;
-}
-
-/* Target all possible wrapper elements created by React Router, providers, etc. */
-#root > *,
-#root > * > *,
-#root > * > * > *,
-#root > * > * > * > *,
-body > div,
-body > div > div,
-html > body > div {
-  overflow-y: visible !important;
-  height: auto !important;
-  max-height: none !important;
-}
-
-/* Prevent any element with viewport height from creating scroll containers */
-[class*="min-h-screen"],
-[class*="h-screen"],
-[class*="h-\[100vh\]"],
-[style*="height: 100vh"],
-[style*="height:100vh"],
-[style*="height: 100%"] {
-  overflow-y: visible !important;
-  height: auto !important;
-  max-height: none !important;
-}
-
-/* Nuclear option: Force ALL divs to not create scroll containers */
-div {
-  overflow-y: visible !important;
-}
-
-/* Exception: Allow overflow only for components that explicitly need it */
-div[class*="overflow-y-auto"],
-div[class*="overflow-auto"],
-div[class*="overflow-y-scroll"],
-[data-radix-scroll-area-viewport],
-[data-radix-scroll-area-root] {
-  overflow-y: auto !important;
+  scroll-behavior: smooth;
 }
