@@ -82,11 +82,11 @@ function removeScrollContainers() {
   const body = document.body;
   const root = document.getElementById('root');
   
-  // html must NOT scroll - prevent double scrollbar
+  // html must NOT scroll - prevent double scrollbar, but allow natural height growth
   if (html) {
     html.style.setProperty('overflow-y', 'hidden', 'important');
     html.style.setProperty('overflow-x', 'hidden', 'important');
-    html.style.setProperty('height', '100%', 'important');
+    html.style.setProperty('height', 'auto', 'important');
   }
   
   // body handles all scrolling

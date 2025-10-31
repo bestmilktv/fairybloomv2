@@ -121,7 +121,7 @@
   html {
     overflow-x: hidden;
     overflow-y: hidden;
-    height: 100%;
+    height: auto;
     /* Ensure page always starts at the very top */
     scroll-behavior: auto;
   }
@@ -194,7 +194,7 @@
   /* Explicitly prevent scroll containers on root elements - use !important to override any conflicting styles */
   html {
     overflow-y: hidden !important;
-    height: 100% !important;
+    height: auto !important;
   }
   
   body {
@@ -383,7 +383,7 @@
 
 html {
   overflow-y: hidden !important;
-  height: 100% !important;
+  height: auto !important;
   max-height: none !important;
 }
 
