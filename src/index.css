@@ -366,3 +366,55 @@
   width: 320px;
   transition: transform 1000ms ease-out, opacity 1000ms ease-out;
 }
+
+/* ====================================================================
+   CRITICAL: Prevent second scrollbar - highest priority rules
+   These rules MUST be outside @layer to override everything
+   ==================================================================== */
+
+html,
+body,
+#root {
+  overflow-y: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Target all possible wrapper elements created by React Router, providers, etc. */
+#root > *,
+#root > * > *,
+#root > * > * > *,
+#root > * > * > * > *,
+body > div,
+body > div > div,
+html > body > div {
+  overflow-y: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Prevent any element with viewport height from creating scroll containers */
+[class*="min-h-screen"],
+[class*="h-screen"],
+[class*="h-\[100vh\]"],
+[style*="height: 100vh"],
+[style*="height:100vh"],
+[style*="height: 100%"] {
+  overflow-y: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Nuclear option: Force ALL divs to not create scroll containers */
+div {
+  overflow-y: visible !important;
+}
+
+/* Exception: Allow overflow only for components that explicitly need it */
+div[class*="overflow-y-auto"],
+div[class*="overflow-auto"],
+div[class*="overflow-y-scroll"],
+[data-radix-scroll-area-viewport],
+[data-radix-scroll-area-root] {
+  overflow-y: auto !important;
+}
