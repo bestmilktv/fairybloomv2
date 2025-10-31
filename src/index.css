@@ -191,14 +191,38 @@ html {
     will-change: auto;
   }
 
-  /* Prevent font loading layout shift in Hero section */
-  section h2.font-serif {
+  /* Prevent font loading layout shift - use size-adjust for fallback font to match Playfair Display */
+  @font-face {
+    font-family: 'Playfair Display Fallback';
+    src: local('Times New Roman');
+    size-adjust: 105%;
+    ascent-override: 90%;
+    descent-override: 22%;
+    line-gap-override: 0%;
+  }
+
+  /* Force font metrics to prevent layout shift */
+  section h2.font-serif,
+  h2.font-serif,
+  .font-serif {
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     contain: layout style;
-    /* Reserve space to prevent layout shift */
-    min-height: 1.2em;
-    line-height: 1.1;
+    /* Use fallback font that matches Playfair Display metrics */
+    font-family: 'Playfair Display', 'Playfair Display Fallback', serif !important;
+    /* Prevent font size changes */
+    font-size-adjust: 0.5;
+  }
+  
+  /* Explicit font sizes for Hero to prevent scaling - match Tailwind values exactly */
+  section h2.text-5xl {
+    font-size: 3rem !important; /* 48px - Tailwind text-5xl */
+  }
+  
+  @media (min-width: 768px) {
+    section h2.text-7xl {
+      font-size: 4.5rem !important; /* 72px - Tailwind text-7xl */
+    }
   }
   
   /* Stabilize paragraph and button container heights */
