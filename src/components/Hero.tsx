@@ -1,6 +1,34 @@
 import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-jewelry.jpg';
+
 const Hero = () => {
+  // Custom smooth scroll funkce s pomalejší animací (o 25% pomalejší)
+  const smoothScrollTo = (targetPosition: number) => {
+    const startPosition = window.pageYOffset;
+    const distance = targetPosition - startPosition;
+    const duration = Math.abs(distance) * 1.25; // Zpomalení o 25% (1.25x delší)
+    let startTime: number | null = null;
+
+    const easeInOutCubic = (t: number): number => {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    };
+
+    const animation = (currentTime: number) => {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const progress = Math.min(timeElapsed / duration, 1);
+      const easedProgress = easeInOutCubic(progress);
+
+      window.scrollTo(0, startPosition + distance * easedProgress);
+
+      if (progress < 1) {
+        requestAnimationFrame(animation);
+      }
+    };
+
+    requestAnimationFrame(animation);
+  };
+
   const scrollToProducts = () => {
     const element = document.getElementById('náhrdelníky');
     if (element) {
@@ -8,10 +36,7 @@ const Hero = () => {
       const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
       const offsetPosition = elementPosition - navHeight;
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+      smoothScrollTo(offsetPosition);
     }
   };
 
@@ -22,10 +47,7 @@ const Hero = () => {
       const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
       const offsetPosition = elementPosition - navHeight;
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+      smoothScrollTo(offsetPosition);
     }
   };
   return <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-secondary/30 to-accent/20">
