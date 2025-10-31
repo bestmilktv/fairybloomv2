@@ -121,9 +121,7 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "kern" 1;
     overflow-x: hidden;
-    overflow-y: auto;
     width: 100%;
-    height: 100%;
     position: relative;
     /* Ensure page always starts at the very top */
     scroll-behavior: auto;
