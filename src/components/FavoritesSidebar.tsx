@@ -201,7 +201,7 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <Link
-                      to={`/product-shopify/${product.handle}`}
+                      to={`/produkt/${product.handle}`}
                       onClick={onClose}
                       className="flex items-center space-x-4 flex-1 min-w-0"
                     >
