@@ -19,6 +19,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [brandValuesRef, brandValuesVisible] = useScrollAnimation();
+  const [myStoryRef, myStoryVisible] = useScrollAnimation();
   const [newsletterRef, newsletterVisible] = useScrollAnimation();
 
   // Collection mapping for Shopify - using slugified handles (these are the actual Shopify handles!)
@@ -243,6 +244,51 @@ const Index = () => {
               <p className="text-muted-foreground leading-relaxed">
                 Vyrábíme v České republice s garancí nejvyšší kvality a preciznosti
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* My Story Section */}
+      <section 
+        id="muj-pribeh"
+        ref={myStoryRef}
+        className={`py-24 px-6 bg-gradient-to-br from-background via-primary/5 to-secondary/10 scroll-fade-in ${myStoryVisible ? 'visible' : ''}`}
+      >
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16 fade-in-up">
+            <h2 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-8 tracking-wide">
+              Můj příběh
+            </h2>
+          </div>
+          
+          <div className="space-y-8 fade-in-up-delayed" style={{ animationDelay: '0.2s' }}>
+            <div className="text-center mb-12">
+              <p className="text-2xl md:text-3xl font-serif font-medium text-luxury/90 italic leading-relaxed max-w-3xl mx-auto">
+                Každý detail má svůj význam.<br />
+                Každý okamžik si zaslouží být výjimečný.
+              </p>
+            </div>
+
+            <div className="prose prose-lg max-w-none text-foreground/90 leading-relaxed space-y-6">
+              <p className="text-lg md:text-xl leading-relaxed">
+                Jmenuji se <span className="font-semibold text-luxury">Terka</span> a FairyBloom vznikl z touhy tvořit něco víc než jen šperky – chtěla jsem vytvořit zážitek, který lidem připomene krásu jednoduchosti a sílu osobních příběhů.
+              </p>
+              
+              <p className="text-lg md:text-xl leading-relaxed">
+                Věřím, že pravý luxus nespočívá v lesku, ale v emocích, které v nás zůstávají. Každý kousek z FairyBloom proto navrhujeme tak, aby byl nejen esteticky dokonalý, ale hlavně osobní – spojený s významem, vzpomínkou, momentem.
+              </p>
+              
+              <p className="text-lg md:text-xl leading-relaxed">
+                Naším cílem není zaplavit svět dalšími produkty, ale vytvářet věci, které něco znamenají. Každý šperk, který projde našima rukama, má svůj důvod, svůj příběh a své místo – stejně jako vy.
+              </p>
+              
+              <div className="mt-12 pt-8 border-t border-primary/20">
+                <p className="text-xl md:text-2xl font-serif font-semibold text-luxury text-center leading-relaxed">
+                  FairyBloom není jen značka.<br />
+                  <span className="font-normal italic">Je to filozofie pomalé krásy, která se rodí z klidu, péče a respektu k detailu.</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>

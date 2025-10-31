@@ -2,11 +2,29 @@ import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-jewelry.jpg';
 const Hero = () => {
   const scrollToProducts = () => {
-    const element = document.getElementById('nahrdelníky');
+    const element = document.getElementById('náhrdelníky');
     if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
+      const navHeight = 80; // Přibližná výška navigační lišty
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - navHeight;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const scrollToMyStory = () => {
+    const element = document.getElementById('muj-pribeh');
+    if (element) {
+      const navHeight = 80; // Přibližná výška navigační lišty
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - navHeight;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
       });
     }
   };
@@ -29,7 +47,7 @@ const Hero = () => {
         
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6" style={{ minHeight: '60px' }}>
           <Button variant="gold" size="lg" onClick={scrollToProducts} className="w-full md:w-auto">Objevit kolekce</Button>
-          <Button variant="premium" size="lg" className="w-full md:w-auto">Můj příběh</Button>
+          <Button variant="premium" size="lg" onClick={scrollToMyStory} className="w-full md:w-auto">Můj příběh</Button>
         </div>
       </div>
       
