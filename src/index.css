@@ -197,6 +197,36 @@
     overflow-y: visible !important;
     height: auto !important;
   }
+
+  /* Prevent any wrapper divs from creating scroll containers - target all possible provider wrappers */
+  #root > *,
+  #root > * > *,
+  #root > * > * > *,
+  body > div,
+  html > body > div {
+    overflow-y: visible !important;
+  }
+
+  /* Explicitly prevent min-h-screen elements from creating scroll containers */
+  .min-h-screen,
+  [class*="min-h-screen"] {
+    overflow-y: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Prevent any element with height viewport from creating scroll containers */
+  [class*="h-screen"],
+  [class*="h-\[100vh\]"],
+  [style*="height: 100vh"],
+  [style*="height:100vh"] {
+    overflow-y: visible !important;
+  }
+
+  /* Nuclear option: Prevent ALL divs from creating scroll containers (except those that explicitly need it) */
+  div:not([class*="overflow-y-auto"]):not([class*="overflow-auto"]):not([class*="overflow-y-scroll"]) {
+    overflow-y: visible !important;
+  }
 }
 
 /* Premium typography and animations */
