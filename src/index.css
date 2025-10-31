@@ -190,6 +190,26 @@ html {
     position: fixed;
     will-change: auto;
   }
+
+  /* Prevent font loading layout shift in Hero section */
+  section h2.font-serif {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    contain: layout style;
+    /* Reserve space to prevent layout shift */
+    min-height: 1.2em;
+    line-height: 1.1;
+  }
+  
+  /* Stabilize paragraph and button container heights */
+  section p {
+    min-height: fit-content;
+  }
+  
+  section button,
+  section .button-container {
+    will-change: auto;
+  }
 }
 
 /* Premium typography and animations */

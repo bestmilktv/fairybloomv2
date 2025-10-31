@@ -17,16 +17,17 @@ const Hero = () => {
     }} />
       
       {/* Content */}
-      <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
-        <h2 className="text-5xl md:text-7xl font-serif font-bold text-luxury-foreground mb-6 tracking-wide">
-          Přírodní krása zachycená v čase
+      <div className="relative z-10 text-center max-w-4xl mx-auto px-6" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <h2 className="text-5xl md:text-7xl font-serif font-bold text-luxury-foreground mb-6 tracking-wide leading-tight" style={{ lineHeight: '1.1' }}>
+          Přírodní krása<br />
+          <span className="block mt-2">zachycená v čase</span>
         </h2>
         
-        <p className="text-xl md:text-2xl text-luxury-foreground/90 mb-8 leading-relaxed max-w-2xl mx-auto">
+        <p className="text-xl md:text-2xl text-luxury-foreground/90 mb-8 leading-relaxed max-w-2xl mx-auto" style={{ minHeight: '80px' }}>
           Objevte naši jedinečnou kolekci šperků s opravdovými květinami z českých luk a lesů. Každý kousek je vytvořen ručně s láskou k detailu a nese v sobě kouzlo přírody.
         </p>
         
-        <div className="space-y-4 md:space-y-0 md:space-x-6 md:flex md:justify-center">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6" style={{ minHeight: '60px' }}>
           <Button variant="gold" size="lg" onClick={scrollToProducts} className="w-full md:w-auto">Objevit kolekce</Button>
           <Button variant="premium" size="lg" className="w-full md:w-auto">Můj příběh</Button>
         </div>
