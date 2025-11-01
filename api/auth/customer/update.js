@@ -10,14 +10,25 @@ const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/ap
 
 /**
  * Make authenticated request to Customer Account API
+ * @param {string} query - GraphQL query
+ * @param {object} variables - Query variables
+ * @param {object} req - Request object to extract cookies
  */
-async function fetchCustomerAccount(query, variables = {}) {
+async function fetchCustomerAccount(query, variables = {}, req = null) {
+  // Build headers with cookies from request
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  // Forward cookies from original request to Shopify API
+  // This is required for authentication in Node.js server-side code
+  if (req && req.headers.cookie) {
+    headers['Cookie'] = req.headers.cookie;
+  }
+
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
+    headers,
     body: JSON.stringify({
       query,
       variables,
@@ -25,6 +36,9 @@ async function fetchCustomerAccount(query, variables = {}) {
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Shopify Customer Account API error: ${response.status}`, errorText);
+    
     if (response.status === 401) {
       throw new Error('Authentication required');
     }
@@ -35,6 +49,7 @@ async function fetchCustomerAccount(query, variables = {}) {
 
   if (data.errors && data.errors.length > 0) {
     const errorMessages = data.errors.map((error) => error.message).join(', ');
+    console.error('GraphQL errors from Shopify:', errorMessages);
     throw new Error(`GraphQL errors: ${errorMessages}`);
   }
 
@@ -87,23 +102,46 @@ export default async function handler(req, res) {
       input: updateInput
     };
 
-    const updateResult = await fetchCustomerAccount(updateQuery, updateVariables);
+    console.log('Updating customer profile with:', updateInput);
 
-    if (updateResult.data.customerUpdate.userErrors.length > 0) {
+    const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, req);
+
+    // Check for GraphQL errors in response
+    if (!updateResult.data || !updateResult.data.customerUpdate) {
+      console.error('Invalid response from Shopify API:', updateResult);
+      return res.status(500).json({ error: 'Neplatná odpověď z Shopify API.' });
+    }
+
+    if (updateResult.data.customerUpdate.userErrors && updateResult.data.customerUpdate.userErrors.length > 0) {
       const errorMessage = updateResult.data.customerUpdate.userErrors[0].message;
-      return res.status(400).json({ error: errorMessage });
+      console.error('Shopify userErrors:', updateResult.data.customerUpdate.userErrors);
+      return res.status(400).json({ error: errorMessage || 'Aktualizace profilu se nezdařila.' });
     }
 
     const customer = updateResult.data.customerUpdate.customer;
 
+    if (!customer) {
+      console.error('No customer data in response:', updateResult);
+      return res.status(500).json({ error: 'Aktualizace profilu se nezdařila - chybí data zákazníka.' });
+    }
+
+    console.log('Customer profile updated successfully:', customer);
+
     return res.status(200).json({
       id: customer.id,
       email: customer.email,
-      firstName: customer.firstName,
-      lastName: customer.lastName
+      firstName: customer.firstName || '',
+      lastName: customer.lastName || ''
     });
   } catch (error) {
     console.error('Customer update API error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    const errorMessage = error.message || 'Internal server error';
+    
+    // Return more specific error message to frontend
+    if (errorMessage.includes('Authentication required')) {
+      return res.status(401).json({ error: 'Nejste přihlášeni. Prosím přihlaste se znovu.' });
+    }
+    
+    return res.status(500).json({ error: errorMessage.includes('GraphQL errors') ? errorMessage : 'Aktualizace profilu se nezdařila. Zkuste to prosím znovu.' });
   }
 }
