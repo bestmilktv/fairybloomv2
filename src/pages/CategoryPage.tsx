@@ -230,7 +230,11 @@ const CategoryPage = () => {
       {/* Products Grid */}
       <section className="pt-8 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
-          {isLoading ? null : hasError ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {/* Empty space - maintains layout during loading */}
+            </div>
+          ) : hasError ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-6">Nepodařilo se načíst produkty z obchodu. Zkontrolujte prosím připojení k internetu.</p>
               <div className="text-center">
