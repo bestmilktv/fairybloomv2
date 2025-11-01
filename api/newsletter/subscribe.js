@@ -2,7 +2,7 @@
  * Shopify Newsletter Subscription API Endpoint
  * 
  * Handles newsletter subscription by creating/updating customers in Shopify
- * with accepts_marketing: true
+ * with email_marketing_consent (state: "subscribed")
  * 
  * Usage:
  * POST /api/newsletter/subscribe
@@ -13,6 +13,7 @@
  * 
  * Error responses:
  * 400 - Invalid email format or missing email
+ * 401 - Invalid Shopify Admin API token
  * 409 - Email already subscribed
  * 500 - Server error
  */
@@ -54,12 +55,23 @@ export default async function handler(req, res) {
       });
     }
 
-    // Use Shopify Admin API version (consistent with other endpoints)
-    const apiVersion = '2023-10';
+    // Use Shopify Admin API version 2024-04 (supports email_marketing_consent)
+    const apiVersion = '2024-04';
     const baseUrl = `https://${storeDomain}/admin/api/${apiVersion}`;
 
+    // Prepare email_marketing_consent object with current timestamp
+    const consentTimestamp = new Date().toISOString();
+    const emailMarketingConsent = {
+      state: 'subscribed',
+      opt_in_level: 'confirmed_opt_in',
+      consent_updated_at: consentTimestamp
+    };
+
     // Step 1: Try to find existing customer by email
+    // Use search API or fallback to listing with email filter
     const searchUrl = `${baseUrl}/customers/search.json?query=email:${encodeURIComponent(email)}`;
+    
+    console.log(`[Newsletter] Searching for customer with email: ${email}`);
     
     const searchResponse = await fetch(searchUrl, {
       method: 'GET',
@@ -71,12 +83,13 @@ export default async function handler(req, res) {
 
     if (!searchResponse.ok) {
       if (searchResponse.status === 401) {
+        console.error('[Newsletter] Invalid Shopify Admin API token');
         return res.status(401).json({ 
           error: 'Invalid Shopify Admin API token' 
         });
       }
       const errorText = await searchResponse.text();
-      console.error(`Shopify API search error: ${searchResponse.status} - ${errorText}`);
+      console.error(`[Newsletter] Shopify API search error: ${searchResponse.status} - ${errorText}`);
       return res.status(searchResponse.status).json({ 
         error: `Shopify API error: ${searchResponse.statusText}` 
       });
@@ -84,42 +97,65 @@ export default async function handler(req, res) {
 
     const searchData = await searchResponse.json();
     const existingCustomers = searchData.customers || [];
+    
+    console.log(`[Newsletter] Found ${existingCustomers.length} existing customer(s)`);
 
     // Step 2: Update existing customer or create new one
     if (existingCustomers.length > 0) {
       // Customer exists - update to accept marketing
       const customer = existingCustomers[0];
       
-      // Check if already accepts marketing
-      if (customer.accepts_marketing) {
+      console.log(`[Newsletter] Customer found with ID: ${customer.id}, current marketing consent:`, customer.email_marketing_consent);
+      
+      // Check if already subscribed to marketing
+      if (customer.email_marketing_consent?.state === 'subscribed') {
+        console.log(`[Newsletter] Customer ${customer.id} is already subscribed`);
         return res.status(409).json({ 
           error: 'This email is already subscribed to the newsletter' 
         });
       }
 
-      // Update customer
+      // Update customer with email_marketing_consent
       const updateUrl = `${baseUrl}/customers/${customer.id}.json`;
+      const updatePayload = {
+        customer: {
+          id: customer.id,
+          email_marketing_consent: emailMarketingConsent
+        }
+      };
+      
+      console.log(`[Newsletter] Updating customer ${customer.id} with:`, JSON.stringify(updatePayload, null, 2));
+      
       const updateResponse = await fetch(updateUrl, {
         method: 'PUT',
         headers: {
           'X-Shopify-Access-Token': adminToken,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          customer: {
-            id: customer.id,
-            accepts_marketing: true,
-          }
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
       if (!updateResponse.ok) {
         const errorText = await updateResponse.text();
-        console.error(`Shopify API update error: ${updateResponse.status} - ${errorText}`);
+        console.error(`[Newsletter] Shopify API update error: ${updateResponse.status} - ${errorText}`);
+        
+        // Try to parse error details
+        let errorDetails = errorText;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorDetails = errorData.errors ? JSON.stringify(errorData.errors) : errorText;
+        } catch (e) {
+          // Keep errorText as is
+        }
+        
         return res.status(updateResponse.status).json({ 
-          error: `Failed to update customer: ${updateResponse.statusText}` 
+          error: `Failed to update customer: ${updateResponse.statusText}`,
+          details: errorDetails
         });
       }
+
+      const updateResult = await updateResponse.json();
+      console.log(`[Newsletter] Successfully updated customer ${customer.id}:`, updateResult.customer?.email_marketing_consent);
 
       return res.status(200).json({
         success: true,
@@ -128,24 +164,27 @@ export default async function handler(req, res) {
     } else {
       // Customer doesn't exist - create new customer with marketing consent
       const createUrl = `${baseUrl}/customers.json`;
+      const createPayload = {
+        customer: {
+          email: email,
+          email_marketing_consent: emailMarketingConsent
+        }
+      };
+      
+      console.log(`[Newsletter] Creating new customer with:`, JSON.stringify(createPayload, null, 2));
+      
       const createResponse = await fetch(createUrl, {
         method: 'POST',
         headers: {
           'X-Shopify-Access-Token': adminToken,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          customer: {
-            email: email,
-            accepts_marketing: true,
-            // Create as newsletter subscriber (no first/last name required)
-          }
-        }),
+        body: JSON.stringify(createPayload),
       });
 
       if (!createResponse.ok) {
         const errorData = await createResponse.json();
-        console.error(`Shopify API create error: ${createResponse.status}`, errorData);
+        console.error(`[Newsletter] Shopify API create error: ${createResponse.status}:`, JSON.stringify(errorData, null, 2));
         
         // Handle duplicate email error
         if (createResponse.status === 422 && errorData.errors?.email) {
@@ -154,10 +193,19 @@ export default async function handler(req, res) {
           });
         }
         
+        // Return detailed error
+        const errorMessage = errorData.errors 
+          ? Object.entries(errorData.errors).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`).join('; ')
+          : `Failed to create customer: ${createResponse.statusText}`;
+        
         return res.status(createResponse.status).json({ 
-          error: `Failed to create customer: ${createResponse.statusText}` 
+          error: errorMessage,
+          details: errorData
         });
       }
+
+      const createResult = await createResponse.json();
+      console.log(`[Newsletter] Successfully created customer ${createResult.customer?.id} with marketing consent:`, createResult.customer?.email_marketing_consent);
 
       return res.status(200).json({
         success: true,
