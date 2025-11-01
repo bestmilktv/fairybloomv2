@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 
 export default function ProfilePage() {
   const { user, loading, refreshUser, setNeedsProfileCompletion } = useAuth()
+  const location = useLocation()
 
   // Show loading only during initial auth check and only if we have no user at all
   if (loading && !user) {
@@ -15,14 +17,15 @@ export default function ProfilePage() {
     )
   }
 
-  // Refresh user data when component mounts
+  // Refresh user data when component mounts or when navigating to this page
   useEffect(() => {
     const refreshData = async () => {
-      // Wait for initial loading to complete and user to exist
-      if (!loading && user) {
-        console.log('ProfilePage: Refreshing user data from Shopify (user exists)...')
+      // Always refresh to get latest data from Shopify when ProfilePage is viewed
+      // Wait for loading to complete
+      if (!loading) {
+        console.log('ProfilePage: Refreshing user data from Shopify...')
         try {
-          // Always refresh when ProfilePage mounts to get latest data from Shopify
+          // Always refresh when ProfilePage mounts or when navigating to it
           // Skip modal check - we don't want modal to show when visiting ProfilePage
           await refreshUser(true, false)
           // Also explicitly set needsProfileCompletion to false to ensure modal doesn't show
@@ -31,14 +34,13 @@ export default function ProfilePage() {
         } catch (error) {
           console.error('ProfilePage: Error refreshing user data:', error)
         }
-      } else if (!loading && !user) {
-        console.log('ProfilePage: No user, skipping refresh')
       }
     }
     
     refreshData()
-    // Only run on mount, not when user data changes (React will automatically re-render when user state changes)
-  }, []) // Empty dependency array - only run on mount
+    // Refresh whenever location changes (navigation to this page) or loading completes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, loading]) // Refresh when navigating to this page or when loading completes
 
   // Log user data when it changes
   useEffect(() => {

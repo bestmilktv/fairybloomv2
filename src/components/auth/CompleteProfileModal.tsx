@@ -43,8 +43,20 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
       setZip(user.address?.zip || '')
       setCountry(user.address?.country || 'CZ')
       setPhone(user.address?.phone || '')
-      // If user doesn't have marketing preference set, default to true
-      setAcceptsMarketing(user.acceptsMarketing !== undefined ? user.acceptsMarketing : true)
+      // Always default to true for newsletter - checkbox should be checked by default
+      setAcceptsMarketing(true)
+    } else if (isOpen) {
+      // Reset form when modal opens for new user
+      setFirstName('')
+      setLastName('')
+      setAddress1('')
+      setAddress2('')
+      setCity('')
+      setZip('CZ')
+      setCountry('CZ')
+      setPhone('')
+      // Always default to true for newsletter
+      setAcceptsMarketing(true)
     }
   }, [isOpen, user])
 
