@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false)
+  const [justLoggedIn, setJustLoggedIn] = useState(false) // Track if user just logged in
 
   // Computed property for authentication status
   const isAuthenticated = !!user
@@ -68,7 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check if customer is authenticated via Customer Account API
         const isAuth = await isCustomerAuthenticated()
         if (isAuth) {
-          // Fetch customer data
+          // Fetch customer data, but don't set justLoggedIn - this is just page load
+          setJustLoggedIn(false)
           await refreshUser()
         }
       } catch (error) {
@@ -95,6 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: result.error || 'SSO login failed' }
       }
 
+      // Mark that user just logged in - this will allow modal to show if needed
+      setJustLoggedIn(true)
+      
       // OAuth was successful, fetch customer data
       await refreshUser()
       
@@ -185,10 +190,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           hasCity,
           hasZip,
           hasCountry,
-          needsCompletion
+          needsCompletion,
+          justLoggedIn
         })
 
-        setNeedsProfileCompletion(needsCompletion)
+        // Only show modal if user just logged in AND needs completion
+        // If user is just refreshing page, don't show modal
+        setNeedsProfileCompletion(needsCompletion && justLoggedIn)
       } else {
         console.log('No customer data received from API')
         setUser(null)
@@ -257,6 +265,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         // Refresh user data from Shopify to get the latest state
+        // Reset justLoggedIn after update to prevent modal from showing again
+        setJustLoggedIn(false)
         await refreshUser()
         
         // refreshUser will set needsProfileCompletion correctly based on actual data

@@ -100,6 +100,9 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
           title: "Profil aktualizován",
           description: "Vaše údaje byly úspěšně uloženy.",
         })
+        
+        // Reset justLoggedIn flag after completing profile
+        // This ensures modal won't show again unless user logs in again
         onComplete()
       }
     } catch (error) {
