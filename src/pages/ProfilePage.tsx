@@ -48,6 +48,20 @@ export default function ProfilePage() {
     }
   }, [user])
 
+  // Refresh user data when component mounts if user exists but data might be incomplete
+  useEffect(() => {
+    const refreshIfNeeded = async () => {
+      if (user && (!user.email || !user.address)) {
+        // User exists but data seems incomplete, refresh from API
+        await refreshUser()
+      }
+    }
+    
+    if (!loading && user) {
+      refreshIfNeeded()
+    }
+  }, [user, loading, refreshUser])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)

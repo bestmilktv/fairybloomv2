@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, User } from 'lucide-react'
@@ -21,6 +22,7 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
   const [zip, setZip] = useState('')
   const [country, setCountry] = useState('CZ')
   const [phone, setPhone] = useState('')
+  const [acceptsMarketing, setAcceptsMarketing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { updateProfile, refreshUser, user } = useAuth()
@@ -41,6 +43,7 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
       setZip(user.address?.zip || '')
       setCountry(user.address?.country || 'CZ')
       setPhone(user.address?.phone || '')
+      setAcceptsMarketing(user.acceptsMarketing || false)
     }
   }, [isOpen, user])
 
@@ -76,7 +79,8 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
       const result = await updateProfile({ 
         firstName: firstName.trim(), 
         lastName: lastName.trim(),
-        address: addressData
+        address: addressData,
+        acceptsMarketing
       })
       
       if (!result.success) {
@@ -248,6 +252,20 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={loading}
                 />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="acceptsMarketing"
+                  checked={acceptsMarketing}
+                  onCheckedChange={(checked) => setAcceptsMarketing(checked === true)}
+                  disabled={loading}
+                />
+                <Label htmlFor="acceptsMarketing" className="cursor-pointer text-sm">
+                  Chci odebírat newsletter a být informován o novinkách a speciálních nabídkách
+                </Label>
               </div>
             </div>
           </div>
