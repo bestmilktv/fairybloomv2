@@ -319,7 +319,7 @@ const Index = () => {
               />
               <button 
                 type="submit"
-                className="px-8 py-4 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-primary/25 transition-all duration-300 transform hover:scale-105"
+                className="px-8 py-4 bg-luxury text-luxury-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-luxury/25 transition-all duration-300 transform hover:scale-105"
               >
                 Odebírat
               </button>
