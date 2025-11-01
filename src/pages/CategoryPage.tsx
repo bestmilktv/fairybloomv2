@@ -24,6 +24,10 @@ const CategoryPage = () => {
   const [sort, setSort] = useState<string>(() => searchParams.get('razeni') || 'nejoblibenejsi');
   const [expectedProductCount, setExpectedProductCount] = useState<number>(20); // Default to API limit
 
+  // Reset expected product count to default when category changes
+  useEffect(() => {
+    setExpectedProductCount(20);
+  }, [category]);
 
   // Scroll to top when page loads
   useEffect(() => {
