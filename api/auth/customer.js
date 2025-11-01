@@ -85,13 +85,25 @@ export default async function handler(req, res) {
 
     const customer = adminData.customer;
 
+    console.log('Raw customer data from Shopify Admin API:', {
+      id: customer.id,
+      email: customer.email,
+      first_name: customer.first_name,
+      last_name: customer.last_name,
+      addresses_count: customer.addresses ? customer.addresses.length : 0,
+      addresses: customer.addresses
+    });
+
     // Get default address (first address or null)
     const defaultAddress = customer.addresses && customer.addresses.length > 0 
       ? customer.addresses[0] 
       : null;
 
-    // Extract address data - only include if it has required fields
-    const address = defaultAddress && defaultAddress.address1 && defaultAddress.city && defaultAddress.zip && defaultAddress.country ? {
+    console.log('Default address:', defaultAddress);
+
+    // Extract address data - include if it exists, even if some fields are missing
+    // We'll let the frontend decide if it's complete or not
+    const address = defaultAddress ? {
       address1: defaultAddress.address1 || '',
       address2: defaultAddress.address2 || '',
       city: defaultAddress.city || '',
@@ -105,30 +117,32 @@ export default async function handler(req, res) {
     const acceptsMarketing = customer.email_marketing_consent?.state === 'subscribed' || 
                              customer.accepts_marketing === true;
 
-    console.log('Customer data from Shopify Admin API:', {
-      id: customer.id,
-      email: customer.email,
-      firstName: customer.first_name,
-      lastName: customer.last_name,
-      hasAddress: !!address,
-      addressFields: address ? {
-        address1: address.address1,
-        city: address.city,
-        zip: address.zip,
-        country: address.country
-      } : null,
-      acceptsMarketing
-    });
-
-    // Return current data from Admin API
-    return res.status(200).json({
+    const responseData = {
       id: customer.id.toString(),
       email: customer.email || '',
       firstName: customer.first_name || '',
       lastName: customer.last_name || '',
       address: address,
       acceptsMarketing: acceptsMarketing
+    };
+
+    console.log('Customer data from Shopify Admin API (response):', {
+      id: responseData.id,
+      email: responseData.email,
+      firstName: responseData.firstName,
+      lastName: responseData.lastName,
+      hasAddress: !!responseData.address,
+      addressFields: responseData.address ? {
+        address1: responseData.address.address1,
+        city: responseData.address.city,
+        zip: responseData.address.zip,
+        country: responseData.address.country
+      } : null,
+      acceptsMarketing: responseData.acceptsMarketing
     });
+
+    // Return current data from Admin API
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('Customer API error:', error);
     

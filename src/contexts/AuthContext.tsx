@@ -150,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return value !== undefined && value !== null && typeof value === 'string' && value.trim().length > 0
         }
 
-        console.log('Refreshing user data from Shopify:', {
+        console.log('Refreshing user data from Shopify (raw API response):', {
           id: customerData.id,
           email: customerData.email,
           firstName: customerData.firstName,
@@ -164,14 +164,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } : null
         })
 
-        setUser({
+        const userData = {
           id: customerData.id,
           firstName: customerData.firstName || '',
           lastName: customerData.lastName || '',
-          email: customerData.email,
+          email: customerData.email || '',
           address: customerData.address,
           acceptsMarketing: customerData.acceptsMarketing
-        })
+        }
+
+        console.log('Setting user state with:', userData)
+
+        setUser(userData)
         
         // Check if profile needs completion - all required fields must have non-empty values
         const hasFirstName = hasValue(customerData.firstName)

@@ -4,7 +4,7 @@ import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 
 export default function ProfilePage() {
-  const { user, loading, refreshUser } = useAuth()
+  const { user, loading, refreshUser, setNeedsProfileCompletion } = useAuth()
 
   // Show loading only during initial auth check and only if we have no user at all
   if (loading && !user) {
@@ -19,6 +19,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const refreshData = async () => {
       if (!loading) {
+        console.log('ProfilePage: Refreshing user data from Shopify...')
         // Always refresh when ProfilePage mounts to get latest data from Shopify
         // Skip modal check - we don't want modal to show when visiting ProfilePage
         await refreshUser(true)
@@ -29,6 +30,20 @@ export default function ProfilePage() {
     
     refreshData()
   }, []) // Only run once on mount
+
+  // Log user data when it changes
+  useEffect(() => {
+    if (user) {
+      console.log('ProfilePage: User data updated:', {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        hasAddress: !!user.address,
+        address: user.address
+      })
+    }
+  }, [user])
 
   // If no user after loading is complete, redirect immediately
   if (!user) {
