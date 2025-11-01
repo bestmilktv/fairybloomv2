@@ -91,7 +91,8 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
         await new Promise(resolve => setTimeout(resolve, 500))
         
         // Refresh user data from Shopify to ensure we have the latest data
-        await refreshUser()
+        // Skip modal check since profile is now complete
+        await refreshUser(true, false)
         
         // Wait again to ensure state is updated
         await new Promise(resolve => setTimeout(resolve, 300))

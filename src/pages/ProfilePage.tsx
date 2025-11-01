@@ -15,7 +15,7 @@ export default function ProfilePage() {
     )
   }
 
-  // Refresh user data when component mounts or when user changes
+  // Refresh user data when component mounts
   useEffect(() => {
     const refreshData = async () => {
       // Wait for initial loading to complete and user to exist
@@ -24,7 +24,7 @@ export default function ProfilePage() {
         try {
           // Always refresh when ProfilePage mounts to get latest data from Shopify
           // Skip modal check - we don't want modal to show when visiting ProfilePage
-          await refreshUser(true)
+          await refreshUser(true, false)
           // Also explicitly set needsProfileCompletion to false to ensure modal doesn't show
           setNeedsProfileCompletion(false)
           console.log('ProfilePage: Refresh completed')
@@ -37,7 +37,8 @@ export default function ProfilePage() {
     }
     
     refreshData()
-  }, [loading, user?.id]) // Run when loading changes or user ID changes
+    // Only run on mount, not when user data changes (React will automatically re-render when user state changes)
+  }, []) // Empty dependency array - only run on mount
 
   // Log user data when it changes
   useEffect(() => {
@@ -82,6 +83,14 @@ export default function ProfilePage() {
           <section className="p-6 rounded-lg shadow bg-white">
             <h2 className="text-lg font-semibold mb-4">Vaše údaje</h2>
             <div className="space-y-3">
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Email:</span>
+                <p className="text-base">
+                  {user && user.email && user.email.trim() 
+                    ? user.email 
+                    : 'Nevyplněno'}
+                </p>
+              </div>
               <div>
                 <span className="text-sm font-medium text-muted-foreground">Jméno:</span>
                 <p className="text-base">

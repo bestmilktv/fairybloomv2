@@ -28,7 +28,7 @@ interface AuthContextType {
   needsProfileCompletion: boolean
   loginWithSSO: () => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
-  refreshUser: (skipModalCheck?: boolean) => Promise<void>
+  refreshUser: (skipModalCheck?: boolean, checkJustLoggedIn?: boolean) => Promise<void>
   updateProfile: (updates: { 
     firstName?: string
     lastName?: string
@@ -70,8 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const isAuth = await isCustomerAuthenticated()
         if (isAuth) {
           // Fetch customer data, but don't set justLoggedIn - this is just page load
+          // Skip modal check since this is not a fresh login
           setJustLoggedIn(false)
-          await refreshUser()
+          await refreshUser(true, false)
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
@@ -101,7 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setJustLoggedIn(true)
       
       // OAuth was successful, fetch customer data
-      await refreshUser()
+      // Pass checkJustLoggedIn=true to ensure modal check uses the correct flag
+      await refreshUser(false, true)
       
       // Try to associate existing cart with newly authenticated customer
       const cartId = localStorage.getItem('fairybloom-cart-id');
@@ -140,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Refresh user data from Customer Account API
    */
-  const refreshUser = async (skipModalCheck: boolean = false): Promise<void> => {
+  const refreshUser = async (skipModalCheck: boolean = false, checkJustLoggedIn: boolean = false): Promise<void> => {
     try {
       const customerData = await fetchCustomerProfile()
       
@@ -177,11 +179,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(userData)
         
-        // Force a small delay to ensure state is updated
-        setTimeout(() => {
-          console.log('User state after setUser:', userData)
-        }, 100)
-        
         // Check if profile needs completion - all required fields must have non-empty values
         const hasFirstName = hasValue(customerData.firstName)
         const hasLastName = hasValue(customerData.lastName)
@@ -192,6 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         const needsCompletion = !hasFirstName || !hasLastName || !hasAddress1 || !hasCity || !hasZip || !hasCountry
         
+        // Determine if we should check justLoggedIn flag
+        // If checkJustLoggedIn is explicitly provided (not undefined), use it
+        // Otherwise, use the current state value
+        const shouldCheckJustLoggedIn = checkJustLoggedIn !== undefined ? checkJustLoggedIn : justLoggedIn
+        
         console.log('Profile completion check:', {
           hasFirstName,
           hasLastName,
@@ -200,29 +202,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           hasZip,
           hasCountry,
           needsCompletion,
-          justLoggedIn,
+          justLoggedIn: shouldCheckJustLoggedIn,
           skipModalCheck
         })
 
         // Only show modal if:
-        // 1. User just logged in (justLoggedIn === true)
+        // 1. User just logged in (shouldCheckJustLoggedIn === true)
         // 2. Profile needs completion (needsCompletion === true)
         // 3. Not skipping modal check (skipModalCheck === false)
         // If user is just refreshing page or visiting ProfilePage, don't show modal
         if (skipModalCheck) {
           setNeedsProfileCompletion(false)
+          // Reset justLoggedIn when skipping modal check (e.g., from ProfilePage)
+          if (!checkJustLoggedIn) {
+            setJustLoggedIn(false)
+          }
         } else {
-          setNeedsProfileCompletion(needsCompletion && justLoggedIn)
+          const shouldShowModal = needsCompletion && shouldCheckJustLoggedIn
+          setNeedsProfileCompletion(shouldShowModal)
+          
+          // If profile is complete or modal should not be shown, reset justLoggedIn
+          if (!needsCompletion || !shouldCheckJustLoggedIn) {
+            setJustLoggedIn(false)
+          }
+          
+          console.log('Modal visibility decision:', {
+            shouldShowModal,
+            needsCompletion,
+            shouldCheckJustLoggedIn
+          })
         }
       } else {
         console.log('No customer data received from API')
         setUser(null)
         setNeedsProfileCompletion(false)
+        setJustLoggedIn(false)
       }
     } catch (error) {
       console.error('Error refreshing user data:', error)
       setUser(null)
       setNeedsProfileCompletion(false)
+      setJustLoggedIn(false)
     }
   }
 
@@ -284,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Refresh user data from Shopify to get the latest state
         // Reset justLoggedIn after update to prevent modal from showing again
         setJustLoggedIn(false)
-        await refreshUser()
+        await refreshUser(true, false)
         
         // refreshUser will set needsProfileCompletion correctly based on actual data
         return { success: true }
