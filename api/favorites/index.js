@@ -12,20 +12,23 @@ const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/ap
  * Make authenticated request to Customer Account API
  * @param {string} query - GraphQL query
  * @param {object} variables - Query variables
- * @param {object} authData - Auth data containing access_token
+ * @param {object} req - Request object to extract cookies
  */
-async function fetchCustomerAccount(query, variables = {}, authData = null) {
+async function fetchCustomerAccount(query, variables = {}, req = null) {
   // Build headers
   const headers = {
     'Content-Type': 'application/json',
   };
 
-  // Use access_token from cookie for authentication
-  // Shopify Customer Account API accepts OAuth 2.0 Bearer tokens
-  if (authData && authData.access_token) {
-    headers['Authorization'] = `Bearer ${authData.access_token}`;
+  // Shopify Customer Account API requires session cookies from shopify.com domain
+  // These cookies are set during OAuth flow and contain authentication session
+  // We must forward ALL cookies from the browser request to Shopify API
+  if (req && req.headers.cookie) {
+    headers['Cookie'] = req.headers.cookie;
+    console.log('Forwarding cookies to Shopify API (length):', req.headers.cookie.length);
   } else {
-    throw new Error('Authentication required - missing access token');
+    console.error('No cookies found in request headers');
+    throw new Error('Authentication required - missing cookies');
   }
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
@@ -83,7 +86,7 @@ export default async function handler(req, res) {
         }
       `;
 
-      const result = await fetchCustomerAccount(query, {}, authData);
+      const result = await fetchCustomerAccount(query, {}, req);
       
       if (!result.data.customer) {
         return res.status(200).json({ favorites: [] });
@@ -123,7 +126,7 @@ export default async function handler(req, res) {
         }
       `;
 
-      const getResult = await fetchCustomerAccount(getQuery, {}, authData);
+      const getResult = await fetchCustomerAccount(getQuery, {}, req);
       let currentFavorites = [];
 
       if (getResult.data.customer?.metafield?.value) {
@@ -170,7 +173,7 @@ export default async function handler(req, res) {
         ]
       };
 
-      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, authData);
+      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, req);
 
       if (updateResult.data.customerUpdate.userErrors.length > 0) {
         const errorMessage = updateResult.data.customerUpdate.userErrors[0].message;
@@ -200,7 +203,7 @@ export default async function handler(req, res) {
         }
       `;
 
-      const getResult = await fetchCustomerAccount(getQuery, {}, authData);
+      const getResult = await fetchCustomerAccount(getQuery, {}, req);
       let currentFavorites = [];
 
       if (getResult.data.customer?.metafield?.value) {
@@ -245,7 +248,7 @@ export default async function handler(req, res) {
         ]
       };
 
-      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, authData);
+      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, req);
 
       if (updateResult.data.customerUpdate.userErrors.length > 0) {
         const errorMessage = updateResult.data.customerUpdate.userErrors[0].message;

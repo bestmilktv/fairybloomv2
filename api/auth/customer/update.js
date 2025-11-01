@@ -12,24 +12,24 @@ const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/ap
  * Make authenticated request to Customer Account API
  * @param {string} query - GraphQL query
  * @param {object} variables - Query variables
- * @param {object} authData - Auth data containing access_token
+ * @param {object} req - Request object to extract cookies
  */
-async function fetchCustomerAccount(query, variables = {}, authData = null) {
+async function fetchCustomerAccount(query, variables = {}, req = null) {
   // Build headers
   const headers = {
     'Content-Type': 'application/json',
   };
 
-  // Use access_token from cookie for authentication
-  // Shopify Customer Account API accepts OAuth 2.0 Bearer tokens
-  if (authData && authData.access_token) {
-    headers['Authorization'] = `Bearer ${authData.access_token}`;
+  // Shopify Customer Account API requires session cookies from shopify.com domain
+  // These cookies are set during OAuth flow and contain authentication session
+  // We must forward ALL cookies from the browser request to Shopify API
+  if (req && req.headers.cookie) {
+    headers['Cookie'] = req.headers.cookie;
+    console.log('Forwarding cookies to Shopify API (length):', req.headers.cookie.length);
   } else {
-    throw new Error('Authentication required - missing access token');
+    console.error('No cookies found in request headers');
+    throw new Error('Authentication required - missing cookies');
   }
-
-  // Also forward cookies as fallback (for Shopify session cookies if needed)
-  // Note: This may not work across domains, but Bearer token should be sufficient
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
@@ -108,9 +108,9 @@ export default async function handler(req, res) {
     };
 
     console.log('Updating customer profile with:', updateInput);
-    console.log('Using access_token for authentication');
+    console.log('Using cookies from request for authentication');
 
-    const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, authData);
+    const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, req);
 
     // Check for GraphQL errors in response
     if (!updateResult.data || !updateResult.data.customerUpdate) {
