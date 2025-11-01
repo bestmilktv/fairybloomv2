@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import { getProductsByCollection } from '@/lib/shopify';
 import { createCollectionPath } from '@/lib/slugify';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { toast } from '@/hooks/use-toast';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -18,6 +19,8 @@ const Index = () => {
   const [productCategories, setProductCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [brandValuesRef, brandValuesVisible] = useScrollAnimation();
   const [myStoryRef, myStoryVisible] = useScrollAnimation();
   const [newsletterRef, newsletterVisible] = useScrollAnimation();
@@ -145,6 +148,81 @@ const Index = () => {
 
     return () => observer.disconnect();
   }, []);
+
+  // Handle newsletter subscription
+  const handleNewsletterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // Validate email
+    if (!newsletterEmail || !newsletterEmail.trim()) {
+      toast({
+        title: 'Chybí e-mail',
+        description: 'Prosím zadejte svůj e-mail.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newsletterEmail)) {
+      toast({
+        title: 'Neplatný e-mail',
+        description: 'Prosím zadejte platnou e-mailovou adresu.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: newsletterEmail.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle specific error cases
+        if (response.status === 409) {
+          toast({
+            title: 'Již přihlášeno',
+            description: data.error || 'Tento e-mail je již přihlášen k odběru newsletteru.',
+          });
+        } else {
+          toast({
+            title: 'Chyba',
+            description: data.error || 'Došlo k chybě, zkuste to prosím později.',
+            variant: 'destructive',
+          });
+        }
+        return;
+      }
+
+      // Success
+      toast({
+        title: 'Úspěšně přihlášeno',
+        description: 'Děkujeme! Úspěšně jste přihlášeni k odběru newsletteru.',
+      });
+
+      // Clear input
+      setNewsletterEmail('');
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      toast({
+        title: 'Chyba',
+        description: 'Došlo k chybě, zkuste to prosím později.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -310,18 +388,22 @@ const Index = () => {
               Přihlaste se k odběru našeho newsletteru a získejte exkluzivní přístup k novinkám a speciálním nabídkám
             </p>
             
-            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <input 
                 type="email" 
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
                 placeholder="Váš e-mail"
                 className="flex-1 px-6 py-4 rounded-lg border border-border bg-background/50 backdrop-blur-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
                 required
+                disabled={isSubmitting}
               />
               <button 
                 type="submit"
-                className="px-8 py-4 bg-luxury text-luxury-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-luxury/25 transition-all duration-300 transform hover:scale-105"
+                disabled={isSubmitting}
+                className="px-8 py-4 bg-luxury text-luxury-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-luxury/25 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                Odebírat
+                {isSubmitting ? 'Odesílám...' : 'Odebírat'}
               </button>
             </form>
             
