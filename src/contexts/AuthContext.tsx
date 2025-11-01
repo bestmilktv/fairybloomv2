@@ -8,6 +8,16 @@ interface User {
   firstName: string
   lastName: string
   email: string
+  address?: {
+    address1: string
+    address2?: string
+    city: string
+    province?: string
+    zip: string
+    country: string
+    phone?: string
+  }
+  acceptsMarketing?: boolean
 }
 
 // Authentication context interface
@@ -19,7 +29,20 @@ interface AuthContextType {
   loginWithSSO: () => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
-  updateProfile: (updates: { firstName: string; lastName: string }) => Promise<{ success: boolean; error?: string }>
+  updateProfile: (updates: { 
+    firstName?: string
+    lastName?: string
+    address?: {
+      address1: string
+      address2?: string
+      city: string
+      province?: string
+      zip: string
+      country: string
+      phone?: string
+    }
+    acceptsMarketing?: boolean
+  }) => Promise<{ success: boolean; error?: string }>
   setNeedsProfileCompletion: (needs: boolean) => void
 }
 
@@ -121,7 +144,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: customerData.id,
           firstName: customerData.firstName || '',
           lastName: customerData.lastName || '',
-          email: customerData.email
+          email: customerData.email,
+          address: customerData.address,
+          acceptsMarketing: customerData.acceptsMarketing
         })
         
         // Check if profile needs completion (missing firstName or lastName)
@@ -142,7 +167,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Update customer profile information using Shopify Admin API via backend
    * This avoids CORS issues with Customer Account API
    */
-  const updateProfile = async (updates: { firstName: string; lastName: string }): Promise<{ success: boolean; error?: string }> => {
+  const updateProfile = async (updates: { 
+    firstName?: string
+    lastName?: string
+    address?: {
+      address1: string
+      address2?: string
+      city: string
+      province?: string
+      zip: string
+      country: string
+      phone?: string
+    }
+    acceptsMarketing?: boolean
+  }): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch('/api/auth/customer/admin-update', {
         method: 'POST',
@@ -165,7 +203,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: updatedData.id,
           firstName: updatedData.firstName,
           lastName: updatedData.lastName,
-          email: updatedData.email
+          email: updatedData.email,
+          address: updatedData.address,
+          acceptsMarketing: updatedData.acceptsMarketing
         })
         setNeedsProfileCompletion(false)
         return { success: true }

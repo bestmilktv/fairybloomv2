@@ -62,7 +62,9 @@ export default async function handler(req, res) {
         id: authData.customer.sub,
         email: authData.customer.email || '',
         firstName: authData.customer.firstName || '',
-        lastName: authData.customer.lastName || ''
+        lastName: authData.customer.lastName || '',
+        address: undefined,
+        acceptsMarketing: undefined
       });
     }
 
@@ -75,18 +77,42 @@ export default async function handler(req, res) {
         id: authData.customer.sub,
         email: authData.customer.email || '',
         firstName: authData.customer.firstName || '',
-        lastName: authData.customer.lastName || ''
+        lastName: authData.customer.lastName || '',
+        address: undefined,
+        acceptsMarketing: undefined
       });
     }
 
     const customer = adminData.customer;
 
-    // Return current data from Admin API in same format as before
+    // Get default address (first address or null)
+    const defaultAddress = customer.addresses && customer.addresses.length > 0 
+      ? customer.addresses[0] 
+      : null;
+
+    // Extract address data
+    const address = defaultAddress ? {
+      address1: defaultAddress.address1 || '',
+      address2: defaultAddress.address2 || '',
+      city: defaultAddress.city || '',
+      province: defaultAddress.province || '',
+      zip: defaultAddress.zip || '',
+      country: defaultAddress.country || '',
+      phone: defaultAddress.phone || ''
+    } : undefined;
+
+    // Check email marketing consent
+    const acceptsMarketing = customer.email_marketing_consent?.state === 'subscribed' || 
+                             customer.accepts_marketing === true;
+
+    // Return current data from Admin API
     return res.status(200).json({
       id: customer.id.toString(),
       email: customer.email || '',
       firstName: customer.first_name || '',
-      lastName: customer.last_name || ''
+      lastName: customer.last_name || '',
+      address: address,
+      acceptsMarketing: acceptsMarketing
     });
   } catch (error) {
     console.error('Customer API error:', error);
@@ -99,7 +125,9 @@ export default async function handler(req, res) {
           id: authData.customer.sub,
           email: authData.customer.email || '',
           firstName: authData.customer.firstName || '',
-          lastName: authData.customer.lastName || ''
+          lastName: authData.customer.lastName || '',
+          address: undefined,
+          acceptsMarketing: undefined
         });
       }
     } catch (fallbackError) {

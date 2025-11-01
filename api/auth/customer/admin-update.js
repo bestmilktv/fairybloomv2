@@ -32,10 +32,11 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    const { firstName, lastName } = req.body;
+    const { firstName, lastName, address, acceptsMarketing } = req.body;
 
-    if (!firstName && !lastName) {
-      return res.status(400).json({ error: 'At least firstName or lastName is required' });
+    // At least one field must be provided for update
+    if (!firstName && !lastName && !address && acceptsMarketing === undefined) {
+      return res.status(400).json({ error: 'At least one field is required for update' });
     }
 
     // Extract customer ID from OAuth JWT (sub field)
@@ -51,8 +52,23 @@ export default async function handler(req, res) {
       originalCustomerId: customerId,
       originalCustomerIdType: typeof customerId,
       numericCustomerId: numericCustomerId,
-      updates: { firstName, lastName }
+      updates: { firstName, lastName, hasAddress: !!address, acceptsMarketing }
     });
+
+    // Fetch current customer data to get existing addresses
+    const getCustomerResponse = await fetch(`https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json`, {
+      method: 'GET',
+      headers: {
+        'X-Shopify-Access-Token': ADMIN_TOKEN,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    let existingAddresses = [];
+    if (getCustomerResponse.ok) {
+      const currentData = await getCustomerResponse.json();
+      existingAddresses = currentData.customer?.addresses || [];
+    }
 
     // Build update payload for Admin API
     const updatePayload = {
@@ -61,6 +77,37 @@ export default async function handler(req, res) {
 
     if (firstName) updatePayload.customer.first_name = firstName;
     if (lastName) updatePayload.customer.last_name = lastName;
+
+    // Handle address update - create or update first address
+    if (address) {
+      const addressData = {
+        address1: address.address1 || '',
+        address2: address.address2 || '',
+        city: address.city || '',
+        province: address.province || '',
+        zip: address.zip || '',
+        country: address.country || 'CZ', // Default to CZ if not provided
+        phone: address.phone || ''
+      };
+
+      // If customer has addresses, update the first one, otherwise create new
+      if (existingAddresses.length > 0) {
+        addressData.id = existingAddresses[0].id;
+        updatePayload.customer.addresses = [addressData];
+      } else {
+        updatePayload.customer.addresses = [addressData];
+      }
+    }
+
+    // Handle email marketing consent
+    if (acceptsMarketing !== undefined) {
+      const consentTimestamp = new Date().toISOString();
+      updatePayload.customer.email_marketing_consent = {
+        state: acceptsMarketing ? 'subscribed' : 'not_subscribed',
+        opt_in_level: 'single_opt_in',
+        consent_updated_at: consentTimestamp
+      };
+    }
 
     // Call Shopify Admin API
     const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json`;
@@ -99,10 +146,32 @@ export default async function handler(req, res) {
 
     const customer = adminData.customer;
 
+    // Get default address (first address or null)
+    const defaultAddress = customer.addresses && customer.addresses.length > 0 
+      ? customer.addresses[0] 
+      : null;
+
+    // Extract address data
+    const addressResponse = defaultAddress ? {
+      address1: defaultAddress.address1 || '',
+      address2: defaultAddress.address2 || '',
+      city: defaultAddress.city || '',
+      province: defaultAddress.province || '',
+      zip: defaultAddress.zip || '',
+      country: defaultAddress.country || '',
+      phone: defaultAddress.phone || ''
+    } : undefined;
+
+    // Check email marketing consent
+    const acceptsMarketingResponse = customer.email_marketing_consent?.state === 'subscribed' || 
+                                     customer.accepts_marketing === true;
+
     console.log('Customer profile updated successfully via Admin API:', {
       id: customer.id,
       firstName: customer.first_name,
-      lastName: customer.last_name
+      lastName: customer.last_name,
+      hasAddress: !!defaultAddress,
+      acceptsMarketing: acceptsMarketingResponse
     });
 
     // Return data in same format as Customer Account API
@@ -110,7 +179,9 @@ export default async function handler(req, res) {
       id: customer.id.toString(),
       email: customer.email,
       firstName: customer.first_name || '',
-      lastName: customer.last_name || ''
+      lastName: customer.last_name || '',
+      address: addressResponse,
+      acceptsMarketing: acceptsMarketingResponse
     });
   } catch (error) {
     console.error('Customer update API error:', error);
