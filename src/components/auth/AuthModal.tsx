@@ -27,7 +27,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       } else {
         toast({
           title: "Přihlášení",
-          description: "Úspěšně jste se přihlásili přes Shopify.",
+          description: "Úspěšně jste se přihlásili.",
         })
         onClose()
       }
@@ -52,9 +52,9 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <ShoppingBag className="h-8 w-8 text-gold" />
               </div>
             </div>
-            <h3 className="text-lg font-medium">Přihlášení přes Shopify</h3>
+            <h3 className="text-lg font-medium">Vítejte zpět</h3>
             <p className="text-sm text-muted-foreground">
-              Přihlaste se bezpečně pomocí svého Shopify účtu
+              Přihlaste se pro přístup k exkluzivním službám a prémiovým funkcím
             </p>
           </div>
 
@@ -76,7 +76,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 Přihlašuji...
               </>
             ) : (
-              'Přihlásit se přes Shopify'
+              'Přihlásit se'
             )}
           </Button>
 
