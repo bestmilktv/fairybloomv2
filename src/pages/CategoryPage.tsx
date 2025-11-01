@@ -22,7 +22,7 @@ const CategoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [sort, setSort] = useState<string>(() => searchParams.get('razeni') || 'nejoblibenejsi');
-  const [expectedProductCount, setExpectedProductCount] = useState<number>(8); // Default: 2 rows x 4 columns
+  const [expectedProductCount, setExpectedProductCount] = useState<number>(20); // Default to API limit
 
 
   // Scroll to top when page loads
@@ -81,7 +81,7 @@ const CategoryPage = () => {
             
             setShopifyProducts(products);
             // Update expected count for next time (used for placeholders)
-            setExpectedProductCount(products.length || 8);
+            setExpectedProductCount(products.length || 20);
           } else {
             setHasError(true);
           }
