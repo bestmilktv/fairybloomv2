@@ -90,8 +90,8 @@ export default async function handler(req, res) {
       ? customer.addresses[0] 
       : null;
 
-    // Extract address data
-    const address = defaultAddress ? {
+    // Extract address data - only include if it has required fields
+    const address = defaultAddress && defaultAddress.address1 && defaultAddress.city && defaultAddress.zip && defaultAddress.country ? {
       address1: defaultAddress.address1 || '',
       address2: defaultAddress.address2 || '',
       city: defaultAddress.city || '',
@@ -104,6 +104,21 @@ export default async function handler(req, res) {
     // Check email marketing consent
     const acceptsMarketing = customer.email_marketing_consent?.state === 'subscribed' || 
                              customer.accepts_marketing === true;
+
+    console.log('Customer data from Shopify Admin API:', {
+      id: customer.id,
+      email: customer.email,
+      firstName: customer.first_name,
+      lastName: customer.last_name,
+      hasAddress: !!address,
+      addressFields: address ? {
+        address1: address.address1,
+        city: address.city,
+        zip: address.zip,
+        country: address.country
+      } : null,
+      acceptsMarketing
+    });
 
     // Return current data from Admin API
     return res.status(200).json({

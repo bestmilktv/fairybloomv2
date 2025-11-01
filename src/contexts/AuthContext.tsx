@@ -140,6 +140,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const customerData = await fetchCustomerProfile()
       
       if (customerData) {
+        // Helper function to check if a string value is actually filled (not empty/whitespace)
+        const hasValue = (value: string | undefined | null): boolean => {
+          return value !== undefined && value !== null && typeof value === 'string' && value.trim().length > 0
+        }
+
+        console.log('Refreshing user data from Shopify:', {
+          id: customerData.id,
+          email: customerData.email,
+          firstName: customerData.firstName,
+          lastName: customerData.lastName,
+          hasAddress: !!customerData.address,
+          addressDetails: customerData.address ? {
+            address1: customerData.address.address1,
+            city: customerData.address.city,
+            zip: customerData.address.zip,
+            country: customerData.address.country
+          } : null
+        })
+
         setUser({
           id: customerData.id,
           firstName: customerData.firstName || '',
@@ -149,15 +168,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           acceptsMarketing: customerData.acceptsMarketing
         })
         
-        // Check if profile needs completion (missing firstName, lastName, or address)
-        const needsCompletion = !customerData.firstName || 
-                                !customerData.lastName || 
-                                !customerData.address?.address1 || 
-                                !customerData.address?.city || 
-                                !customerData.address?.zip || 
-                                !customerData.address?.country
+        // Check if profile needs completion - all required fields must have non-empty values
+        const hasFirstName = hasValue(customerData.firstName)
+        const hasLastName = hasValue(customerData.lastName)
+        const hasAddress1 = customerData.address?.address1 && hasValue(customerData.address.address1)
+        const hasCity = customerData.address?.city && hasValue(customerData.address.city)
+        const hasZip = customerData.address?.zip && hasValue(customerData.address.zip)
+        const hasCountry = customerData.address?.country && hasValue(customerData.address.country)
+        
+        const needsCompletion = !hasFirstName || !hasLastName || !hasAddress1 || !hasCity || !hasZip || !hasCountry
+        
+        console.log('Profile completion check:', {
+          hasFirstName,
+          hasLastName,
+          hasAddress1,
+          hasCity,
+          hasZip,
+          hasCountry,
+          needsCompletion
+        })
+
         setNeedsProfileCompletion(needsCompletion)
       } else {
+        console.log('No customer data received from API')
         setUser(null)
         setNeedsProfileCompletion(false)
       }
@@ -204,13 +237,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const updatedData = await response.json()
       
       if (updatedData) {
-        // Wait a moment for Shopify to fully process the update
-        await new Promise(resolve => setTimeout(resolve, 500))
+        // Wait for Shopify to fully process the update - retry logic
+        let retries = 3
+        let customerData = null
+        
+        while (retries > 0 && !customerData) {
+          await new Promise(resolve => setTimeout(resolve, 800))
+          
+          try {
+            const refreshed = await fetchCustomerProfile()
+            if (refreshed && refreshed.firstName && refreshed.address?.address1) {
+              customerData = refreshed
+            }
+          } catch (error) {
+            console.warn('Retry fetching customer data:', retries, error)
+          }
+          
+          retries--
+        }
         
         // Refresh user data from Shopify to get the latest state
         await refreshUser()
         
-        setNeedsProfileCompletion(false)
+        // refreshUser will set needsProfileCompletion correctly based on actual data
         return { success: true }
       } else {
         return { success: false, error: 'Aktualizace profilu se nezdařila.' }

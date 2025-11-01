@@ -48,19 +48,27 @@ export default function ProfilePage() {
     }
   }, [user])
 
-  // Refresh user data when component mounts if user exists but data might be incomplete
+  // Refresh user data when component mounts to ensure we have latest data from Shopify
   useEffect(() => {
-    const refreshIfNeeded = async () => {
-      if (user && (!user.email || !user.address)) {
-        // User exists but data seems incomplete, refresh from API
+    const refreshData = async () => {
+      if (!loading && user) {
+        // Always refresh when component mounts to get latest data from Shopify
         await refreshUser()
       }
     }
     
-    if (!loading && user) {
-      refreshIfNeeded()
+    refreshData()
+  }, []) // Only run once on mount
+
+  // Refresh when user changes (e.g., after login)
+  useEffect(() => {
+    if (user && !loading) {
+      // If user exists but missing critical data, refresh
+      if (!user.email || (!user.firstName && !user.lastName) || !user.address) {
+        refreshUser()
+      }
     }
-  }, [user, loading, refreshUser])
+  }, [user?.id, loading]) // Refresh when user ID changes (new login)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
