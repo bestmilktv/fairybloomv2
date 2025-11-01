@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { initiateOAuthFlow, OAuthResult } from '@/lib/oauth'
-import { fetchCustomerProfile, logoutCustomer, isCustomerAuthenticated } from '@/lib/customerAccountApi'
+import { fetchCustomerProfile, logoutCustomer, isCustomerAuthenticated, updateCustomerProfile } from '@/lib/customerAccountApi'
 
 // User interface for authenticated customer
 interface User {
@@ -15,9 +15,12 @@ interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   loading: boolean
+  needsProfileCompletion: boolean
   loginWithSSO: () => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
+  updateProfile: (updates: { firstName: string; lastName: string }) => Promise<{ success: boolean; error?: string }>
+  setNeedsProfileCompletion: (needs: boolean) => void
 }
 
 // Create the authentication context
@@ -26,6 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false)
 
   // Computed property for authentication status
   const isAuthenticated = !!user
@@ -115,16 +119,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (customerData) {
         setUser({
           id: customerData.id,
-          firstName: customerData.firstName,
-          lastName: customerData.lastName,
+          firstName: customerData.firstName || '',
+          lastName: customerData.lastName || '',
           email: customerData.email
         })
+        
+        // Check if profile needs completion (missing firstName or lastName)
+        const needsCompletion = !customerData.firstName || !customerData.lastName
+        setNeedsProfileCompletion(needsCompletion)
       } else {
         setUser(null)
+        setNeedsProfileCompletion(false)
       }
     } catch (error) {
       console.error('Error refreshing user data:', error)
       setUser(null)
+      setNeedsProfileCompletion(false)
+    }
+  }
+
+  /**
+   * Update customer profile information
+   */
+  const updateProfile = async (updates: { firstName: string; lastName: string }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const updatedData = await updateCustomerProfile(updates)
+      
+      if (updatedData) {
+        setUser({
+          id: updatedData.id,
+          firstName: updatedData.firstName,
+          lastName: updatedData.lastName,
+          email: updatedData.email
+        })
+        setNeedsProfileCompletion(false)
+        return { success: true }
+      } else {
+        return { success: false, error: 'Aktualizace profilu se nezdařila.' }
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      return { success: false, error: 'Nastala neočekávaná chyba.' }
     }
   }
 
@@ -154,9 +189,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     isAuthenticated,
     loading,
+    needsProfileCompletion,
     loginWithSSO,
     logout,
     refreshUser,
+    updateProfile,
+    setNeedsProfileCompletion,
   }
 
   return (

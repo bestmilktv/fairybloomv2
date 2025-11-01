@@ -281,6 +281,37 @@ export async function isCustomerAuthenticated(): Promise<boolean> {
 }
 
 /**
+ * Update customer profile information
+ * @param {object} updates - Object with firstName and/or lastName
+ * @returns {Promise<CustomerAccountCustomer | null>} Updated customer data or null if failed
+ */
+export async function updateCustomerProfile(updates: { firstName?: string; lastName?: string }): Promise<CustomerAccountCustomer | null> {
+  try {
+    const response = await fetch('/api/auth/customer/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return null;
+      }
+      throw new Error(`Failed to update customer profile: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating customer profile:', error);
+    return null;
+  }
+}
+
+/**
  * Logout customer by calling logout endpoint
  * @returns {Promise<boolean>} True if logout successful
  */

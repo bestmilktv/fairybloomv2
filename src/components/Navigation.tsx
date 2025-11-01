@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { CompleteProfileModal } from '@/components/auth/CompleteProfileModal';
 import { MiniCart } from '@/components/MiniCart';
 import { FavoritesSidebar } from '@/components/FavoritesSidebar';
 import { createCollectionPath } from '@/lib/slugify';
@@ -16,7 +17,7 @@ const Navigation = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [favoritesSidebarOpen, setFavoritesSidebarOpen] = useState(false);
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, needsProfileCompletion, setNeedsProfileCompletion } = useAuth();
   const { getTotalItems } = useCart();
   const { getFavoriteCount } = useFavorites();
   useEffect(() => {
@@ -157,6 +158,11 @@ const Navigation = () => {
       <AuthModal 
         isOpen={authModalOpen} 
         onClose={() => setAuthModalOpen(false)} 
+      />
+      
+      <CompleteProfileModal
+        isOpen={needsProfileCompletion}
+        onComplete={() => setNeedsProfileCompletion(false)}
       />
       
       <MiniCart 
