@@ -28,7 +28,7 @@ interface AuthContextType {
   needsProfileCompletion: boolean
   loginWithSSO: () => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
-  refreshUser: () => Promise<void>
+  refreshUser: (skipModalCheck?: boolean) => Promise<void>
   updateProfile: (updates: { 
     firstName?: string
     lastName?: string
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Refresh user data from Customer Account API
    */
-  const refreshUser = async (): Promise<void> => {
+  const refreshUser = async (skipModalCheck: boolean = false): Promise<void> => {
     try {
       const customerData = await fetchCustomerProfile()
       
@@ -191,12 +191,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           hasZip,
           hasCountry,
           needsCompletion,
-          justLoggedIn
+          justLoggedIn,
+          skipModalCheck
         })
 
-        // Only show modal if user just logged in AND needs completion
-        // If user is just refreshing page, don't show modal
-        setNeedsProfileCompletion(needsCompletion && justLoggedIn)
+        // Only show modal if:
+        // 1. User just logged in (justLoggedIn === true)
+        // 2. Profile needs completion (needsCompletion === true)
+        // 3. Not skipping modal check (skipModalCheck === false)
+        // If user is just refreshing page or visiting ProfilePage, don't show modal
+        if (skipModalCheck) {
+          setNeedsProfileCompletion(false)
+        } else {
+          setNeedsProfileCompletion(needsCompletion && justLoggedIn)
+        }
       } else {
         console.log('No customer data received from API')
         setUser(null)
