@@ -52,9 +52,8 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <ShoppingBag className="h-8 w-8 text-gold" />
               </div>
             </div>
-            <h3 className="text-lg font-medium">Vítejte zpět</h3>
             <p className="text-sm text-muted-foreground">
-              Přihlaste se pro přístup k exkluzivním službám a prémiovým funkcím
+              Přihlaste se a získáte spoustu výhod!
             </p>
           </div>
 
