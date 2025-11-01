@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,8 +17,20 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
   const [lastName, setLastName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { updateProfile, refreshUser } = useAuth()
+  const { updateProfile, refreshUser, user } = useAuth()
   const { toast } = useToast()
+
+  // Check if user already has name filled - allow closing if they do
+  const hasName = user?.firstName && user?.lastName
+  const canClose = hasName
+
+  // Pre-fill form with existing user data when modal opens or user data changes
+  useEffect(() => {
+    if (isOpen && user) {
+      setFirstName(user.firstName || '')
+      setLastName(user.lastName || '')
+    }
+  }, [isOpen, user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,8 +65,26 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Only allow closing if user has name filled
+        if (!open && canClose) {
+          onComplete()
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {
+        // Prevent closing by clicking outside if name is missing
+        if (!canClose) {
+          e.preventDefault()
+        }
+      }} onEscapeKeyDown={(e) => {
+        // Prevent closing with Escape if name is missing
+        if (!canClose) {
+          e.preventDefault()
+        }
+      }}>
         <DialogHeader>
           <DialogTitle>Doplnění údajů</DialogTitle>
         </DialogHeader>
