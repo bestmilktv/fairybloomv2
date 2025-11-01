@@ -281,7 +281,79 @@ export async function isCustomerAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Update customer profile information
+ * Update customer profile information directly from browser
+ * This function calls Customer Account API directly from the browser where cookies are available
+ * @param {object} updates - Object with firstName and/or lastName
+ * @returns {Promise<CustomerAccountCustomer | null>} Updated customer data or null if failed
+ */
+export async function updateCustomerProfileDirect(updates: { firstName: string; lastName: string }): Promise<CustomerAccountCustomer | null> {
+  if (!SHOP_ID) {
+    throw new Error('Missing SHOPIFY_SHOP_ID environment variable');
+  }
+
+  // Build update input
+  const updateInput: { firstName?: string; lastName?: string } = {};
+  if (updates.firstName) updateInput.firstName = updates.firstName;
+  if (updates.lastName) updateInput.lastName = updates.lastName;
+
+  const updateQuery = `
+    mutation customerUpdate($input: CustomerUpdateInput!) {
+      customerUpdate(input: $input) {
+        customer {
+          id
+          firstName
+          lastName
+          email
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const updateVariables = {
+    input: updateInput
+  };
+
+  try {
+    const response = await fetchCustomerAccount<{ 
+      customerUpdate: { 
+        customer: CustomerAccountCustomer | null;
+        userErrors: Array<{ field: string; message: string }>;
+      }
+    }>(updateQuery, updateVariables);
+
+    if (response.data.customerUpdate.userErrors && response.data.customerUpdate.userErrors.length > 0) {
+      const errorMessage = response.data.customerUpdate.userErrors[0].message;
+      console.error('Shopify userErrors:', response.data.customerUpdate.userErrors);
+      throw new Error(errorMessage || 'Aktualizace profilu se nezdařila.');
+    }
+
+    const customer = response.data.customerUpdate.customer;
+
+    if (!customer) {
+      throw new Error('Aktualizace profilu se nezdařila - chybí data zákazníka.');
+    }
+
+    return {
+      id: customer.id,
+      email: customer.email,
+      firstName: customer.firstName || '',
+      lastName: customer.lastName || ''
+    };
+  } catch (error) {
+    console.error('Error updating customer profile:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Nastala neočekávaná chyba při aktualizaci profilu.');
+  }
+}
+
+/**
+ * Update customer profile information via backend API (DEPRECATED - use updateCustomerProfileDirect instead)
  * @param {object} updates - Object with firstName and/or lastName
  * @returns {Promise<CustomerAccountCustomer | null>} Updated customer data or null if failed
  */

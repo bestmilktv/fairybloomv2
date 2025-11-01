@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { initiateOAuthFlow, OAuthResult } from '@/lib/oauth'
-import { fetchCustomerProfile, logoutCustomer, isCustomerAuthenticated, updateCustomerProfile } from '@/lib/customerAccountApi'
+import { fetchCustomerProfile, logoutCustomer, isCustomerAuthenticated, updateCustomerProfileDirect } from '@/lib/customerAccountApi'
 
 // User interface for authenticated customer
 interface User {
@@ -140,10 +140,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Update customer profile information
+   * Calls Customer Account API directly from browser where cookies are available
    */
   const updateProfile = async (updates: { firstName: string; lastName: string }): Promise<{ success: boolean; error?: string }> => {
     try {
-      const updatedData = await updateCustomerProfile(updates)
+      const updatedData = await updateCustomerProfileDirect(updates)
       
       if (updatedData) {
         setUser({
@@ -159,6 +160,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Error updating profile:', error)
+      if (error instanceof Error) {
+        return { success: false, error: error.message }
+      }
       return { success: false, error: 'Nastala neočekávaná chyba.' }
     }
   }
