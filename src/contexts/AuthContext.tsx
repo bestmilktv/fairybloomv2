@@ -173,9 +173,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           acceptsMarketing: customerData.acceptsMarketing
         }
 
-        console.log('Setting user state with:', userData)
+        console.log('Setting user state with:', JSON.stringify(userData, null, 2))
 
         setUser(userData)
+        
+        // Force a small delay to ensure state is updated
+        setTimeout(() => {
+          console.log('User state after setUser:', userData)
+        }, 100)
         
         // Check if profile needs completion - all required fields must have non-empty values
         const hasFirstName = hasValue(customerData.firstName)
