@@ -37,6 +37,12 @@ export default async function handler(req, res) {
     // Fetch current customer data from Shopify Admin API
     const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json`;
     
+    console.log('Fetching customer from Shopify Admin API:', {
+      url: adminApiUrl,
+      customerId: numericCustomerId,
+      storeDomain: STORE_DOMAIN
+    });
+    
     const adminResponse = await fetch(adminApiUrl, {
       method: 'GET',
       headers: {
@@ -53,53 +59,54 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Invalid Admin API token' });
       }
       if (adminResponse.status === 404) {
+        console.error('Customer not found in Shopify Admin API, customerId:', numericCustomerId);
         return res.status(404).json({ error: 'Customer not found' });
       }
       
-      // Fallback to JWT data if Admin API fails
-      console.warn('Admin API failed, falling back to JWT data');
-      return res.status(200).json({
-        id: authData.customer.sub,
-        email: authData.customer.email || '',
-        firstName: authData.customer.firstName || '',
-        lastName: authData.customer.lastName || '',
-        address: undefined,
-        acceptsMarketing: undefined
+      // Don't fallback - return error instead
+      return res.status(adminResponse.status).json({ 
+        error: `Shopify API error: ${adminResponse.statusText}` 
       });
     }
 
     const adminData = await adminResponse.json();
 
     if (!adminData.customer) {
-      console.error('Invalid response from Shopify Admin API:', adminData);
-      // Fallback to JWT data if response is invalid
-      return res.status(200).json({
-        id: authData.customer.sub,
-        email: authData.customer.email || '',
-        firstName: authData.customer.firstName || '',
-        lastName: authData.customer.lastName || '',
-        address: undefined,
-        acceptsMarketing: undefined
-      });
+      console.error('Invalid response from Shopify Admin API - no customer object:', JSON.stringify(adminData, null, 2));
+      return res.status(500).json({ error: 'Invalid response from Shopify API' });
     }
 
     const customer = adminData.customer;
 
-    console.log('Raw customer data from Shopify Admin API:', {
+    console.log('Raw customer data from Shopify Admin API:', JSON.stringify({
       id: customer.id,
       email: customer.email,
       first_name: customer.first_name,
       last_name: customer.last_name,
       addresses_count: customer.addresses ? customer.addresses.length : 0,
-      addresses: customer.addresses
-    });
+      addresses: customer.addresses ? customer.addresses.map(addr => ({
+        id: addr.id,
+        address1: addr.address1,
+        city: addr.city,
+        zip: addr.zip,
+        country: addr.country
+      })) : null
+    }, null, 2));
 
     // Get default address (first address or null)
-    const defaultAddress = customer.addresses && customer.addresses.length > 0 
-      ? customer.addresses[0] 
-      : null;
+    // Shopify Admin API returns addresses in customer.addresses array
+    // We should also check customer.default_address as fallback
+    let defaultAddress = null;
+    
+    if (customer.default_address) {
+      defaultAddress = customer.default_address;
+      console.log('Using default_address from customer object');
+    } else if (customer.addresses && customer.addresses.length > 0) {
+      defaultAddress = customer.addresses[0];
+      console.log('Using first address from addresses array');
+    }
 
-    console.log('Default address:', defaultAddress);
+    console.log('Default address:', JSON.stringify(defaultAddress, null, 2));
 
     // Extract address data - include if it exists, even if some fields are missing
     // We'll let the frontend decide if it's complete or not
@@ -126,7 +133,7 @@ export default async function handler(req, res) {
       acceptsMarketing: acceptsMarketing
     };
 
-    console.log('Customer data from Shopify Admin API (response):', {
+    console.log('Customer data from Shopify Admin API (response):', JSON.stringify({
       id: responseData.id,
       email: responseData.email,
       firstName: responseData.firstName,
@@ -139,7 +146,7 @@ export default async function handler(req, res) {
         country: responseData.address.country
       } : null,
       acceptsMarketing: responseData.acceptsMarketing
-    });
+    }, null, 2));
 
     // Return current data from Admin API
     return res.status(200).json(responseData);

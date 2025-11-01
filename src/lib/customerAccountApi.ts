@@ -122,19 +122,31 @@ async function fetchCustomerAccount<T>(
  */
 export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | null> {
   try {
+    console.log('fetchCustomerProfile: Calling /api/auth/customer...');
     const response = await fetch('/api/auth/customer', {
       method: 'GET',
       credentials: 'include',
     });
 
+    console.log('fetchCustomerProfile: Response status:', response.status, response.statusText);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('fetchCustomerProfile: API error response:', errorText);
       if (response.status === 401) {
         return null;
       }
-      throw new Error(`Failed to fetch customer profile: ${response.status}`);
+      throw new Error(`Failed to fetch customer profile: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('fetchCustomerProfile: Received data from API:', JSON.stringify(data, null, 2));
+    
+    // Check if data is actually empty
+    if (data && (!data.firstName || !data.lastName || !data.email)) {
+      console.warn('fetchCustomerProfile: Received data but fields are empty!', data);
+    }
+    
     return data;
   } catch (error) {
     console.error('Error fetching customer profile:', error);
