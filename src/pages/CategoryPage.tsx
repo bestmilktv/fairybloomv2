@@ -231,8 +231,8 @@ const CategoryPage = () => {
       <section className="pt-8 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {/* Empty space - maintains layout during loading */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 min-h-[600px]">
+              {/* Empty space - maintains layout height during loading */}
             </div>
           ) : hasError ? (
             <div className="text-center py-12">
