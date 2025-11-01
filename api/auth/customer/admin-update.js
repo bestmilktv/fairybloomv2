@@ -39,20 +39,17 @@ export default async function handler(req, res) {
     }
 
     // Extract customer ID from OAuth JWT (sub field)
-    // Format from OAuth is numeric ID (e.g., "23325479567704")
-    // Admin API requires numeric ID, not GID format
+    // Format from OAuth is always numeric ID (e.g., 23325479567704 as number)
+    // Admin API accepts both number and string, so we convert to string for consistency
     const customerId = authData.customer.sub;
-    let numericCustomerId = customerId;
-
-    // Extract numeric ID if it's in GID format (shouldn't be, but handle it just in case)
-    if (customerId.includes('/Customer/')) {
-      numericCustomerId = customerId.split('/Customer/')[1];
-    } else if (customerId.startsWith('gid://shopify/Customer/')) {
-      numericCustomerId = customerId.replace('gid://shopify/Customer/', '');
-    }
+    
+    // Convert to string immediately - OAuth JWT sub is always a number
+    // No need to check for GID format as OAuth always returns numeric ID
+    const numericCustomerId = String(customerId);
 
     console.log('Updating customer profile via Admin API:', {
       originalCustomerId: customerId,
+      originalCustomerIdType: typeof customerId,
       numericCustomerId: numericCustomerId,
       updates: { firstName, lastName }
     });
