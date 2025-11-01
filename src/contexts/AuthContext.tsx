@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { initiateOAuthFlow, OAuthResult } from '@/lib/oauth'
-import { fetchCustomerProfile, logoutCustomer, isCustomerAuthenticated, updateCustomerProfileDirect } from '@/lib/customerAccountApi'
+import { fetchCustomerProfile, logoutCustomer, isCustomerAuthenticated } from '@/lib/customerAccountApi'
 
 // User interface for authenticated customer
 interface User {
@@ -139,12 +139,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   /**
-   * Update customer profile information
-   * Calls Customer Account API directly from browser where cookies are available
+   * Update customer profile information using Shopify Admin API via backend
+   * This avoids CORS issues with Customer Account API
    */
   const updateProfile = async (updates: { firstName: string; lastName: string }): Promise<{ success: boolean; error?: string }> => {
     try {
-      const updatedData = await updateCustomerProfileDirect(updates)
+      const response = await fetch('/api/auth/customer/admin-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(updates),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Aktualizace profilu se nezdařila.' }))
+        return { success: false, error: errorData.error || 'Aktualizace profilu se nezdařila.' }
+      }
+
+      const updatedData = await response.json()
       
       if (updatedData) {
         setUser({
