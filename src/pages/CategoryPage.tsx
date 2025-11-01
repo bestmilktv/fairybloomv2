@@ -188,17 +188,19 @@ const CategoryPage = () => {
       {/* Back to Homepage Button */}
       <div className="pt-24 px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          <BackToHomepageButton />
+          <div className="fade-in-progressive-0">
+            <BackToHomepageButton />
+          </div>
         </div>
       </div>
       
       {/* Category Header */}
       <section className="pb-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-6 tracking-wide">
+          <h1 className="fade-in-progressive-1 text-5xl md:text-6xl font-serif font-bold text-luxury mb-6 tracking-wide">
             {categoryData.title}
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p className="fade-in-progressive-2 text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             {categoryData.subtitle}
           </p>
         </div>
@@ -207,7 +209,7 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-start fade-in-up">
+          <div className="flex items-center justify-start fade-in-progressive-3">
             <div className="w-56">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-muted/60 bg-background/60 backdrop-blur text-sm">
