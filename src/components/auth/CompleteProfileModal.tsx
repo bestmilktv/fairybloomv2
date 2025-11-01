@@ -15,20 +15,32 @@ interface CompleteProfileModalProps {
 export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModalProps) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [address1, setAddress1] = useState('')
+  const [address2, setAddress2] = useState('')
+  const [city, setCity] = useState('')
+  const [zip, setZip] = useState('')
+  const [country, setCountry] = useState('CZ')
+  const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { updateProfile, refreshUser, user } = useAuth()
   const { toast } = useToast()
 
-  // Check if user already has name filled - allow closing if they do
-  const hasName = user?.firstName && user?.lastName
-  const canClose = hasName
+  // Check if user already has all required data - modal cannot be closed if data is missing
+  const hasAllData = user?.firstName && user?.lastName && user?.address?.address1 && user?.address?.city && user?.address?.zip && user?.address?.country
+  const canClose = hasAllData
 
   // Pre-fill form with existing user data when modal opens or user data changes
   useEffect(() => {
     if (isOpen && user) {
       setFirstName(user.firstName || '')
       setLastName(user.lastName || '')
+      setAddress1(user.address?.address1 || '')
+      setAddress2(user.address?.address2 || '')
+      setCity(user.address?.city || '')
+      setZip(user.address?.zip || '')
+      setCountry(user.address?.country || 'CZ')
+      setPhone(user.address?.phone || '')
     }
   }, [isOpen, user])
 
@@ -37,14 +49,36 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
     setLoading(true)
     setError(null)
 
+    // Validate all required fields
     if (!firstName.trim() || !lastName.trim()) {
       setError('Prosím vyplňte jméno i příjmení.')
       setLoading(false)
       return
     }
 
+    if (!address1.trim() || !city.trim() || !zip.trim() || !country.trim()) {
+      setError('Prosím vyplňte všechny povinné údaje o adrese.')
+      setLoading(false)
+      return
+    }
+
     try {
-      const result = await updateProfile({ firstName: firstName.trim(), lastName: lastName.trim() })
+      const addressData = {
+        address1: address1.trim(),
+        address2: address2.trim() || undefined,
+        city: city.trim(),
+        province: '',
+        zip: zip.trim(),
+        country: country.trim() || 'CZ',
+        phone: phone.trim() || undefined
+      }
+
+      const result = await updateProfile({ 
+        firstName: firstName.trim(), 
+        lastName: lastName.trim(),
+        address: addressData
+      })
+      
       if (!result.success) {
         setError(result.error || 'Aktualizace profilu se nezdařila.')
       } else {
@@ -74,7 +108,7 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
         }
       }}
     >
-      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => {
         // Prevent closing by clicking outside if name is missing
         if (!canClose) {
           e.preventDefault()
@@ -97,7 +131,7 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
-              Pro dokončení registrace prosím vyplňte své jméno a příjmení.
+              Pro dokončení registrace prosím vyplňte své údaje a adresu.
             </p>
           </div>
 
@@ -108,31 +142,113 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
           )}
 
           <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Jméno *</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Vaše jméno"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={loading}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Příjmení *</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Vaše příjmení"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="firstName">Jméno *</Label>
+              <Label htmlFor="address1">Ulice a číslo popisné *</Label>
               <Input
-                id="firstName"
+                id="address1"
                 type="text"
-                placeholder="Vaše jméno"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Např. Hlavní 123"
+                value={address1}
+                onChange={(e) => setAddress1(e.target.value)}
                 disabled={loading}
                 required
-                autoFocus
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastName">Příjmení *</Label>
+              <Label htmlFor="address2">Doplňující údaje (volitelné)</Label>
               <Input
-                id="lastName"
+                id="address2"
                 type="text"
-                placeholder="Vaše příjmení"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Např. byt 5"
+                value={address2}
+                onChange={(e) => setAddress2(e.target.value)}
                 disabled={loading}
-                required
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">Město *</Label>
+                <Input
+                  id="city"
+                  type="text"
+                  placeholder="Např. Praha"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="zip">PSČ *</Label>
+                <Input
+                  id="zip"
+                  type="text"
+                  placeholder="Např. 12000"
+                  value={zip}
+                  onChange={(e) => setZip(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="country">Země *</Label>
+                <Input
+                  id="country"
+                  type="text"
+                  placeholder="Např. CZ"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefon (volitelné)</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="Např. +420 123 456 789"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
             </div>
           </div>
 

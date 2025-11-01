@@ -149,8 +149,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           acceptsMarketing: customerData.acceptsMarketing
         })
         
-        // Check if profile needs completion (missing firstName or lastName)
-        const needsCompletion = !customerData.firstName || !customerData.lastName
+        // Check if profile needs completion (missing firstName, lastName, or address)
+        const needsCompletion = !customerData.firstName || 
+                                !customerData.lastName || 
+                                !customerData.address?.address1 || 
+                                !customerData.address?.city || 
+                                !customerData.address?.zip || 
+                                !customerData.address?.country
         setNeedsProfileCompletion(needsCompletion)
       } else {
         setUser(null)
