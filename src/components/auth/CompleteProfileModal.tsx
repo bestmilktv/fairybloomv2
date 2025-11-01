@@ -22,7 +22,7 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
   const [zip, setZip] = useState('')
   const [country, setCountry] = useState('CZ')
   const [phone, setPhone] = useState('')
-  const [acceptsMarketing, setAcceptsMarketing] = useState(false)
+  const [acceptsMarketing, setAcceptsMarketing] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { updateProfile, refreshUser, user } = useAuth()
@@ -43,7 +43,8 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
       setZip(user.address?.zip || '')
       setCountry(user.address?.country || 'CZ')
       setPhone(user.address?.phone || '')
-      setAcceptsMarketing(user.acceptsMarketing || false)
+      // If user doesn't have marketing preference set, default to true
+      setAcceptsMarketing(user.acceptsMarketing !== undefined ? user.acceptsMarketing : true)
     }
   }, [isOpen, user])
 
@@ -86,8 +87,14 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
       if (!result.success) {
         setError(result.error || 'Aktualizace profilu se nezdařila.')
       } else {
-        // Refresh user data
+        // Wait a bit for Shopify to process the update
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Refresh user data from Shopify to ensure we have the latest data
         await refreshUser()
+        
+        // Wait again to ensure state is updated
+        await new Promise(resolve => setTimeout(resolve, 300))
         
         toast({
           title: "Profil aktualizován",

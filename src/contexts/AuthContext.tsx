@@ -204,14 +204,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const updatedData = await response.json()
       
       if (updatedData) {
-        setUser({
-          id: updatedData.id,
-          firstName: updatedData.firstName,
-          lastName: updatedData.lastName,
-          email: updatedData.email,
-          address: updatedData.address,
-          acceptsMarketing: updatedData.acceptsMarketing
-        })
+        // Wait a moment for Shopify to fully process the update
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Refresh user data from Shopify to get the latest state
+        await refreshUser()
+        
         setNeedsProfileCompletion(false)
         return { success: true }
       } else {

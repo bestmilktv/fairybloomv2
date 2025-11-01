@@ -132,6 +132,37 @@ export default function ProfilePage() {
             </p>
           </div>
 
+          {/* Display User Information */}
+          <section className="p-6 rounded-lg shadow bg-white mb-6">
+            <h2 className="text-lg font-semibold mb-4">Vaše údaje</h2>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Jméno:</span>
+                <p className="text-base">{user?.firstName || 'Nevyplněno'}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Příjmení:</span>
+                <p className="text-base">{user?.lastName || 'Nevyplněno'}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Email:</span>
+                <p className="text-base">{user?.email || 'Nevyplněno'}</p>
+              </div>
+              {user?.address && (
+                <div>
+                  <span className="text-sm font-medium text-muted-foreground">Adresa:</span>
+                  <p className="text-base">
+                    {user.address.address1}
+                    {user.address.address2 && `, ${user.address.address2}`}
+                    {user.address.city && `, ${user.address.city}`}
+                    {user.address.zip && ` ${user.address.zip}`}
+                    {user.address.country && `, ${user.address.country}`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Profile Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <section className="p-6 rounded-lg shadow bg-white">
