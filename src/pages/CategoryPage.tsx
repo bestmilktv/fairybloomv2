@@ -188,7 +188,7 @@ const CategoryPage = () => {
       {/* Back to Homepage Button */}
       <div className="pt-24 px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          <div className="fade-in-progressive-0">
+          <div key={`back-button-${decodedCategory}`} className="fade-in-progressive-0">
             <BackToHomepageButton />
           </div>
         </div>
@@ -197,10 +197,10 @@ const CategoryPage = () => {
       {/* Category Header */}
       <section className="pb-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="fade-in-progressive-1 text-5xl md:text-6xl font-serif font-bold text-luxury mb-6 tracking-wide">
+          <h1 key={`title-${decodedCategory}`} className="fade-in-progressive-1 text-5xl md:text-6xl font-serif font-bold text-luxury mb-6 tracking-wide">
             {categoryData.title}
           </h1>
-          <p className="fade-in-progressive-2 text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p key={`subtitle-${decodedCategory}`} className="fade-in-progressive-2 text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             {categoryData.subtitle}
           </p>
         </div>
@@ -209,7 +209,7 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-start fade-in-progressive-3">
+          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3">
             <div className="w-56">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-muted/60 bg-background/60 backdrop-blur text-sm">
@@ -230,19 +230,7 @@ const CategoryPage = () => {
       {/* Products Grid */}
       <section className="pt-8 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
-          {isLoading ? (
-            <div className="text-center">
-              <div className="animate-pulse">
-                <div className="h-12 bg-muted rounded-lg mb-4 max-w-md mx-auto"></div>
-                <div className="h-6 bg-muted rounded-lg mb-12 max-w-2xl mx-auto"></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="bg-muted rounded-2xl h-96 animate-pulse"></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : hasError ? (
+          {isLoading ? null : hasError ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-6">Nepodařilo se načíst produkty z obchodu. Zkontrolujte prosím připojení k internetu.</p>
               <div className="text-center">
@@ -260,6 +248,7 @@ const CategoryPage = () => {
             </div>
           ) : (
             <CategoryProductSection 
+              key={`products-${decodedCategory}`}
               category={decodedCategory || ''}
               initialProducts={displayProducts}
             />
