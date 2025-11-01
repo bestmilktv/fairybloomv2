@@ -51,6 +51,8 @@ export default async function handler(req, res) {
       },
     });
 
+    console.log('Shopify Admin API response status:', adminResponse.status, adminResponse.statusText);
+
     if (!adminResponse.ok) {
       const errorText = await adminResponse.text();
       console.error(`Shopify Admin API error: ${adminResponse.status}`, errorText);
@@ -70,6 +72,7 @@ export default async function handler(req, res) {
     }
 
     const adminData = await adminResponse.json();
+    console.log('Raw adminData response from Shopify:', JSON.stringify(adminData, null, 2));
 
     if (!adminData.customer) {
       console.error('Invalid response from Shopify Admin API - no customer object:', JSON.stringify(adminData, null, 2));
@@ -78,11 +81,15 @@ export default async function handler(req, res) {
 
     const customer = adminData.customer;
 
+    // Log the FULL customer object to see what Shopify actually returns
+    console.log('FULL customer object from Shopify Admin API:', JSON.stringify(customer, null, 2));
+
     console.log('Raw customer data from Shopify Admin API:', JSON.stringify({
       id: customer.id,
       email: customer.email,
       first_name: customer.first_name,
       last_name: customer.last_name,
+      default_address: customer.default_address,
       addresses_count: customer.addresses ? customer.addresses.length : 0,
       addresses: customer.addresses ? customer.addresses.map(addr => ({
         id: addr.id,
@@ -124,14 +131,24 @@ export default async function handler(req, res) {
     const acceptsMarketing = customer.email_marketing_consent?.state === 'subscribed' || 
                              customer.accepts_marketing === true;
 
+    // Ensure we're reading the data correctly
+    // Shopify Admin API uses snake_case for field names
     const responseData = {
-      id: customer.id.toString(),
+      id: customer.id ? String(customer.id) : '',
       email: customer.email || '',
-      firstName: customer.first_name || '',
-      lastName: customer.last_name || '',
+      firstName: customer.first_name || customer.firstName || '',
+      lastName: customer.last_name || customer.lastName || '',
       address: address,
       acceptsMarketing: acceptsMarketing
     };
+
+    // Log what we're about to return
+    console.log('Response data being sent to frontend:', JSON.stringify(responseData, null, 2));
+    
+    // Double-check that we're getting actual values
+    if (!responseData.email && !responseData.firstName && !responseData.lastName) {
+      console.error('WARNING: All customer fields are empty! Full customer object:', JSON.stringify(customer, null, 2));
+    }
 
     console.log('Customer data from Shopify Admin API (response):', JSON.stringify({
       id: responseData.id,
@@ -152,24 +169,12 @@ export default async function handler(req, res) {
     return res.status(200).json(responseData);
   } catch (error) {
     console.error('Customer API error:', error);
+    console.error('Error stack:', error.stack);
     
-    // Fallback to JWT data if there's an error
-    try {
-      const authData = getAuthCookie(req);
-      if (authData && authData.customer) {
-        return res.status(200).json({
-          id: authData.customer.sub,
-          email: authData.customer.email || '',
-          firstName: authData.customer.firstName || '',
-          lastName: authData.customer.lastName || '',
-          address: undefined,
-          acceptsMarketing: undefined
-        });
-      }
-    } catch (fallbackError) {
-      console.error('Fallback to JWT also failed:', fallbackError);
-    }
-    
-    return res.status(500).json({ error: 'Internal server error' });
+    // Don't fallback to JWT data - return error instead so we can debug
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
   }
 }
