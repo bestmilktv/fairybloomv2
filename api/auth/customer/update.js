@@ -12,19 +12,24 @@ const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/ap
  * Make authenticated request to Customer Account API
  * @param {string} query - GraphQL query
  * @param {object} variables - Query variables
- * @param {object} req - Request object to extract cookies
+ * @param {object} authData - Auth data containing access_token
  */
-async function fetchCustomerAccount(query, variables = {}, req = null) {
-  // Build headers with cookies from request
+async function fetchCustomerAccount(query, variables = {}, authData = null) {
+  // Build headers
   const headers = {
     'Content-Type': 'application/json',
   };
 
-  // Forward cookies from original request to Shopify API
-  // This is required for authentication in Node.js server-side code
-  if (req && req.headers.cookie) {
-    headers['Cookie'] = req.headers.cookie;
+  // Use access_token from cookie for authentication
+  // Shopify Customer Account API accepts OAuth 2.0 Bearer tokens
+  if (authData && authData.access_token) {
+    headers['Authorization'] = `Bearer ${authData.access_token}`;
+  } else {
+    throw new Error('Authentication required - missing access token');
   }
+
+  // Also forward cookies as fallback (for Shopify session cookies if needed)
+  // Note: This may not work across domains, but Bearer token should be sufficient
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
@@ -103,8 +108,9 @@ export default async function handler(req, res) {
     };
 
     console.log('Updating customer profile with:', updateInput);
+    console.log('Using access_token for authentication');
 
-    const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, req);
+    const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, authData);
 
     // Check for GraphQL errors in response
     if (!updateResult.data || !updateResult.data.customerUpdate) {

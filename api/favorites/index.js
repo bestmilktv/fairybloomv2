@@ -10,14 +10,27 @@ const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/ap
 
 /**
  * Make authenticated request to Customer Account API
+ * @param {string} query - GraphQL query
+ * @param {object} variables - Query variables
+ * @param {object} authData - Auth data containing access_token
  */
-async function fetchCustomerAccount(query, variables = {}) {
+async function fetchCustomerAccount(query, variables = {}, authData = null) {
+  // Build headers
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  // Use access_token from cookie for authentication
+  // Shopify Customer Account API accepts OAuth 2.0 Bearer tokens
+  if (authData && authData.access_token) {
+    headers['Authorization'] = `Bearer ${authData.access_token}`;
+  } else {
+    throw new Error('Authentication required - missing access token');
+  }
+
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
+    headers,
     body: JSON.stringify({
       query,
       variables,
@@ -25,6 +38,9 @@ async function fetchCustomerAccount(query, variables = {}) {
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Shopify Customer Account API error: ${response.status}`, errorText);
+    
     if (response.status === 401) {
       throw new Error('Authentication required');
     }
@@ -35,6 +51,7 @@ async function fetchCustomerAccount(query, variables = {}) {
 
   if (data.errors && data.errors.length > 0) {
     const errorMessages = data.errors.map((error) => error.message).join(', ');
+    console.error('GraphQL errors from Shopify:', errorMessages);
     throw new Error(`GraphQL errors: ${errorMessages}`);
   }
 
@@ -66,7 +83,7 @@ export default async function handler(req, res) {
         }
       `;
 
-      const result = await fetchCustomerAccount(query);
+      const result = await fetchCustomerAccount(query, {}, authData);
       
       if (!result.data.customer) {
         return res.status(200).json({ favorites: [] });
@@ -106,7 +123,7 @@ export default async function handler(req, res) {
         }
       `;
 
-      const getResult = await fetchCustomerAccount(getQuery);
+      const getResult = await fetchCustomerAccount(getQuery, {}, authData);
       let currentFavorites = [];
 
       if (getResult.data.customer?.metafield?.value) {
@@ -153,7 +170,7 @@ export default async function handler(req, res) {
         ]
       };
 
-      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables);
+      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, authData);
 
       if (updateResult.data.customerUpdate.userErrors.length > 0) {
         const errorMessage = updateResult.data.customerUpdate.userErrors[0].message;
@@ -183,7 +200,7 @@ export default async function handler(req, res) {
         }
       `;
 
-      const getResult = await fetchCustomerAccount(getQuery);
+      const getResult = await fetchCustomerAccount(getQuery, {}, authData);
       let currentFavorites = [];
 
       if (getResult.data.customer?.metafield?.value) {
@@ -228,7 +245,7 @@ export default async function handler(req, res) {
         ]
       };
 
-      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables);
+      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, authData);
 
       if (updateResult.data.customerUpdate.userErrors.length > 0) {
         const errorMessage = updateResult.data.customerUpdate.userErrors[0].message;
