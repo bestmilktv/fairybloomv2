@@ -27,7 +27,7 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
 
   const headers = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${accessToken}`
+    'Shopify-Customer-Access-Token': accessToken
   };
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
