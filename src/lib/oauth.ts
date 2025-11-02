@@ -147,11 +147,11 @@ function buildAuthorizationUrl(codeChallenge: string, state: string): string {
  * @param {Function} resolve - Promise resolve function
  * @param {Function} reject - Promise reject function
  */
-function handleOAuthCallback(
+async function handleOAuthCallback(
   event: MessageEvent, 
   resolve: (result: OAuthResult) => void, 
   reject: (error: Error) => void
-): void {
+): Promise<void> {
   // Verify origin
   const expectedOrigin = OAUTH_CONFIG.appUrl;
   if (event.origin !== expectedOrigin) {
