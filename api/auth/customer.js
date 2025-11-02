@@ -8,6 +8,13 @@ import { getAuthCookie } from '../utils/cookies.js';
 const SHOP_ID = process.env.SHOPIFY_SHOP_ID || process.env.VITE_SHOPIFY_SHOP_ID;
 const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/api/unstable/graphql`;
 
+// DEBUG: Log configuration on module load
+if (typeof SHOP_ID !== 'undefined') {
+  console.log('[Customer API] Module loaded - SHOP_ID configured:', !!SHOP_ID);
+  console.log('[Customer API] SHOP_ID value:', SHOP_ID ? 'SET (length: ' + String(SHOP_ID).length + ')' : 'NOT SET');
+  console.log('[Customer API] CUSTOMER_ACCOUNT_URL:', CUSTOMER_ACCOUNT_URL);
+}
+
 const CUSTOMER_QUERY = `
   query {
     customer {
@@ -113,11 +120,22 @@ async function callCustomerAccountAPI(query, variables, accessToken) {
 
   const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
   console.log('[Customer API] Using customer access token:', tokenPreview, '(length:', accessToken.length, ')');
+  console.log('[Customer API] Token type:', accessToken.startsWith('shcat_') ? 'shcat_ (Customer Account)' : 'unknown format');
 
   const headers = {
     'Content-Type': 'application/json',
     'Shopify-Customer-Access-Token': accessToken,
   };
+
+  // DEBUG: Log headers being sent (without token value)
+  console.log('[Customer API] Request headers:', {
+    'Content-Type': headers['Content-Type'],
+    'Shopify-Customer-Access-Token': 'present (' + accessToken.length + ' chars)',
+    'Token starts with': accessToken.substring(0, 10)
+  });
+  
+  // DEBUG: Log URL being called
+  console.log('[Customer API] Calling URL:', CUSTOMER_ACCOUNT_URL);
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
@@ -223,7 +241,40 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Shopify Shop ID is not configured' });
   }
 
+  // DEBUG: Log cookie debugging
+  const hasCookies = !!req.headers.cookie;
+  console.log('[Customer API] Request has cookies header:', hasCookies);
+  
+  if (hasCookies) {
+    const cookieHeader = req.headers.cookie || '';
+    const hasShopifyToken = cookieHeader.includes('shopify_access_token');
+    console.log('[Customer API] shopify_access_token cookie present:', hasShopifyToken);
+    
+    if (hasShopifyToken) {
+      const tokenMatch = cookieHeader.match(/shopify_access_token=([^;]+)/);
+      if (tokenMatch) {
+        console.log('[Customer API] Cookie value found (length):', tokenMatch[1]?.length || 0);
+      }
+    }
+  }
+
   const authData = getAuthCookie(req);
+  console.log('[Customer API] getAuthCookie returned:', authData ? 'data exists' : 'null');
+  
+  if (authData) {
+    const hasAccessToken = !!authData.access_token;
+    const tokenPreview = authData.access_token ? `${authData.access_token.slice(0, 10)}...${authData.access_token.slice(-6)}` : 'none';
+    console.log('[Customer API] authData.access_token exists:', hasAccessToken, 'preview:', tokenPreview);
+    console.log('[Customer API] token type:', authData.access_token?.startsWith('shcat_') ? 'shcat_ (Customer Account)' : 'unknown');
+    
+    if (authData.expires_at) {
+      const expiresDate = new Date(authData.expires_at);
+      const now = new Date();
+      const isExpired = expiresDate < now;
+      const timeUntilExpiry = expiresDate.getTime() - now.getTime();
+      console.log('[Customer API] Token expires_at:', authData.expires_at, 'isExpired:', isExpired, 'ms until expiry:', timeUntilExpiry);
+    }
+  }
 
   if (!authData || !authData.access_token) {
     return res.status(401).json({ error: 'Not authenticated' });

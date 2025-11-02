@@ -49,16 +49,24 @@ export function setAuthCookie(res, token, expiresAt, customerData = null) {
  */
 export function getAuthCookie(req) {
   const cookies = req.headers.cookie;
-  if (!cookies) return null;
+  if (!cookies) {
+    console.log('[getAuthCookie] No cookies header');
+    return null;
+  }
 
   const tokenMatch = cookies.match(/shopify_access_token=([^;]+)/);
-  if (!tokenMatch) return null;
+  if (!tokenMatch) {
+    console.log('[getAuthCookie] shopify_access_token cookie not found in header');
+    return null;
+  }
   
   try {
     const decoded = Buffer.from(tokenMatch[1], 'base64').toString('utf-8');
-    return JSON.parse(decoded);
+    const parsed = JSON.parse(decoded);
+    console.log('[getAuthCookie] Successfully decoded cookie, has access_token:', !!parsed.access_token);
+    return parsed;
   } catch (error) {
-    console.error('Failed to decode auth cookie:', error);
+    console.error('[getAuthCookie] Failed to decode auth cookie:', error.message);
     return null;
   }
 }

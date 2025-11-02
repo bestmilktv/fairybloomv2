@@ -252,12 +252,20 @@ export default async function handler(req, res) {
     // Set secure HTTP-only cookie with customer data
     setAuthCookie(res, access_token, expiresAt, customerData);
 
-    // Clear temporary cookies
-    res.setHeader('Set-Cookie', [
-      ...res.getHeader('Set-Cookie') || [],
-      'oauth_state=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/',
-      'oauth_code_verifier=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
-    ]);
+    // DEBUG: Log cookie was set
+    const tokenPreview = `${access_token.slice(0, 6)}...${access_token.slice(-4)}`;
+    console.log('[OAuth Callback] Cookie set with token preview:', tokenPreview);
+    console.log('[OAuth Callback] Cookie expires at:', expiresAt);
+    console.log('[OAuth Callback] Cookie domain:', process.env.NODE_ENV === 'production' ? '.fairybloom.cz' : 'localhost');
+    console.log('[OAuth Callback] Cookie secure:', process.env.NODE_ENV === 'production');
+
+    // Clear temporary cookies - append to existing Set-Cookie header to avoid overwriting auth cookie
+    const existingCookies = res.getHeader('Set-Cookie') || [];
+    const clearCookies = [
+      'oauth_state=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=None; Secure',
+      'oauth_code_verifier=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=None; Secure'
+    ];
+    res.setHeader('Set-Cookie', [...existingCookies, ...clearCookies]);
 
     // Return success page that posts message to parent window
     return res.status(200).send(`

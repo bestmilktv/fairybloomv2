@@ -125,6 +125,9 @@ async function fetchCustomerAccount<T>(
  */
 export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | null> {
   try {
+    // Add small delay to ensure cookie is set after OAuth callback
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     console.log('fetchCustomerProfile: Calling /api/auth/customer...');
     const response = await fetch('/api/auth/customer', {
       method: 'GET',
