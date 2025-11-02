@@ -14,25 +14,21 @@ const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN;
 const ADMIN_API_VERSION = '2024-04';
 
 /**
- * Fetch Customer Account API using cookies (same pattern as api/favorites/index.js)
- * DŮLEŽITÉ: Customer Account API funguje POUZE přes cookies z shopify.com domény
- * Cookies jsou nastavené během OAuth redirectu na shopify.com
+ * Fetch Customer Account API using customer access token (shcat_*), no cookies required
  */
-async function fetchCustomerAccount(query, variables = {}, req = null) {
+async function fetchCustomerAccount(query, variables = {}, accessToken) {
+  if (!accessToken || typeof accessToken !== 'string') {
+    console.error('[Customer Account API] Missing customer access token');
+    throw new Error('Authentication required - missing customer access token');
+  }
+
+  const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
+  console.log('[Customer Account API] Using customer access token:', tokenPreview, '(length:', accessToken.length, ')');
+
   const headers = {
     'Content-Type': 'application/json',
+    Authorization: `Bearer ${accessToken}`
   };
-
-  // Shopify Customer Account API vyžaduje session cookies z shopify.com domain
-  // These cookies are set during OAuth flow and contain authentication session
-  // We must forward ALL cookies from the browser request to Shopify API
-  if (req && req.headers.cookie) {
-    headers['Cookie'] = req.headers.cookie;
-    console.log('[Customer Account API] Forwarding cookies (length):', req.headers.cookie.length);
-  } else {
-    console.error('[Customer Account API] No cookies found in request headers');
-    throw new Error('Authentication required - missing cookies');
-  }
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
@@ -212,6 +208,12 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    const accessToken = authData.access_token;
+    if (!accessToken || typeof accessToken !== 'string') {
+      console.error('[Customer Account API] Missing customer access token in auth cookie');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const customerId = authData.customer.sub;
     const numericCustomerId = String(customerId);
 
@@ -219,18 +221,6 @@ export default async function handler(req, res) {
     console.log('=== ATTEMPTING CUSTOMER ACCOUNT API (PRIMARY) ===');
     console.log('[DEBUG] SHOP_ID:', SHOP_ID ? 'CONFIGURED' : 'MISSING');
     console.log('[DEBUG] SHOP_ID value:', SHOP_ID || 'undefined');
-    
-    // DEBUG: Logovat cookies, které máme v requestu
-    console.log('[DEBUG] Request cookies:', req.headers.cookie);
-    console.log('[DEBUG] Cookie header length:', req.headers.cookie ? req.headers.cookie.length : 0);
-    if (req.headers.cookie) {
-      const cookies = req.headers.cookie.split(';');
-      console.log('[DEBUG] Cookie count:', cookies.length);
-      cookies.forEach((cookie, index) => {
-        const [name] = cookie.trim().split('=');
-        console.log(`[DEBUG] Cookie ${index + 1}: ${name} (length: ${cookie.length})`);
-      });
-    }
     
     let customerData = null;
     let dataSource = 'unknown';
@@ -284,8 +274,9 @@ export default async function handler(req, res) {
           }
         `;
 
-        // Customer Account API funguje POUZE přes cookies, nepotřebuje Authorization header
-        const response = await fetchCustomerAccount(customerAccountQuery, {}, req);
+        const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
+        console.log('[Customer Account API] Using access_token:', tokenPreview, '(length:', accessToken.length, ')');
+        const response = await fetchCustomerAccount(customerAccountQuery, {}, accessToken);
         console.log('[Customer Account API] Response received:', JSON.stringify(response, null, 2));
 
         if (response.data && response.data.customer) {
@@ -521,6 +512,7 @@ export default async function handler(req, res) {
     console.log(`=== CUSTOMER DATA RETRIEVED FROM: ${dataSource.toUpperCase()} ===`);
     console.log('Final customer data:', JSON.stringify(customerData, null, 2));
 
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     return res.status(200).json(customerData);
 
   } catch (error) {
