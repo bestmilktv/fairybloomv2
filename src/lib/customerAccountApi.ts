@@ -124,77 +124,37 @@ async function fetchCustomerAccount<T>(
  * @returns {Promise<CustomerAccountCustomer | null>} Customer data or null if not authenticated
  */
 export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | null> {
-  // Retry mechanism - cookie may take time to be set after OAuth callback
-  const maxRetries = 5;
-  const baseDelay = 500;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      // Exponential backoff delay
-      if (attempt > 1) {
-        const delay = baseDelay * Math.pow(2, attempt - 2);
-        console.log(`fetchCustomerProfile: Retry attempt ${attempt}/${maxRetries}, waiting ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      } else {
-        // First attempt - wait a bit for cookie to be set
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      console.log(`fetchCustomerProfile: Attempt ${attempt}/${maxRetries} - Calling /api/auth/customer...`);
-      const response = await fetch('/api/auth/customer', {
-        method: 'GET',
-        credentials: 'include', // Include cookies - CRITICAL for HttpOnly cookies
-        mode: 'cors', // Ensure CORS is handled
-      });
+  try {
+    console.log('fetchCustomerProfile: Calling /api/auth/customer...');
+    const response = await fetch('/api/auth/customer', {
+      method: 'GET',
+      credentials: 'include', // Include cookies so backend can forward them
+    });
 
-      console.log(`fetchCustomerProfile: Response status: ${response.status} ${response.statusText}`);
+    console.log('fetchCustomerProfile: Response status:', response.status, response.statusText);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        
-        // If 401 and not last attempt, retry
-        if (response.status === 401 && attempt < maxRetries) {
-          console.log(`fetchCustomerProfile: 401 on attempt ${attempt}, will retry...`);
-          continue;
-        }
-        
-        // If 401 and last attempt, return null (not authenticated)
-        if (response.status === 401) {
-          console.log('fetchCustomerProfile: 401 on final attempt, returning null');
-          return null;
-        }
-        
-        // Other errors - throw
-        console.error('fetchCustomerProfile: API error response:', errorText);
-        throw new Error(`Failed to fetch customer profile: ${response.status} - ${errorText}`);
-      }
-
-      // Success - parse and return data
-      const data = await response.json();
-      console.log('fetchCustomerProfile: Successfully received customer data');
-      
-      // Check if data is actually empty
-      if (data && (!data.firstName || !data.lastName || !data.email)) {
-        console.warn('fetchCustomerProfile: Received data but fields are empty!', data);
-      }
-      
-      return data;
-    } catch (error) {
-      // If last attempt, return null
-      if (attempt === maxRetries) {
-        console.error('fetchCustomerProfile: Error on final attempt:', error);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('fetchCustomerProfile: API error response:', errorText);
+      if (response.status === 401) {
         return null;
       }
-      
-      // Otherwise, continue to next retry
-      console.error(`fetchCustomerProfile: Error on attempt ${attempt}, will retry:`, error);
-      continue;
+      throw new Error(`Failed to fetch customer profile: ${response.status} - ${errorText}`);
     }
+
+    const data = await response.json();
+    console.log('fetchCustomerProfile: Received data from API:', JSON.stringify(data, null, 2));
+    
+    // Check if data is actually empty
+    if (data && (!data.firstName || !data.lastName || !data.email)) {
+      console.warn('fetchCustomerProfile: Received data but fields are empty!', data);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching customer profile:', error);
+    return null;
   }
-  
-  // If we get here, all retries failed
-  console.error('fetchCustomerProfile: All retry attempts failed');
-  return null;
 }
 
 /**

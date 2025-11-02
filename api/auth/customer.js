@@ -1,6 +1,7 @@
 /**
  * Customer Data Endpoint
- * Uses Shopify Customer Account API (GraphQL) to fetch and update customer data
+ * Fetches current customer profile data from Shopify Customer Account API (GraphQL)
+ * Falls back to Admin API if Customer Account API fails
  */
 
 import { getAuthCookie } from '../utils/cookies.js';
@@ -8,194 +9,26 @@ import { getAuthCookie } from '../utils/cookies.js';
 const SHOP_ID = process.env.SHOPIFY_SHOP_ID || process.env.VITE_SHOPIFY_SHOP_ID;
 const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/api/unstable/graphql`;
 
-// DEBUG: Log configuration on module load
-if (typeof SHOP_ID !== 'undefined') {
-  console.log('[Customer API] Module loaded - SHOP_ID configured:', !!SHOP_ID);
-  console.log('[Customer API] SHOP_ID value:', SHOP_ID ? 'SET (length: ' + String(SHOP_ID).length + ')' : 'NOT SET');
-  console.log('[Customer API] CUSTOMER_ACCOUNT_URL:', CUSTOMER_ACCOUNT_URL);
-}
+const STORE_DOMAIN = process.env.VITE_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN;
+const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN;
+const ADMIN_API_VERSION = '2024-04';
 
-const CUSTOMER_QUERY = `
-  query {
-    customer {
-      id
-      firstName
-      lastName
-      emailAddress {
-        emailAddress
-      }
-      phoneNumber {
-        phoneNumber
-      }
-      defaultAddress {
-        id
-        address1
-        address2
-        city
-        province
-        zip
-        countryCode
-        phoneNumber {
-          phoneNumber
-        }
-      }
-      addresses(first: 10) {
-        edges {
-          node {
-            id
-            address1
-            address2
-            city
-            province
-            zip
-            countryCode
-            phoneNumber {
-              phoneNumber
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-
-const CUSTOMER_UPDATE_MUTATION = `
-  mutation customerUpdate($customer: CustomerUpdateInput!) {
-    customerUpdate(customer: $customer) {
-      customer {
-        id
-        firstName
-        lastName
-        emailAddress {
-          emailAddress
-        }
-        phoneNumber {
-          phoneNumber
-        }
-        defaultAddress {
-          id
-          address1
-          address2
-          city
-          province
-          zip
-          countryCode
-          phoneNumber {
-            phoneNumber
-          }
-        }
-        addresses(first: 10) {
-          edges {
-            node {
-              id
-              address1
-              address2
-              city
-              province
-              zip
-              countryCode
-              phoneNumber {
-                phoneNumber
-              }
-            }
-          }
-        }
-      }
-      userErrors {
-        field
-        message
-      }
-    }
-  }
-`;
-
-const CUSTOMER_ADDRESS_CREATE_MUTATION = `
-  mutation customerAddressCreate($address: MailingAddressInput!, $addressListId: ID) {
-    customerAddressCreate(address: $address, addressListId: $addressListId) {
-      customerAddress {
-        id
-        address1
-        address2
-        city
-        province
-        zip
-        countryCode
-        phoneNumber {
-          phoneNumber
-        }
-      }
-      userErrors {
-        field
-        message
-      }
-    }
-  }
-`;
-
-const CUSTOMER_ADDRESS_UPDATE_MUTATION = `
-  mutation customerAddressUpdate($address: MailingAddressInput!, $id: ID!) {
-    customerAddressUpdate(address: $address, id: $id) {
-      customerAddress {
-        id
-        address1
-        address2
-        city
-        province
-        zip
-        countryCode
-        phoneNumber {
-          phoneNumber
-        }
-      }
-      userErrors {
-        field
-        message
-      }
-    }
-  }
-`;
-
-const CUSTOMER_DEFAULT_ADDRESS_UPDATE_MUTATION = `
-  mutation customerDefaultAddressUpdate($addressId: ID!) {
-    customerDefaultAddressUpdate(addressId: $addressId) {
-      customer {
-        id
-      }
-      userErrors {
-        field
-        message
-      }
-    }
-  }
-`;
-
-async function callCustomerAccountAPI(query, variables, accessToken) {
-  if (!SHOP_ID) {
-    throw new Error('Shopify Shop ID not configured');
-  }
-
+/**
+ * Fetch Customer Account API using customer access token (shcat_*), no cookies required
+ */
+async function fetchCustomerAccount(query, variables = {}, accessToken) {
   if (!accessToken || typeof accessToken !== 'string') {
+    console.error('[Customer Account API] Missing customer access token');
     throw new Error('Authentication required - missing customer access token');
   }
 
   const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
-  console.log('[Customer API] Using customer access token:', tokenPreview, '(length:', accessToken.length, ')');
-  console.log('[Customer API] Token type:', accessToken.startsWith('shcat_') ? 'shcat_ (Customer Account)' : 'unknown format');
+  console.log('[Customer Account API] Using customer access token:', tokenPreview, '(length:', accessToken.length, ')');
 
   const headers = {
     'Content-Type': 'application/json',
-    'Shopify-Customer-Access-Token': accessToken,
+    'Shopify-Customer-Access-Token': accessToken
   };
-
-  // DEBUG: Log headers being sent (without token value)
-  console.log('[Customer API] Request headers:', {
-    'Content-Type': headers['Content-Type'],
-    'Shopify-Customer-Access-Token': 'present (' + accessToken.length + ' chars)',
-    'Token starts with': accessToken.substring(0, 10)
-  });
-  
-  // DEBUG: Log URL being called
-  console.log('[Customer API] Calling URL:', CUSTOMER_ACCOUNT_URL);
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
@@ -206,24 +39,9 @@ async function callCustomerAccountAPI(query, variables, accessToken) {
     }),
   });
 
-  console.log('[Customer API] Customer Account API status:', response.status, response.statusText);
-  const responseText = await response.text();
-  
-  let payload;
-  try {
-    payload = JSON.parse(responseText);
-  } catch (parseError) {
-    console.error('[Customer API] Failed to parse Customer Account API JSON:', parseError);
-    console.error('[Customer API] Raw response text (first 200 chars):', responseText.substring(0, 200));
-    throw new Error('Invalid response from Customer Account API');
-  }
-
   if (!response.ok) {
-    console.error(`[Customer API] Shopify Customer Account API error: ${response.status}`);
-    if (payload.errors && payload.errors.length > 0) {
-      const errorMessages = payload.errors.map((error) => error?.message || 'Unknown error').join(', ');
-      console.error('[Customer API] GraphQL errors from Shopify:', errorMessages);
-    }
+    const errorText = await response.text();
+    console.error(`[Customer Account API] Error ${response.status}:`, errorText);
     
     if (response.status === 401) {
       throw new Error('Authentication required');
@@ -231,311 +49,480 @@ async function callCustomerAccountAPI(query, variables, accessToken) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  if (payload.errors && payload.errors.length > 0) {
-    const errorMessages = payload.errors.map((error) => error?.message || 'Unknown error').join(', ');
-    console.error('[Customer API] GraphQL errors from Shopify:', errorMessages);
+  const data = await response.json();
+
+  if (data.errors && data.errors.length > 0) {
+    const errorMessages = data.errors.map((error) => error.message).join(', ');
+    console.error('[Customer Account API] GraphQL errors:', errorMessages);
     throw new Error(`GraphQL errors: ${errorMessages}`);
   }
 
-  return payload;
+  return data;
 }
 
-function mapCustomerResponse(customer) {
-  if (!customer || typeof customer !== 'object') {
+/**
+ * Fallback: Fetch customer data from Admin GraphQL API
+ * GraphQL API má lepší kontrolu nad tím, co vrací než REST API
+ */
+async function fetchCustomerFromAdminGraphQL(customerId) {
+  if (!STORE_DOMAIN || !ADMIN_TOKEN) {
+    console.warn('[Admin GraphQL API] Missing configuration');
     return null;
   }
 
-  const email = customer.emailAddress?.emailAddress || '';
-  const phone = customer.phoneNumber?.phoneNumber || '';
-  const defaultAddress = customer.defaultAddress;
-  const addresses = customer.addresses?.edges || [];
-  const primaryAddress = defaultAddress || (addresses.length > 0 && addresses[0]?.node ? addresses[0].node : null);
-
-  return {
-    id: customer.id || '',
-    firstName: customer.firstName || '',
-    lastName: customer.lastName || '',
-    email: email,
-    phone: phone,
-    address: primaryAddress
-      ? {
-          id: primaryAddress.id || '',
-          address1: primaryAddress.address1 || '',
-          address2: primaryAddress.address2 || '',
-          city: primaryAddress.city || '',
-          province: primaryAddress.province || '',
-          zip: primaryAddress.zip || '',
-          country: primaryAddress.countryCode || '', // Map countryCode to country for frontend
-          countryCode: primaryAddress.countryCode || '',
-          phone: primaryAddress.phoneNumber?.phoneNumber || '',
+  const adminGraphQLUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/graphql.json`;
+  
+  console.log('[Admin GraphQL API] Fetching customer:', customerId);
+  
+  // GraphQL query pro získání kompletních customer dat včetně adres
+  const query = `
+    query getCustomer($id: ID!) {
+      customer(id: $id) {
+        id
+        firstName
+        lastName
+        email
+        defaultAddress {
+          address1
+          address2
+          city
+          province
+          zip
+          countryCodeV2
+          phone
         }
-      : null,
-  };
+        addresses(first: 5) {
+          address1
+          address2
+          city
+          province
+          zip
+          countryCodeV2
+          phone
+        }
+        emailMarketingConsent {
+          marketingState
+        }
+      }
+    }
+  `;
+
+  // Shopify GraphQL Admin API používá GID formát: gid://shopify/Customer/{id}
+  const customerGid = `gid://shopify/Customer/${customerId}`;
+  
+  try {
+    const graphqlResponse = await fetch(adminGraphQLUrl, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': ADMIN_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        variables: {
+          id: customerGid
+        }
+      }),
+    });
+
+    if (!graphqlResponse.ok) {
+      console.warn('[Admin GraphQL API] Failed:', graphqlResponse.status, graphqlResponse.statusText);
+      return null;
+    }
+
+    const graphqlData = await graphqlResponse.json();
+    
+    if (graphqlData.errors) {
+      console.error('[Admin GraphQL API] GraphQL errors:', graphqlData.errors);
+      return null;
+    }
+
+    return graphqlData.data?.customer || null;
+  } catch (error) {
+    console.error('[Admin GraphQL API] Error:', error.message);
+    return null;
+  }
 }
 
-function buildCustomerInput(payload = {}) {
-  const input = {};
-  let hasChanges = false;
-
-  if (payload.firstName !== undefined) {
-    input.firstName = payload.firstName;
-    hasChanges = true;
-  }
-  if (payload.lastName !== undefined) {
-    input.lastName = payload.lastName;
-    hasChanges = true;
-  }
-  if (payload.email !== undefined) {
-    input.emailAddress = { emailAddress: payload.email };
-    hasChanges = true;
-  }
-  if (payload.phone !== undefined) {
-    input.phoneNumber = { phoneNumber: payload.phone };
-    hasChanges = true;
-  }
-
-  return hasChanges ? input : null;
-}
-
-function buildAddressInput(address = {}) {
-  if (!address || typeof address !== 'object') {
+/**
+ * Fallback: Fetch customer data from Admin REST API (legacy)
+ */
+async function fetchCustomerFromAdminREST(customerId) {
+  if (!STORE_DOMAIN || !ADMIN_TOKEN) {
+    console.warn('[Admin REST API] Missing configuration');
     return null;
   }
 
-  // Customer Account API expects MailingAddressInput format
-  const input = {};
-  let hasFields = false;
+  const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${customerId}.json`;
+  
+  console.log('[Admin REST API] Fetching customer:', adminApiUrl);
+  
+  const adminResponse = await fetch(adminApiUrl, {
+    method: 'GET',
+    headers: {
+      'X-Shopify-Access-Token': ADMIN_TOKEN,
+      'Content-Type': 'application/json',
+    },
+  });
 
-  if (address.address1 !== undefined) {
-    input.address1 = address.address1;
-    hasFields = true;
+  if (!adminResponse.ok) {
+    console.warn('[Admin REST API] Failed:', adminResponse.status, adminResponse.statusText);
+    return null;
   }
-  if (address.address2 !== undefined) {
-    input.address2 = address.address2;
-    hasFields = true;
-  }
-  if (address.city !== undefined) {
-    input.city = address.city;
-    hasFields = true;
-  }
-  if (address.province !== undefined) {
-    input.province = address.province;
-    hasFields = true;
-  }
-  if (address.zip !== undefined) {
-    input.zip = address.zip;
-    hasFields = true;
-  }
-  if (address.country !== undefined || address.countryCode !== undefined) {
-    // Customer Account API expects countryCode (e.g., "CZ")
-    const countryCode = address.countryCode || (address.country && address.country.length === 2 ? address.country.toUpperCase() : address.country);
-    if (countryCode) {
-      input.countryCode = countryCode;
-      hasFields = true;
+
+  const adminData = await adminResponse.json();
+  
+  // DETAILNÍ LOGOVÁNÍ PRO DEBUGGING
+  console.log('[Admin REST API] Raw response from Shopify:', JSON.stringify(adminData, null, 2));
+  
+  if (adminData.customer) {
+    console.log('[Admin REST API] Customer object keys:', Object.keys(adminData.customer));
+    console.log('[Admin REST API] Customer first_name:', adminData.customer.first_name);
+    console.log('[Admin REST API] Customer last_name:', adminData.customer.last_name);
+    console.log('[Admin REST API] Customer email:', adminData.customer.email);
+    console.log('[Admin REST API] Has default_address:', !!adminData.customer.default_address);
+    if (adminData.customer.default_address) {
+      console.log('[Admin REST API] Default address keys:', Object.keys(adminData.customer.default_address));
+      console.log('[Admin REST API] Default address:', JSON.stringify(adminData.customer.default_address, null, 2));
+    }
+    console.log('[Admin REST API] Has addresses array:', !!adminData.customer.addresses);
+    if (adminData.customer.addresses && adminData.customer.addresses.length > 0) {
+      console.log('[Admin REST API] Addresses count:', adminData.customer.addresses.length);
+      console.log('[Admin REST API] First address:', JSON.stringify(adminData.customer.addresses[0], null, 2));
     }
   }
-  if (address.phone !== undefined) {
-    input.phoneNumber = { phoneNumber: address.phone };
-    hasFields = true;
-  }
-  if (address.firstName !== undefined) {
-    input.firstName = address.firstName;
-    hasFields = true;
-  }
-  if (address.lastName !== undefined) {
-    input.lastName = address.lastName;
-    hasFields = true;
-  }
-
-  return hasFields ? input : null;
+  
+  return adminData.customer || null;
 }
 
 export default async function handler(req, res) {
-  if (!SHOP_ID) {
-    return res.status(500).json({ error: 'Shopify Shop ID is not configured' });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Get token from cookie (primary and only method)
-  const authData = getAuthCookie(req);
-  
-  if (!authData || !authData.access_token) {
-    console.log('[Customer API] No valid authentication cookie found');
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  const customerAccessToken = authData.access_token;
-  console.log('[Customer API] Using token from cookie, preview:', `${customerAccessToken.slice(0, 10)}...${customerAccessToken.slice(-6)}`);
-
-  if (req.method === 'GET') {
-    try {
-      const result = await callCustomerAccountAPI(CUSTOMER_QUERY, {}, customerAccessToken);
-
-      if (!result || !result.data || !result.data.customer) {
-        console.warn('[Customer API] No customer data in response');
-        return res.status(404).json({ error: 'Customer not found' });
-      }
-
-      const customer = mapCustomerResponse(result.data.customer);
-
-      if (!customer) {
-        return res.status(404).json({ error: 'Customer not found' });
-      }
-
-      return res.status(200).json(customer);
-    } catch (error) {
-      console.error('[Customer API] GET failed:', error.message);
-      
-      let statusCode = 502;
-      if (error.message.includes('Authentication required')) {
-        statusCode = 401;
-      } else if (error.message.includes('HTTP error')) {
-        statusCode = 502;
-      }
-      
-      return res.status(statusCode).json({
-        error: 'Failed to fetch customer data',
-        details: error.message,
-      });
+  try {
+    // Verify authentication
+    const authData = getAuthCookie(req);
+    
+    if (!authData || !authData.customer || !authData.customer.sub) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
-  }
 
-  if (req.method === 'POST') {
+    const accessToken = authData.access_token;
+    if (!accessToken || typeof accessToken !== 'string') {
+      console.error('[Customer Account API] Missing customer access token in auth cookie');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const customerId = authData.customer.sub;
+    const numericCustomerId = String(customerId);
+
+    // ========== PRIMARY: TRY CUSTOMER ACCOUNT API GRAPHQL ==========
+    console.log('=== ATTEMPTING CUSTOMER ACCOUNT API (PRIMARY) ===');
+    console.log('[DEBUG] SHOP_ID:', SHOP_ID ? 'CONFIGURED' : 'MISSING');
+    console.log('[DEBUG] SHOP_ID value:', SHOP_ID || 'undefined');
+    
+    let customerData = null;
+    let dataSource = 'unknown';
+
     try {
-      let parsedBody = req.body;
-      if (typeof parsedBody === 'string') {
-        try {
-          parsedBody = JSON.parse(parsedBody);
-        } catch (parseError) {
-          return res.status(400).json({ error: 'Invalid JSON payload' });
-        }
-      }
+      if (!SHOP_ID) {
+        console.error('[Customer Account API] SHOPIFY_SHOP_ID NOT CONFIGURED - SKIPPING CUSTOMER ACCOUNT API');
+        console.error('[Customer Account API] Available env vars:', {
+          SHOPIFY_SHOP_ID: !!process.env.SHOPIFY_SHOP_ID,
+          VITE_SHOPIFY_SHOP_ID: !!process.env.VITE_SHOPIFY_SHOP_ID,
+          SHOP_ID_value: SHOP_ID
+        });
+      } else {
+        console.log('[Customer Account API] SHOP_ID is configured, attempting Customer Account API call...');
+        const customerAccountQuery = `
+          query {
+            customer {
+              id
+              firstName
+              lastName
+              emailAddress {
+                emailAddress
+              }
+              defaultAddress {
+                address1
+                address2
+                city
+                province
+                zip
+                country
+                phone
+              }
+              addresses(first: 5) {
+                edges {
+                  node {
+                    id
+                    address1
+                    address2
+                    city
+                    province
+                    zip
+                    country
+                    phone
+                  }
+                }
+              }
+              emailMarketingSubscriptionState {
+                emailMarketingSubscriptionState
+              }
+            }
+          }
+        `;
 
-      const body = parsedBody && typeof parsedBody === 'object' ? parsedBody : {};
-      const customerInput = buildCustomerInput(body);
-      const addressInput = buildAddressInput(body.address);
+        const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
+        console.log('[Customer Account API] Using access_token:', tokenPreview, '(length:', accessToken.length, ')');
+        const response = await fetchCustomerAccount(customerAccountQuery, {}, accessToken);
+        console.log('[Customer Account API] Response received:', JSON.stringify(response, null, 2));
 
-      if (!customerInput && !addressInput) {
-        return res.status(400).json({ error: 'No customer updates provided' });
-      }
+        if (response.data && response.data.customer) {
+          const caCustomer = response.data.customer;
+          dataSource = 'customer_account_api';
 
-      // First, get current customer data to check existing addresses
-      const currentCustomerResult = await callCustomerAccountAPI(CUSTOMER_QUERY, {}, customerAccessToken);
-      const currentCustomer = currentCustomerResult?.data?.customer;
-      const existingAddressId = currentCustomer?.defaultAddress?.id || 
-                               (currentCustomer?.addresses?.edges?.[0]?.node?.id);
+          // Extract email
+          const email = caCustomer.emailAddress?.emailAddress || authData.customer.email || '';
 
-      // Update customer fields (firstName, lastName, email, phone)
-      if (customerInput) {
-        const customerUpdateResult = await callCustomerAccountAPI(CUSTOMER_UPDATE_MUTATION, {
-          customer: customerInput,
-        }, customerAccessToken);
+          // Extract name
+          const firstName = caCustomer.firstName || '';
+          const lastName = caCustomer.lastName || '';
 
-        if (!customerUpdateResult || !customerUpdateResult.data || !customerUpdateResult.data.customerUpdate) {
-          console.error('[Customer API] Invalid response from customerUpdate mutation');
-          return res.status(500).json({ error: 'Invalid response from Shopify API' });
-        }
-
-        const userErrors = customerUpdateResult.data.customerUpdate.userErrors;
-        if (userErrors && userErrors.length > 0) {
-          const errorMessages = userErrors.map((err) => err.message);
-          console.error('[Customer API] customerUpdate userErrors:', errorMessages);
-          return res.status(400).json({
-            error: 'Unable to update customer',
-            details: errorMessages,
-          });
-        }
-      }
-
-      // Update or create address
-      let addressId = existingAddressId;
-      if (addressInput) {
-        if (existingAddressId) {
-          // Update existing address
-          const addressUpdateResult = await callCustomerAccountAPI(CUSTOMER_ADDRESS_UPDATE_MUTATION, {
-            address: addressInput,
-            id: existingAddressId,
-          }, customerAccessToken);
-
-          if (!addressUpdateResult || !addressUpdateResult.data || !addressUpdateResult.data.customerAddressUpdate) {
-            console.error('[Customer API] Invalid response from customerAddressUpdate mutation');
-            return res.status(500).json({ error: 'Invalid response from Shopify API' });
+          // Extract address (prioritize defaultAddress, fallback to first address)
+          let address = null;
+          if (caCustomer.defaultAddress) {
+            const addr = caCustomer.defaultAddress;
+            address = {
+              address1: addr.address1 || '',
+              address2: addr.address2 || '',
+              city: addr.city || '',
+              province: addr.province || '',
+              zip: addr.zip || '',
+              country: addr.country || '',
+              phone: addr.phone || ''
+            };
+            console.log('[Customer Account API] Using defaultAddress');
+          } else if (caCustomer.addresses?.edges && caCustomer.addresses.edges.length > 0) {
+            const addr = caCustomer.addresses.edges[0].node;
+            address = {
+              address1: addr.address1 || '',
+              address2: addr.address2 || '',
+              city: addr.city || '',
+              province: addr.province || '',
+              zip: addr.zip || '',
+              country: addr.country || '',
+              phone: addr.phone || ''
+            };
+            console.log('[Customer Account API] Using first address from addresses array');
           }
 
-          const addressErrors = addressUpdateResult.data.customerAddressUpdate.userErrors;
-          if (addressErrors && addressErrors.length > 0) {
-            const errorMessages = addressErrors.map((err) => err.message);
-            console.error('[Customer API] customerAddressUpdate userErrors:', errorMessages);
-            return res.status(400).json({
-              error: 'Unable to update address',
-              details: errorMessages,
-            });
-          }
+          // Extract email marketing subscription
+          const acceptsMarketing = caCustomer.emailMarketingSubscriptionState?.emailMarketingSubscriptionState === 'SUBSCRIBED';
 
-          addressId = addressUpdateResult.data.customerAddressUpdate.customerAddress?.id || existingAddressId;
+          customerData = {
+            id: caCustomer.id ? String(caCustomer.id) : numericCustomerId,
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            address: address,
+            acceptsMarketing: acceptsMarketing
+          };
+
+          console.log('[Customer Account API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
         } else {
-          // Create new address
-          const addressCreateResult = await callCustomerAccountAPI(CUSTOMER_ADDRESS_CREATE_MUTATION, {
-            address: addressInput,
-          }, customerAccessToken);
-
-          if (!addressCreateResult || !addressCreateResult.data || !addressCreateResult.data.customerAddressCreate) {
-            console.error('[Customer API] Invalid response from customerAddressCreate mutation');
-            return res.status(500).json({ error: 'Invalid response from Shopify API' });
-          }
-
-          const addressErrors = addressCreateResult.data.customerAddressCreate.userErrors;
-          if (addressErrors && addressErrors.length > 0) {
-            const errorMessages = addressErrors.map((err) => err.message);
-            console.error('[Customer API] customerAddressCreate userErrors:', errorMessages);
-            return res.status(400).json({
-              error: 'Unable to create address',
-              details: errorMessages,
-            });
-          }
-
-          addressId = addressCreateResult.data.customerAddressCreate.customerAddress?.id;
-        }
-
-        // Set as default address if addressId exists
-        if (addressId) {
-          const defaultResult = await callCustomerAccountAPI(CUSTOMER_DEFAULT_ADDRESS_UPDATE_MUTATION, {
-            addressId: addressId,
-          }, customerAccessToken);
-
-          const defaultErrors = defaultResult?.data?.customerDefaultAddressUpdate?.userErrors;
-          if (defaultErrors && defaultErrors.length > 0) {
-            console.warn('[Customer API] customerDefaultAddressUpdate userErrors:', defaultErrors.map((err) => err.message));
-            // Don't fail if setting default fails, just log warning
-          }
+          console.warn('[Customer Account API] No customer data in response - response.data:', response.data);
         }
       }
+    } catch (customerAccountError) {
+      console.error('[Customer Account API] ERROR CAUGHT:', customerAccountError.message);
+      console.error('[Customer Account API] Error stack:', customerAccountError.stack);
+      console.error('[Customer Account API] Error type:', customerAccountError.constructor.name);
+      console.log('[Customer Account API] Falling back to Admin API...');
+    }
 
-      // Fetch updated customer data
-      const updatedResult = await callCustomerAccountAPI(CUSTOMER_QUERY, {}, customerAccessToken);
-      const updatedCustomer = mapCustomerResponse(updatedResult?.data?.customer);
-
-      if (!updatedCustomer) {
-        return res.status(404).json({ error: 'Customer not found after update' });
-      }
-
-      return res.status(200).json(updatedCustomer);
-    } catch (error) {
-      console.error('[Customer API] POST failed:', error.message);
+    // ========== FALLBACK: TRY ADMIN GRAPHQL API ==========
+    if (!customerData) {
+      console.log('=== FALLING BACK TO ADMIN GRAPHQL API ===');
       
-      let statusCode = 502;
-      if (error.message.includes('Authentication required')) {
-        statusCode = 401;
-      } else if (error.message.includes('GraphQL errors')) {
-        statusCode = 400;
+      try {
+        // Zkusit Admin GraphQL API (lepší než REST)
+        let adminCustomer = await fetchCustomerFromAdminGraphQL(numericCustomerId);
+        
+        if (adminCustomer) {
+          dataSource = 'admin_graphql_api';
+          
+          // Admin GraphQL API používá camelCase
+          const email = adminCustomer.email && adminCustomer.email.trim()
+            ? adminCustomer.email.trim()
+            : (authData.customer.email || '');
+
+          const firstName = adminCustomer.firstName && adminCustomer.firstName.trim()
+            ? adminCustomer.firstName.trim()
+            : '';
+          const lastName = adminCustomer.lastName && adminCustomer.lastName.trim()
+            ? adminCustomer.lastName.trim()
+            : '';
+
+          // Extract address
+          let address = null;
+          if (adminCustomer.defaultAddress) {
+            const addr = adminCustomer.defaultAddress;
+            if (addr.address1 || addr.city || addr.zip) {
+              address = {
+                address1: addr.address1 || '',
+                address2: addr.address2 || '',
+                city: addr.city || '',
+                province: addr.province || '',
+                zip: addr.zip || '',
+                country: addr.countryCodeV2 || '',
+                phone: addr.phone || ''
+              };
+            }
+          } else if (adminCustomer.addresses && adminCustomer.addresses.length > 0) {
+            const addr = adminCustomer.addresses[0];
+            if (addr.address1 || addr.city || addr.zip) {
+              address = {
+                address1: addr.address1 || '',
+                address2: addr.address2 || '',
+                city: addr.city || '',
+                province: addr.province || '',
+                zip: addr.zip || '',
+                country: addr.countryCodeV2 || '',
+                phone: addr.phone || ''
+              };
+            }
+          }
+
+          // Extract email marketing consent
+          const acceptsMarketing = adminCustomer.emailMarketingConsent?.marketingState === 'SUBSCRIBED';
+
+          customerData = {
+            id: numericCustomerId,
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            address: address,
+            acceptsMarketing: acceptsMarketing
+          };
+
+          console.log('[Admin GraphQL API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
+        } else {
+          // Pokud GraphQL selže, zkusit REST API jako poslední možnost
+          console.log('=== FALLING BACK TO ADMIN REST API (LEGACY) ===');
+          adminCustomer = await fetchCustomerFromAdminREST(numericCustomerId);
+          
+          if (adminCustomer) {
+            dataSource = 'admin_rest_api';
+
+            // REST API používá snake_case
+            const email = adminCustomer.email && adminCustomer.email.trim()
+              ? adminCustomer.email.trim()
+              : (authData.customer.email || '');
+
+            let firstName = adminCustomer.first_name && adminCustomer.first_name.trim()
+              ? adminCustomer.first_name.trim()
+              : '';
+            let lastName = adminCustomer.last_name && adminCustomer.last_name.trim()
+              ? adminCustomer.last_name.trim()
+              : '';
+
+            // Try to extract name from default_address or addresses if not in root
+            if ((!firstName || !lastName) && adminCustomer.default_address) {
+              if (!firstName && adminCustomer.default_address.first_name) {
+                firstName = adminCustomer.default_address.first_name.trim();
+              }
+              if (!lastName && adminCustomer.default_address.last_name) {
+                lastName = adminCustomer.default_address.last_name.trim();
+              }
+            }
+
+            if ((!firstName || !lastName) && adminCustomer.addresses && adminCustomer.addresses.length > 0) {
+              const firstAddr = adminCustomer.addresses[0];
+              if (!firstName && firstAddr.first_name) {
+                firstName = firstAddr.first_name.trim();
+              }
+              if (!lastName && firstAddr.last_name) {
+                lastName = firstAddr.last_name.trim();
+              }
+            }
+
+            // Extract address
+            let address = null;
+            if (adminCustomer.default_address) {
+              const addr = adminCustomer.default_address;
+              if (addr.address1 || addr.city || addr.zip) {
+                address = {
+                  address1: addr.address1 || '',
+                  address2: addr.address2 || '',
+                  city: addr.city || '',
+                  province: addr.province || '',
+                  zip: addr.zip || '',
+                  country: addr.country || addr.country_name || addr.country_code || '',
+                  phone: addr.phone || ''
+                };
+              }
+            } else if (adminCustomer.addresses && adminCustomer.addresses.length > 0) {
+              const addr = adminCustomer.addresses[0];
+              if (addr.address1 || addr.city || addr.zip) {
+                address = {
+                  address1: addr.address1 || '',
+                  address2: addr.address2 || '',
+                  city: addr.city || '',
+                  province: addr.province || '',
+                  zip: addr.zip || '',
+                  country: addr.country || addr.country_name || addr.country_code || '',
+                  phone: addr.phone || ''
+                };
+              }
+            }
+
+            // Extract email marketing consent
+            const acceptsMarketing = adminCustomer.email_marketing_consent?.state === 'subscribed' ||
+                                   adminCustomer.accepts_marketing === true;
+
+            customerData = {
+              id: numericCustomerId,
+              email: email,
+              firstName: firstName,
+              lastName: lastName,
+      address: address,
+      acceptsMarketing: acceptsMarketing
+    };
+
+            console.log('[Admin REST API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
+          }
+        }
+      } catch (adminApiError) {
+        console.error('[Admin API] Fallback error:', adminApiError.message);
       }
-      
-      return res.status(statusCode).json({
-        error: 'Failed to update customer data',
-        details: error.message,
+    }
+
+    // ========== FINAL RESULT ==========
+    if (!customerData) {
+      console.error('[ERROR] No customer data from any source');
+      return res.status(500).json({
+        error: 'Failed to fetch customer data',
+        details: 'Customer data not available from Customer Account API or Admin API'
       });
     }
-  }
 
-  res.setHeader('Allow', 'GET,POST');
-  return res.status(405).json({ error: 'Method not allowed' });
+    // Log final data source
+    console.log(`=== CUSTOMER DATA RETRIEVED FROM: ${dataSource.toUpperCase()} ===`);
+    console.log('Final customer data:', JSON.stringify(customerData, null, 2));
+
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    return res.status(200).json(customerData);
+
+  } catch (error) {
+    console.error('=== CUSTOMER API ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
 }
