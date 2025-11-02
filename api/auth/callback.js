@@ -250,6 +250,7 @@ export default async function handler(req, res) {
     }
 
     // Set secure HTTP-only cookie with customer data
+    // CRITICAL: Cookie must be set BEFORE sending response to popup
     setAuthCookie(res, access_token, expiresAt, customerData);
 
     // DEBUG: Log cookie was set
@@ -257,6 +258,7 @@ export default async function handler(req, res) {
     console.log('[OAuth Callback] Cookie set with token preview:', tokenPreview);
     console.log('[OAuth Callback] Cookie expires at:', expiresAt);
     console.log('[OAuth Callback] Cookie secure:', process.env.NODE_ENV === 'production');
+    console.log('[OAuth Callback] Cookie domain will be set automatically by browser');
 
     // Clear temporary cookies - append to existing Set-Cookie header
     const existingCookies = res.getHeader('Set-Cookie');

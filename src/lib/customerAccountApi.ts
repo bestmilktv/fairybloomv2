@@ -125,8 +125,8 @@ async function fetchCustomerAccount<T>(
  */
 export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | null> {
   // Retry mechanism - cookie may take time to be set after OAuth callback
-  const maxRetries = 3;
-  const baseDelay = 300;
+  const maxRetries = 5;
+  const baseDelay = 500;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -136,14 +136,15 @@ export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | 
         console.log(`fetchCustomerProfile: Retry attempt ${attempt}/${maxRetries}, waiting ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
-        // First attempt - shorter delay
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // First attempt - wait a bit for cookie to be set
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
       
       console.log(`fetchCustomerProfile: Attempt ${attempt}/${maxRetries} - Calling /api/auth/customer...`);
       const response = await fetch('/api/auth/customer', {
         method: 'GET',
-        credentials: 'include', // Include cookies
+        credentials: 'include', // Include cookies - CRITICAL for HttpOnly cookies
+        mode: 'cors', // Ensure CORS is handled
       });
 
       console.log(`fetchCustomerProfile: Response status: ${response.status} ${response.statusText}`);
