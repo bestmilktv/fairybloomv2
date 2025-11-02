@@ -162,13 +162,24 @@ export default async function handler(req, res) {
     }
 
     // Handle email marketing consent
+    // Poznámka: email_marketing_consent může způsobovat 422 error pokud není správný formát
+    // Můžeme ho aktualizovat samostatně nebo použít accepts_marketing boolean místo toho
     if (acceptsMarketing !== undefined) {
-      const consentTimestamp = new Date().toISOString();
-      updatePayload.customer.email_marketing_consent = {
-        state: acceptsMarketing ? 'subscribed' : 'not_subscribed',
-        opt_in_level: 'single_opt_in',
-        consent_updated_at: consentTimestamp
-      };
+      // Zkusit použít accepts_marketing boolean místo email_marketing_consent objektu
+      // To je jednodušší a spolehlivější
+      updatePayload.customer.accepts_marketing = acceptsMarketing;
+      
+      // Alternativně můžeme použít email_marketing_consent, ale s opatrností
+      // Podle Shopify dokumentace může být state "subscribed" nebo "not_subscribed" (lowercase)
+      // Nebo možná potřebujeme jiný formát - pokud to způsobuje 422, zkusit bez tohoto pole
+      if (acceptsMarketing) {
+        const consentTimestamp = new Date().toISOString();
+        updatePayload.customer.email_marketing_consent = {
+          state: 'subscribed',
+          opt_in_level: 'single_opt_in',
+          consent_updated_at: consentTimestamp
+        };
+      }
     }
 
     // ========== LOGOVÁNÍ PAYLOAD PŘED ODESLÁNÍM ==========

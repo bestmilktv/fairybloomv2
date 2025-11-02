@@ -35,15 +35,16 @@ export default async function handler(req, res) {
     const numericCustomerId = String(customerId);
 
     // Fetch current customer data from Shopify Admin API
-    // Přidat explicitní fields parametr - Shopify může mít limitované pole v default response
-    const fields = 'id,email,first_name,last_name,addresses,default_address';
-    const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json?fields=${fields}`;
+    // NEPOUŽÍVAT fields parametr - Shopify REST Admin API ho nemusí podporovat správně
+    // Získat kompletní response a pak parsovat data
+    const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json`;
     
     console.log('=== FETCHING CUSTOMER FROM SHOPIFY ADMIN API ===');
     console.log('URL:', adminApiUrl);
     console.log('Customer ID:', numericCustomerId);
     console.log('Store Domain:', STORE_DOMAIN);
     console.log('Request timestamp:', new Date().toISOString());
+    console.log('API Version:', ADMIN_API_VERSION);
     
     const fetchStartTime = Date.now();
     const adminResponse = await fetch(adminApiUrl, {
@@ -210,13 +211,40 @@ export default async function handler(req, res) {
     };
 
     // ========== ZLEPŠENÁ LOGIKA PRO HLEDÁNÍ ADRESY ==========
+    // DŮLEŽITÉ: Podle Shopify dokumentace a praxe je default_address často primární zdroj dat
+    // Zkontrolovat default_address PŘED addresses array!
     console.log('=== ADDRESS SELECTION LOGIC ===');
     
     let bestAddress = null;
     let selectionReason = '';
     
-    // Strategy 1: Najít adresu s default: true flagem a kompletními daty
-    if (customer.addresses && customer.addresses.length > 0) {
+    // Strategy 1: ZKONTROLOVAT default_address PRVNÍ (nejčastější zdroj dat v Shopify)
+    if (customer.default_address) {
+      console.log('Checking default_address first (primary source in Shopify)...');
+      console.log('Default address data:', {
+        id: customer.default_address.id,
+        address1: customer.default_address.address1,
+        city: customer.default_address.city,
+        zip: customer.default_address.zip,
+        country: customer.default_address.country,
+        first_name: customer.default_address.first_name,
+        last_name: customer.default_address.last_name
+      });
+      
+      if (hasAddressData(customer.default_address)) {
+        bestAddress = customer.default_address;
+        selectionReason = 'default_address with complete data (primary)';
+        console.log(`✓ Found: ${selectionReason} (ID: ${customer.default_address.id})`);
+      } else if (customer.default_address.address1 || customer.default_address.city) {
+        // I když není kompletní, použít pokud má alespoň nějaká data
+        bestAddress = customer.default_address;
+        selectionReason = 'default_address (has some data)';
+        console.log(`⚠ Using: ${selectionReason} (ID: ${customer.default_address.id})`);
+      }
+    }
+    
+    // Strategy 2: Pokud default_address není dostupné nebo je prázdné, zkusit addresses array
+    if (!bestAddress && customer.addresses && customer.addresses.length > 0) {
       console.log(`Checking ${customer.addresses.length} addresses in array...`);
       
       // Nejprve hledat default address s kompletními daty
@@ -226,39 +254,32 @@ export default async function handler(req, res) {
       
       if (defaultAddrWithData) {
         bestAddress = defaultAddrWithData;
-        selectionReason = 'Default address with complete data';
+        selectionReason = 'Default address from array with complete data';
         console.log(`✓ Found: ${selectionReason} (ID: ${defaultAddrWithData.id})`);
       } else {
-        // Strategy 2: Najít jakoukoliv adresu s kompletními daty
+        // Strategy 3: Najít jakoukoliv adresu s kompletními daty
         const anyCompleteAddr = customer.addresses.find(addr => hasAddressData(addr));
         
         if (anyCompleteAddr) {
           bestAddress = anyCompleteAddr;
-          selectionReason = 'Complete address (not default)';
+          selectionReason = 'Complete address from array (not default)';
           console.log(`✓ Found: ${selectionReason} (ID: ${anyCompleteAddr.id}, default: ${anyCompleteAddr.default})`);
         } else {
-          // Strategy 3: Použít default address i když není kompletní
+          // Strategy 4: Použít default address z array i když není kompletní
           const defaultAddr = customer.addresses.find(addr => addr.default === true);
           
           if (defaultAddr) {
             bestAddress = defaultAddr;
-            selectionReason = 'Default address (incomplete data)';
+            selectionReason = 'Default address from array (incomplete data)';
             console.log(`⚠ Using: ${selectionReason} (ID: ${defaultAddr.id})`);
           } else {
-            // Strategy 4: Použít první adresu jako fallback
+            // Strategy 5: Použít první adresu jako fallback
             bestAddress = customer.addresses[0];
-            selectionReason = 'First address (fallback)';
+            selectionReason = 'First address from array (fallback)';
             console.log(`⚠ Using: ${selectionReason} (ID: ${bestAddress.id})`);
           }
         }
       }
-    }
-    
-    // Fallback: Pokud addresses array je prázdný, použít default_address
-    if (!bestAddress && customer.default_address) {
-      bestAddress = customer.default_address;
-      selectionReason = 'default_address from customer object';
-      console.log(`⚠ Using: ${selectionReason}`);
     }
     
     console.log('=== ADDRESS SELECTION RESULT ===');
@@ -286,7 +307,9 @@ export default async function handler(req, res) {
         address1: bestAddress.address1,
         city: bestAddress.city,
         zip: bestAddress.zip,
-        country: bestAddress.country
+        country: bestAddress.country,
+        first_name: bestAddress.first_name,
+        last_name: bestAddress.last_name
       });
       
       address = {
@@ -301,9 +324,11 @@ export default async function handler(req, res) {
       
       console.log('Extracted address:', address);
     } else {
-      // Pokud jsme nenašli adresu v addresses array, zkusit default_address jako poslední pokus
+      console.log('WARNING: No address found at all - checking all possible sources...');
+      
+      // Pokud jsme nenašli žádnou adresu, zkontrolovat všechny možné zdroje
       if (customer.default_address) {
-        console.log('No address found in array, trying default_address as last resort');
+        console.log('Trying default_address as absolute last resort');
         address = {
           address1: customer.default_address.address1 || '',
           address2: customer.default_address.address2 || '',
@@ -313,7 +338,22 @@ export default async function handler(req, res) {
           country: customer.default_address.country || customer.default_address.country_name || customer.default_address.country_code || '',
           phone: customer.default_address.phone || ''
         };
-        console.log('Extracted from default_address:', address);
+        console.log('Extracted from default_address (last resort):', address);
+      } else if (customer.addresses && customer.addresses.length > 0) {
+        console.log('Trying first address from array as absolute last resort');
+        const firstAddr = customer.addresses[0];
+        address = {
+          address1: firstAddr.address1 || '',
+          address2: firstAddr.address2 || '',
+          city: firstAddr.city || '',
+          province: firstAddr.province || '',
+          zip: firstAddr.zip || '',
+          country: firstAddr.country || firstAddr.country_name || firstAddr.country_code || '',
+          phone: firstAddr.phone || ''
+        };
+        console.log('Extracted from addresses[0] (last resort):', address);
+      } else {
+        console.log('ERROR: No address data found in any location!');
       }
     }
 
@@ -397,6 +437,33 @@ export default async function handler(req, res) {
           customerLastName = addrLastName;
           console.log('✓ Using last_name from addresses[0]');
         }
+      }
+    }
+    
+    // Strategy 4: Pokud máme bestAddress, zkusit použít first_name/last_name z něj
+    // (může být už vybrán, ale ještě jsme nezkontrolovali jeho jméno)
+    if ((!customerFirstName || !customerLastName) && bestAddress) {
+      const addrFirstName = bestAddress.first_name && bestAddress.first_name.trim()
+        ? bestAddress.first_name.trim()
+        : '';
+      const addrLastName = bestAddress.last_name && bestAddress.last_name.trim()
+        ? bestAddress.last_name.trim()
+        : '';
+      
+      console.log('Trying bestAddress for names:', {
+        first_name: bestAddress.first_name,
+        last_name: bestAddress.last_name,
+        extractedFirstName: addrFirstName,
+        extractedLastName: addrLastName
+      });
+      
+      if (!customerFirstName && addrFirstName) {
+        customerFirstName = addrFirstName;
+        console.log('✓ Using first_name from bestAddress');
+      }
+      if (!customerLastName && addrLastName) {
+        customerLastName = addrLastName;
+        console.log('✓ Using last_name from bestAddress');
       }
     }
     
