@@ -23,7 +23,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     try {
       const result = await loginWithSSO()
       if (!result.success) {
-        setError(result.error || 'Přihlášení se nezdařilo')
+        setError(result.error || 'Přihlášení bylo zrušeno')
       } else {
         toast({
           title: "Přihlášení",

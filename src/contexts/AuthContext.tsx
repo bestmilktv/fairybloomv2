@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (error.message.includes('timeout')) {
           errorMessage = 'Login timed out. Please try again.'
         } else if (error.message.includes('cancelled')) {
-          errorMessage = 'Přihlášení se nezdařilo.'
+          errorMessage = 'Přihlášení bylo zrušeno.'
         }
       }
       
