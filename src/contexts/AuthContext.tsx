@@ -101,9 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Mark that user just logged in - this will allow modal to show if needed
       setJustLoggedIn(true)
       
-      // Wait longer for cookie to be set after OAuth callback
-      // Cookie needs time to propagate after OAuth popup closes
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Cookie is now set in parent window via /api/auth/set-cookie
+      // Wait for cookie to be available in parent window
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       // OAuth was successful, fetch customer data with retry
       // Pass checkJustLoggedIn=true to ensure modal check uses the correct flag

@@ -177,6 +177,41 @@ function handleOAuthCallback(
     sessionStorage.removeItem('shopify_access_token');
     sessionStorage.removeItem('shopify_token_expires');
 
+    // CRITICAL FIX: Set cookie in parent window via API endpoint
+    // Cookie set in popup window doesn't transfer to parent window!
+    if (access_token && expires_at) {
+      try {
+        console.log('[OAuth] Setting cookie in parent window via /api/auth/set-cookie...');
+        const setCookieResponse = await fetch('/api/auth/set-cookie', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Include cookies
+          body: JSON.stringify({
+            access_token: access_token,
+            expires_at: expires_at,
+            customer: event.data.customer || null
+          }),
+        });
+
+        if (!setCookieResponse.ok) {
+          const errorText = await setCookieResponse.text();
+          console.error('[OAuth] Failed to set cookie in parent window:', errorText);
+          // Don't fail the whole flow, but log the error
+        } else {
+          const setCookieData = await setCookieResponse.json();
+          console.log('[OAuth] Cookie successfully set in parent window:', setCookieData);
+          
+          // Wait a bit for cookie to be available
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      } catch (cookieError) {
+        console.error('[OAuth] Error setting cookie in parent window:', cookieError);
+        // Don't fail the whole flow, but log the error
+      }
+    }
+
     resolve({
       success: true,
       accessToken: access_token,

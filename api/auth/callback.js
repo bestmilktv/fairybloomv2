@@ -282,6 +282,7 @@ export default async function handler(req, res) {
     res.setHeader('Set-Cookie', cookieArray);
 
     // Return success page that posts message to parent window
+    // NOTE: Cookie is set in popup (backup), but parent window will set it again via /api/auth/set-cookie
     return res.status(200).send(`
       <!DOCTYPE html>
       <html>
@@ -299,6 +300,8 @@ export default async function handler(req, res) {
               localStorage.setItem('fairybloom_auth_timestamp', Date.now().toString());
             }
             
+            // Post message to parent window with token
+            // Parent window will set cookie via /api/auth/set-cookie endpoint
             window.opener.postMessage({
               type: 'OAUTH_SUCCESS',
               access_token: '${access_token}',
@@ -306,7 +309,11 @@ export default async function handler(req, res) {
               id_token: '${id_token || ''}',
               customer: customerData
             }, '${process.env.VITE_APP_URL || 'http://localhost:8080'}');
-            window.close();
+            
+            // Wait a bit before closing to ensure message is sent
+            setTimeout(function() {
+              window.close();
+            }, 100);
           } else {
             // Fallback if popup was blocked
             window.location.href = '${process.env.VITE_APP_URL || 'http://localhost:8080'}';
