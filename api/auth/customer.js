@@ -111,6 +111,9 @@ async function callCustomerAccountAPI(query, variables, accessToken) {
     throw new Error('Authentication required - missing customer access token');
   }
 
+  const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
+  console.log('[Customer API] Using customer access token:', tokenPreview, '(length:', accessToken.length, ')');
+
   const headers = {
     'Content-Type': 'application/json',
     'Shopify-Customer-Access-Token': accessToken,
@@ -125,29 +128,42 @@ async function callCustomerAccountAPI(query, variables, accessToken) {
     }),
   });
 
+  console.log('[Customer API] Customer Account API status:', response.status, response.statusText);
   const responseText = await response.text();
-
+  
   let payload;
   try {
     payload = JSON.parse(responseText);
   } catch (parseError) {
+    console.error('[Customer API] Failed to parse Customer Account API JSON:', parseError);
+    console.error('[Customer API] Raw response text (first 200 chars):', responseText.substring(0, 200));
     throw new Error('Invalid response from Customer Account API');
   }
 
   if (!response.ok) {
-    throw new Error('Customer Account API request failed');
+    console.error(`[Customer API] Shopify Customer Account API error: ${response.status}`);
+    if (payload.errors && payload.errors.length > 0) {
+      const errorMessages = payload.errors.map((error) => error?.message || 'Unknown error').join(', ');
+      console.error('[Customer API] GraphQL errors from Shopify:', errorMessages);
+    }
+    
+    if (response.status === 401) {
+      throw new Error('Authentication required');
+    }
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
 
   if (payload.errors && payload.errors.length > 0) {
     const errorMessages = payload.errors.map((error) => error?.message || 'Unknown error').join(', ');
-    throw new Error(`Customer Account API errors: ${errorMessages}`);
+    console.error('[Customer API] GraphQL errors from Shopify:', errorMessages);
+    throw new Error(`GraphQL errors: ${errorMessages}`);
   }
 
-  return payload.data;
+  return payload;
 }
 
 function mapCustomerResponse(customer) {
-  if (!customer) {
+  if (!customer || typeof customer !== 'object') {
     return null;
   }
 
@@ -155,7 +171,7 @@ function mapCustomerResponse(customer) {
   const phone = customer.phoneNumber?.phoneNumber || '';
   const defaultAddress = customer.defaultAddress;
   const addresses = customer.addresses?.edges || [];
-  const primaryAddress = defaultAddress || (addresses.length > 0 ? addresses[0].node : null);
+  const primaryAddress = defaultAddress || (addresses.length > 0 && addresses[0]?.node ? addresses[0].node : null);
 
   return {
     id: customer.id || '',
@@ -217,17 +233,31 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const data = await callCustomerAccountAPI(CUSTOMER_QUERY, {}, customerAccessToken);
+      const result = await callCustomerAccountAPI(CUSTOMER_QUERY, {}, customerAccessToken);
 
-      if (!data?.customer) {
+      if (!result || !result.data || !result.data.customer) {
+        console.warn('[Customer API] No customer data in response');
         return res.status(404).json({ error: 'Customer not found' });
       }
 
-      const customer = mapCustomerResponse(data.customer);
+      const customer = mapCustomerResponse(result.data.customer);
+
+      if (!customer) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
 
       return res.status(200).json(customer);
     } catch (error) {
-      return res.status(502).json({
+      console.error('[Customer API] GET failed:', error.message);
+      
+      let statusCode = 502;
+      if (error.message.includes('Authentication required')) {
+        statusCode = 401;
+      } else if (error.message.includes('HTTP error')) {
+        statusCode = 502;
+      }
+      
+      return res.status(statusCode).json({
         error: 'Failed to fetch customer data',
         details: error.message,
       });
@@ -252,19 +282,26 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No customer updates provided' });
       }
 
-      const data = await callCustomerAccountAPI(CUSTOMER_UPDATE_MUTATION, {
+      const result = await callCustomerAccountAPI(CUSTOMER_UPDATE_MUTATION, {
         customer: customerInput,
       }, customerAccessToken);
 
-      const userErrors = data?.customerUpdate?.userErrors;
+      if (!result || !result.data || !result.data.customerUpdate) {
+        console.error('[Customer API] Invalid response from customerUpdate mutation');
+        return res.status(500).json({ error: 'Invalid response from Shopify API' });
+      }
+
+      const userErrors = result.data.customerUpdate.userErrors;
       if (userErrors && userErrors.length > 0) {
+        const errorMessages = userErrors.map((err) => err.message);
+        console.error('[Customer API] customerUpdate userErrors:', errorMessages);
         return res.status(400).json({
           error: 'Unable to update customer',
-          details: userErrors.map((err) => err.message),
+          details: errorMessages,
         });
       }
 
-      const updatedCustomer = mapCustomerResponse(data?.customerUpdate?.customer);
+      const updatedCustomer = mapCustomerResponse(result.data.customerUpdate.customer);
 
       if (!updatedCustomer) {
         return res.status(404).json({ error: 'Customer not found after update' });
@@ -272,7 +309,16 @@ export default async function handler(req, res) {
 
       return res.status(200).json(updatedCustomer);
     } catch (error) {
-      return res.status(502).json({
+      console.error('[Customer API] POST failed:', error.message);
+      
+      let statusCode = 502;
+      if (error.message.includes('Authentication required')) {
+        statusCode = 401;
+      } else if (error.message.includes('GraphQL errors')) {
+        statusCode = 400;
+      }
+      
+      return res.status(statusCode).json({
         error: 'Failed to update customer data',
         details: error.message,
       });
