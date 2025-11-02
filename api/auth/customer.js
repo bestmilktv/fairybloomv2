@@ -14,22 +14,33 @@ const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN;
 const ADMIN_API_VERSION = '2024-04';
 
 /**
- * Fetch Customer Account API using cookies (same pattern as api/favorites/index.js)
+ * Fetch Customer Account API using cookies and access_token (same pattern as api/favorites/index.js)
  */
-async function fetchCustomerAccount(query, variables = {}, req = null) {
+async function fetchCustomerAccount(query, variables = {}, req = null, accessToken = null) {
   const headers = {
     'Content-Type': 'application/json',
   };
 
-  // Shopify Customer Account API requires session cookies from shopify.com domain
+  // DŮLEŽITÉ: Customer Account API vyžaduje Authorization header s Bearer tokenem
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+    console.log('[Customer Account API] Using Authorization header with access_token');
+  }
+
+  // Shopify Customer Account API také vyžaduje session cookies z shopify.com domain
   // These cookies are set during OAuth flow and contain authentication session
   // We must forward ALL cookies from the browser request to Shopify API
   if (req && req.headers.cookie) {
     headers['Cookie'] = req.headers.cookie;
     console.log('[Customer Account API] Forwarding cookies (length):', req.headers.cookie.length);
   } else {
-    console.error('[Customer Account API] No cookies found in request headers');
-    throw new Error('Authentication required - missing cookies');
+    console.warn('[Customer Account API] No cookies found in request headers');
+  }
+
+  // Pokud nemáme ani access token ani cookies, je to problém
+  if (!accessToken && !req?.headers?.cookie) {
+    console.error('[Customer Account API] Missing both access_token and cookies');
+    throw new Error('Authentication required - missing access_token and cookies');
   }
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
@@ -157,7 +168,9 @@ export default async function handler(req, res) {
           }
         `;
 
-        const response = await fetchCustomerAccount(customerAccountQuery, {}, req);
+        // Předat access_token z auth cookie pro Authorization header
+        const accessToken = authData.access_token;
+        const response = await fetchCustomerAccount(customerAccountQuery, {}, req, accessToken);
         console.log('[Customer Account API] Response received:', JSON.stringify(response, null, 2));
 
         if (response.data && response.data.customer) {
