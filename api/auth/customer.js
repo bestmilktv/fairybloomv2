@@ -35,14 +35,17 @@ export default async function handler(req, res) {
     const numericCustomerId = String(customerId);
 
     // Fetch current customer data from Shopify Admin API
-    const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json`;
+    // Přidat explicitní fields parametr - Shopify může mít limitované pole v default response
+    const fields = 'id,email,first_name,last_name,addresses,default_address';
+    const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json?fields=${fields}`;
     
-    console.log('Fetching customer from Shopify Admin API:', {
-      url: adminApiUrl,
-      customerId: numericCustomerId,
-      storeDomain: STORE_DOMAIN
-    });
+    console.log('=== FETCHING CUSTOMER FROM SHOPIFY ADMIN API ===');
+    console.log('URL:', adminApiUrl);
+    console.log('Customer ID:', numericCustomerId);
+    console.log('Store Domain:', STORE_DOMAIN);
+    console.log('Request timestamp:', new Date().toISOString());
     
+    const fetchStartTime = Date.now();
     const adminResponse = await fetch(adminApiUrl, {
       method: 'GET',
       headers: {
@@ -50,12 +53,18 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
     });
+    const fetchTime = Date.now() - fetchStartTime;
 
-    console.log('Shopify Admin API response status:', adminResponse.status, adminResponse.statusText);
+    console.log('=== SHOPIFY API RESPONSE RECEIVED ===');
+    console.log('Status:', adminResponse.status, adminResponse.statusText);
+    console.log('Response time (ms):', fetchTime);
+    console.log('Response headers:', Object.fromEntries(adminResponse.headers.entries()));
 
     if (!adminResponse.ok) {
       const errorText = await adminResponse.text();
-      console.error(`Shopify Admin API error: ${adminResponse.status}`, errorText);
+      console.error('=== SHOPIFY API ERROR ===');
+      console.error('Status:', adminResponse.status);
+      console.error('Error text:', errorText);
       
       if (adminResponse.status === 401) {
         return res.status(401).json({ error: 'Invalid Admin API token' });
@@ -71,8 +80,30 @@ export default async function handler(req, res) {
       });
     }
 
-    const adminData = await adminResponse.json();
-    console.log('Raw adminData response from Shopify:', JSON.stringify(adminData, null, 2));
+    // ========== RAW RESPONSE LOGGING PŘED PARSOVÁNÍM ==========
+    console.log('=== READING RAW RESPONSE TEXT ===');
+    const responseText = await adminResponse.text();
+    console.log('Raw response text length:', responseText.length);
+    console.log('Raw response text (first 500 chars):', responseText.substring(0, 500));
+    console.log('Raw response text (full):', responseText);
+    
+    let adminData;
+    try {
+      adminData = JSON.parse(responseText);
+      console.log('=== JSON PARSED SUCCESSFULLY ===');
+    } catch (parseError) {
+      console.error('=== JSON PARSE ERROR ===');
+      console.error('Parse error:', parseError);
+      console.error('Response text that failed to parse:', responseText);
+      return res.status(500).json({ 
+        error: 'Failed to parse Shopify API response',
+        details: parseError.message 
+      });
+    }
+    
+    console.log('=== PARSED ADMIN DATA ===');
+    console.log('Parsed data keys:', Object.keys(adminData));
+    console.log('Full parsed data:', JSON.stringify(adminData, null, 2));
 
     if (!adminData.customer) {
       console.error('Invalid response from Shopify Admin API - no customer object:', JSON.stringify(adminData, null, 2));
@@ -244,17 +275,47 @@ export default async function handler(req, res) {
       } : null
     });
 
-    // Extract address data - include if it exists, even if some fields are missing
-    // We'll let the frontend decide if it's complete or not
-    const address = bestAddress ? {
-      address1: bestAddress.address1 || '',
-      address2: bestAddress.address2 || '',
-      city: bestAddress.city || '',
-      province: bestAddress.province || '',
-      zip: bestAddress.zip || '',
-      country: bestAddress.country || bestAddress.country_name || bestAddress.country_code || '',
-      phone: bestAddress.phone || ''
-    } : undefined;
+    // ========== EXTRACT ADDRESS DATA WITH FALLBACKS ==========
+    console.log('=== EXTRACTING ADDRESS DATA ===');
+    
+    let address = undefined;
+    
+    if (bestAddress) {
+      console.log('Extracting from bestAddress:', {
+        id: bestAddress.id,
+        address1: bestAddress.address1,
+        city: bestAddress.city,
+        zip: bestAddress.zip,
+        country: bestAddress.country
+      });
+      
+      address = {
+        address1: bestAddress.address1 || '',
+        address2: bestAddress.address2 || '',
+        city: bestAddress.city || '',
+        province: bestAddress.province || '',
+        zip: bestAddress.zip || '',
+        country: bestAddress.country || bestAddress.country_name || bestAddress.country_code || '',
+        phone: bestAddress.phone || ''
+      };
+      
+      console.log('Extracted address:', address);
+    } else {
+      // Pokud jsme nenašli adresu v addresses array, zkusit default_address jako poslední pokus
+      if (customer.default_address) {
+        console.log('No address found in array, trying default_address as last resort');
+        address = {
+          address1: customer.default_address.address1 || '',
+          address2: customer.default_address.address2 || '',
+          city: customer.default_address.city || '',
+          province: customer.default_address.province || '',
+          zip: customer.default_address.zip || '',
+          country: customer.default_address.country || customer.default_address.country_name || customer.default_address.country_code || '',
+          phone: customer.default_address.phone || ''
+        };
+        console.log('Extracted from default_address:', address);
+      }
+    }
 
     // Check email marketing consent
     const acceptsMarketing = customer.email_marketing_consent?.state === 'subscribed' || 
@@ -266,13 +327,83 @@ export default async function handler(req, res) {
       ? customer.email.trim() 
       : (authData.customer.email || '');
     
-    // Use first_name and last_name from customer object (may be empty)
-    const customerFirstName = customer.first_name && customer.first_name.trim() 
+    // ========== FALLBACK MECHANISMS FOR FIRST_NAME AND LAST_NAME ==========
+    console.log('=== EXTRACTING FIRST_NAME AND LAST_NAME ===');
+    
+    // Strategy 1: Zkusit z customer root
+    let customerFirstName = customer.first_name && customer.first_name.trim() 
       ? customer.first_name.trim() 
       : '';
-    const customerLastName = customer.last_name && customer.last_name.trim() 
+    let customerLastName = customer.last_name && customer.last_name.trim() 
       ? customer.last_name.trim() 
       : '';
+    
+    console.log('From customer root:', {
+      first_name: customer.first_name,
+      last_name: customer.last_name,
+      firstName: customerFirstName,
+      lastName: customerLastName
+    });
+    
+    // Strategy 2: Pokud nejsou v customer root, zkusit z default_address
+    if (!customerFirstName || !customerLastName) {
+      if (customer.default_address) {
+        const defaultAddrFirstName = customer.default_address.first_name && customer.default_address.first_name.trim()
+          ? customer.default_address.first_name.trim()
+          : '';
+        const defaultAddrLastName = customer.default_address.last_name && customer.default_address.last_name.trim()
+          ? customer.default_address.last_name.trim()
+          : '';
+        
+        console.log('Trying default_address:', {
+          first_name: customer.default_address.first_name,
+          last_name: customer.default_address.last_name,
+          extractedFirstName: defaultAddrFirstName,
+          extractedLastName: defaultAddrLastName
+        });
+        
+        if (!customerFirstName && defaultAddrFirstName) {
+          customerFirstName = defaultAddrFirstName;
+          console.log('✓ Using first_name from default_address');
+        }
+        if (!customerLastName && defaultAddrLastName) {
+          customerLastName = defaultAddrLastName;
+          console.log('✓ Using last_name from default_address');
+        }
+      }
+      
+      // Strategy 3: Zkusit z první adresy v addresses array
+      if ((!customerFirstName || !customerLastName) && customer.addresses && customer.addresses.length > 0) {
+        const firstAddr = customer.addresses[0];
+        const addrFirstName = firstAddr.first_name && firstAddr.first_name.trim()
+          ? firstAddr.first_name.trim()
+          : '';
+        const addrLastName = firstAddr.last_name && firstAddr.last_name.trim()
+          ? firstAddr.last_name.trim()
+          : '';
+        
+        console.log('Trying first address:', {
+          first_name: firstAddr.first_name,
+          last_name: firstAddr.last_name,
+          extractedFirstName: addrFirstName,
+          extractedLastName: addrLastName
+        });
+        
+        if (!customerFirstName && addrFirstName) {
+          customerFirstName = addrFirstName;
+          console.log('✓ Using first_name from addresses[0]');
+        }
+        if (!customerLastName && addrLastName) {
+          customerLastName = addrLastName;
+          console.log('✓ Using last_name from addresses[0]');
+        }
+      }
+    }
+    
+    console.log('Final extracted names:', {
+      firstName: customerFirstName,
+      lastName: customerLastName
+    });
 
     console.log('Email fallback check:', {
       customerEmail: customer.email,
@@ -317,8 +448,25 @@ export default async function handler(req, res) {
     // Return current data from Admin API
     return res.status(200).json(responseData);
   } catch (error) {
-    console.error('Customer API error:', error);
+    // ========== DETAILNÍ ERROR LOGGING ==========
+    console.error('=== CUSTOMER API ERROR (CATCH BLOCK) ===');
+    console.error('Error message:', error.message);
+    console.error('Error name:', error.name);
     console.error('Error stack:', error.stack);
+    console.error('Error occurred at:', new Date().toISOString());
+    
+    // Logovat request details pro debugging
+    try {
+      const authData = getAuthCookie(req);
+      console.error('Request context:', {
+        customerId: authData?.customer?.sub,
+        hasAuthData: !!authData,
+        method: req.method,
+        url: req.url
+      });
+    } catch (e) {
+      console.error('Could not log request context:', e);
+    }
     
     // Don't fallback to JWT data - return error instead so we can debug
     return res.status(500).json({ 
