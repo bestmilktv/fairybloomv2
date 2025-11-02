@@ -174,6 +174,13 @@ function handleOAuthCallback(
     sessionStorage.removeItem('oauth_code_verifier');
     sessionStorage.removeItem('oauth_state');
 
+    // Store token in sessionStorage as fallback (for Authorization header)
+    if (access_token) {
+      sessionStorage.setItem('shopify_access_token', access_token);
+      sessionStorage.setItem('shopify_token_expires', expires_at || '');
+      console.log('[OAuth] Token stored in sessionStorage as fallback');
+    }
+
     resolve({
       success: true,
       accessToken: access_token,

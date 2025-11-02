@@ -247,6 +247,7 @@ export default async function handler(req, res) {
   
   if (hasCookies) {
     const cookieHeader = req.headers.cookie || '';
+    console.log('[Customer API] Cookie header (first 100 chars):', cookieHeader.substring(0, 100));
     const hasShopifyToken = cookieHeader.includes('shopify_access_token');
     console.log('[Customer API] shopify_access_token cookie present:', hasShopifyToken);
     
@@ -258,29 +259,34 @@ export default async function handler(req, res) {
     }
   }
 
-  const authData = getAuthCookie(req);
-  console.log('[Customer API] getAuthCookie returned:', authData ? 'data exists' : 'null');
+  // Try to get token from cookie (primary method)
+  let authData = getAuthCookie(req);
+  let authMethod = 'cookie';
+  let customerAccessToken = null;
   
-  if (authData) {
-    const hasAccessToken = !!authData.access_token;
-    const tokenPreview = authData.access_token ? `${authData.access_token.slice(0, 10)}...${authData.access_token.slice(-6)}` : 'none';
-    console.log('[Customer API] authData.access_token exists:', hasAccessToken, 'preview:', tokenPreview);
-    console.log('[Customer API] token type:', authData.access_token?.startsWith('shcat_') ? 'shcat_ (Customer Account)' : 'unknown');
-    
-    if (authData.expires_at) {
-      const expiresDate = new Date(authData.expires_at);
-      const now = new Date();
-      const isExpired = expiresDate < now;
-      const timeUntilExpiry = expiresDate.getTime() - now.getTime();
-      console.log('[Customer API] Token expires_at:', authData.expires_at, 'isExpired:', isExpired, 'ms until expiry:', timeUntilExpiry);
+  if (authData && authData.access_token) {
+    customerAccessToken = authData.access_token;
+    console.log('[Customer API] Authentication method: cookie');
+    console.log('[Customer API] authData.access_token exists, preview:', `${authData.access_token.slice(0, 10)}...${authData.access_token.slice(-6)}`);
+  } else {
+    // Fallback: Try Authorization header (from postMessage token)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      customerAccessToken = authHeader.substring(7);
+      authMethod = 'authorization-header';
+      console.log('[Customer API] Authentication method: Authorization header');
+      console.log('[Customer API] Token from header, preview:', `${customerAccessToken.slice(0, 10)}...${customerAccessToken.slice(-6)}`);
     }
   }
 
-  if (!authData || !authData.access_token) {
+  // Log authentication status
+  console.log('[Customer API] Authentication method used:', authMethod);
+  console.log('[Customer API] Token available:', !!customerAccessToken);
+  
+  if (!customerAccessToken) {
+    console.log('[Customer API] No token found in cookie or Authorization header');
     return res.status(401).json({ error: 'Not authenticated' });
   }
-
-  const customerAccessToken = authData.access_token;
 
   if (req.method === 'GET') {
     try {

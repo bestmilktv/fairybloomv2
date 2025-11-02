@@ -128,10 +128,35 @@ export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | 
     // Add small delay to ensure cookie is set after OAuth callback
     await new Promise(resolve => setTimeout(resolve, 100));
     
+    // Try to get token from sessionStorage as fallback
+    const tokenFromStorage = sessionStorage.getItem('shopify_access_token');
+    const tokenExpires = sessionStorage.getItem('shopify_token_expires');
+    
+    // Check if token is expired
+    let useToken = false;
+    if (tokenFromStorage && tokenExpires) {
+      const expiresDate = new Date(tokenExpires);
+      const now = new Date();
+      if (expiresDate > now) {
+        useToken = true;
+      } else {
+        // Token expired, remove it
+        sessionStorage.removeItem('shopify_access_token');
+        sessionStorage.removeItem('shopify_token_expires');
+      }
+    }
+    
+    const headers: HeadersInit = {};
+    if (useToken) {
+      headers['Authorization'] = `Bearer ${tokenFromStorage}`;
+      console.log('fetchCustomerProfile: Using token from sessionStorage in Authorization header');
+    }
+    
     console.log('fetchCustomerProfile: Calling /api/auth/customer...');
     const response = await fetch('/api/auth/customer', {
       method: 'GET',
       credentials: 'include', // Include cookies so backend can forward them
+      headers,
     });
 
     console.log('fetchCustomerProfile: Response status:', response.status, response.statusText);

@@ -19,27 +19,20 @@ export function setAuthCookie(res, token, expiresAt, customerData = null) {
   
   const encodedValue = Buffer.from(cookieValue).toString('base64');
   
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'None', // Změna z 'Lax' na 'None' pro cross-subdomain sharing
-    domain: process.env.NODE_ENV === 'production' ? '.fairybloom.cz' : 'localhost',
-    path: '/',
-    expires: new Date(expiresAt)
-  };
+  // Cookie options - don't set domain to allow browser to set it automatically
+  // This ensures cookie works for both www.fairybloom.cz and fairybloom.cz
+  const expiresDate = new Date(expiresAt);
+  const cookieString = [
+    `shopify_access_token=${encodedValue}`,
+    `Path=/`,
+    `Expires=${expiresDate.toUTCString()}`,
+    `HttpOnly`,
+    process.env.NODE_ENV === 'production' ? `Secure` : '',
+    `SameSite=None`
+  ].filter(Boolean).join('; ');
 
   // Set the cookie
-  res.setHeader('Set-Cookie', [
-    `shopify_access_token=${encodedValue}; ${Object.entries(cookieOptions)
-      .map(([key, value]) => {
-        if (typeof value === 'boolean') {
-          return value ? key : '';
-        }
-        return `${key}=${value}`;
-      })
-      .filter(Boolean)
-      .join('; ')}`
-  ]);
+  res.setHeader('Set-Cookie', cookieString);
 }
 
 /**
@@ -76,26 +69,17 @@ export function getAuthCookie(req) {
  * @param {Object} res - Response object
  */
 export function clearAuthCookie(res) {
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'None', // Změna z 'Lax' na 'None' pro cross-subdomain sharing
-    domain: process.env.NODE_ENV === 'production' ? '.fairybloom.cz' : 'localhost',
-    path: '/',
-    expires: new Date(0) // Expire immediately
-  };
+  // Clear cookie by setting it with past expiration date
+  const cookieString = [
+    `shopify_access_token=`,
+    `Path=/`,
+    `Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+    `HttpOnly`,
+    process.env.NODE_ENV === 'production' ? `Secure` : '',
+    `SameSite=None`
+  ].filter(Boolean).join('; ');
 
-  res.setHeader('Set-Cookie', [
-    `shopify_access_token=; ${Object.entries(cookieOptions)
-      .map(([key, value]) => {
-        if (typeof value === 'boolean') {
-          return value ? key : '';
-        }
-        return `${key}=${value}`;
-      })
-      .filter(Boolean)
-      .join('; ')}`
-  ]);
+  res.setHeader('Set-Cookie', cookieString);
 }
 
 /**
