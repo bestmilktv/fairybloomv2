@@ -217,6 +217,8 @@ export default async function handler(req, res) {
 
     // ========== PRIMARY: TRY CUSTOMER ACCOUNT API GRAPHQL ==========
     console.log('=== ATTEMPTING CUSTOMER ACCOUNT API (PRIMARY) ===');
+    console.log('[DEBUG] SHOP_ID:', SHOP_ID ? 'CONFIGURED' : 'MISSING');
+    console.log('[DEBUG] SHOP_ID value:', SHOP_ID || 'undefined');
     
     // DEBUG: Logovat cookies, které máme v requestu
     console.log('[DEBUG] Request cookies:', req.headers.cookie);
@@ -235,8 +237,14 @@ export default async function handler(req, res) {
 
     try {
       if (!SHOP_ID) {
-        console.warn('[Customer Account API] SHOPIFY_SHOP_ID not configured, skipping');
+        console.error('[Customer Account API] SHOPIFY_SHOP_ID NOT CONFIGURED - SKIPPING CUSTOMER ACCOUNT API');
+        console.error('[Customer Account API] Available env vars:', {
+          SHOPIFY_SHOP_ID: !!process.env.SHOPIFY_SHOP_ID,
+          VITE_SHOPIFY_SHOP_ID: !!process.env.VITE_SHOPIFY_SHOP_ID,
+          SHOP_ID_value: SHOP_ID
+        });
       } else {
+        console.log('[Customer Account API] SHOP_ID is configured, attempting Customer Account API call...');
         const customerAccountQuery = `
           query {
             customer {
@@ -333,11 +341,13 @@ export default async function handler(req, res) {
 
           console.log('[Customer Account API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
         } else {
-          console.warn('[Customer Account API] No customer data in response');
+          console.warn('[Customer Account API] No customer data in response - response.data:', response.data);
         }
       }
     } catch (customerAccountError) {
-      console.error('[Customer Account API] Error:', customerAccountError.message);
+      console.error('[Customer Account API] ERROR CAUGHT:', customerAccountError.message);
+      console.error('[Customer Account API] Error stack:', customerAccountError.stack);
+      console.error('[Customer Account API] Error type:', customerAccountError.constructor.name);
       console.log('[Customer Account API] Falling back to Admin API...');
     }
 
