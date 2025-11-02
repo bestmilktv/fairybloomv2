@@ -81,24 +81,96 @@ export default async function handler(req, res) {
 
     const customer = adminData.customer;
 
-    // Log the FULL customer object to see what Shopify actually returns
-    console.log('FULL customer object from Shopify Admin API:', JSON.stringify(customer, null, 2));
-
-    console.log('Raw customer data from Shopify Admin API:', JSON.stringify({
-      id: customer.id,
-      email: customer.email,
+    // ========== DETAILNÍ DIAGNOSTICKÉ LOGOVÁNÍ ==========
+    
+    // 1. Logovat celý raw response ze Shopify (kompletní objekt)
+    console.log('=== FULL RAW CUSTOMER OBJECT FROM SHOPIFY ===');
+    console.log(JSON.stringify(customer, null, 2));
+    
+    // 2. Logovat všechny možné varianty jména a příjmení
+    console.log('=== NAME VARIATIONS CHECK ===');
+    console.log({
       first_name: customer.first_name,
+      firstName: customer.firstName,
+      firstname: customer.firstname,
       last_name: customer.last_name,
-      default_address: customer.default_address,
-      addresses_count: customer.addresses ? customer.addresses.length : 0,
-      addresses: customer.addresses ? customer.addresses.map(addr => ({
-        id: addr.id,
-        address1: addr.address1,
-        city: addr.city,
-        zip: addr.zip,
-        country: addr.country
-      })) : null
-    }, null, 2));
+      lastName: customer.lastName,
+      lastname: customer.lastname,
+      name: customer.name,
+      full_name: customer.full_name,
+      fullName: customer.fullName
+    });
+    
+    // 3. Logovat default_address objekt kompletně
+    console.log('=== DEFAULT ADDRESS DETAILS ===');
+    if (customer.default_address) {
+      console.log('Default address exists:', JSON.stringify(customer.default_address, null, 2));
+      console.log('Default address fields:', {
+        id: customer.default_address.id,
+        default: customer.default_address.default,
+        address1: customer.default_address.address1,
+        address2: customer.default_address.address2,
+        city: customer.default_address.city,
+        province: customer.default_address.province,
+        zip: customer.default_address.zip,
+        country: customer.default_address.country,
+        country_name: customer.default_address.country_name,
+        country_code: customer.default_address.country_code,
+        phone: customer.default_address.phone
+      });
+    } else {
+      console.log('No default_address in customer object');
+    }
+    
+    // 4. Logovat všechny adresy v addresses array s detaily
+    console.log('=== ALL ADDRESSES IN ARRAY ===');
+    if (customer.addresses && customer.addresses.length > 0) {
+      console.log(`Total addresses: ${customer.addresses.length}`);
+      customer.addresses.forEach((addr, index) => {
+        console.log(`--- Address ${index + 1} (ID: ${addr.id}) ---`);
+        console.log(JSON.stringify(addr, null, 2));
+        console.log('Address fields:', {
+          id: addr.id,
+          default: addr.default,
+          customer_id: addr.customer_id,
+          address1: addr.address1,
+          address2: addr.address2,
+          city: addr.city,
+          province: addr.province,
+          zip: addr.zip,
+          country: addr.country,
+          country_name: addr.country_name,
+          country_code: addr.country_code,
+          phone: addr.phone,
+          first_name: addr.first_name,
+          last_name: addr.last_name,
+          company: addr.company
+        });
+      });
+    } else {
+      console.log('No addresses in addresses array');
+    }
+    
+    // 5. Logovat email varianty
+    console.log('=== EMAIL VARIATIONS ===');
+    console.log({
+      email: customer.email,
+      email_address: customer.email_address,
+      primary_email: customer.primary_email
+    });
+    
+    // 6. Shrnutí struktury customer objektu
+    console.log('=== CUSTOMER OBJECT STRUCTURE SUMMARY ===');
+    console.log({
+      hasId: !!customer.id,
+      hasEmail: !!customer.email,
+      hasFirstName: !!customer.first_name,
+      hasLastName: !!customer.last_name,
+      hasDefaultAddress: !!customer.default_address,
+      addressesCount: customer.addresses ? customer.addresses.length : 0,
+      hasAddressesArray: !!customer.addresses,
+      allKeys: Object.keys(customer).sort()
+    });
 
     // Helper function to check if address has meaningful data (not just country)
     const hasAddressData = (addr) => {
@@ -106,34 +178,71 @@ export default async function handler(req, res) {
       return !!(addr.address1 && addr.address1.trim() && addr.city && addr.city.trim() && addr.zip && addr.zip.trim());
     };
 
-    // Find the best address - prefer one with complete data (address1, city, zip)
-    // Check all addresses in the array, not just default_address
-    let bestAddress = null;
+    // ========== ZLEPŠENÁ LOGIKA PRO HLEDÁNÍ ADRESY ==========
+    console.log('=== ADDRESS SELECTION LOGIC ===');
     
-    // First, try to find an address with complete data in addresses array
+    let bestAddress = null;
+    let selectionReason = '';
+    
+    // Strategy 1: Najít adresu s default: true flagem a kompletními daty
     if (customer.addresses && customer.addresses.length > 0) {
-      for (const addr of customer.addresses) {
-        if (hasAddressData(addr)) {
-          bestAddress = addr;
-          console.log('Found complete address in addresses array:', addr.id);
-          break;
+      console.log(`Checking ${customer.addresses.length} addresses in array...`);
+      
+      // Nejprve hledat default address s kompletními daty
+      const defaultAddrWithData = customer.addresses.find(addr => 
+        addr.default === true && hasAddressData(addr)
+      );
+      
+      if (defaultAddrWithData) {
+        bestAddress = defaultAddrWithData;
+        selectionReason = 'Default address with complete data';
+        console.log(`✓ Found: ${selectionReason} (ID: ${defaultAddrWithData.id})`);
+      } else {
+        // Strategy 2: Najít jakoukoliv adresu s kompletními daty
+        const anyCompleteAddr = customer.addresses.find(addr => hasAddressData(addr));
+        
+        if (anyCompleteAddr) {
+          bestAddress = anyCompleteAddr;
+          selectionReason = 'Complete address (not default)';
+          console.log(`✓ Found: ${selectionReason} (ID: ${anyCompleteAddr.id}, default: ${anyCompleteAddr.default})`);
+        } else {
+          // Strategy 3: Použít default address i když není kompletní
+          const defaultAddr = customer.addresses.find(addr => addr.default === true);
+          
+          if (defaultAddr) {
+            bestAddress = defaultAddr;
+            selectionReason = 'Default address (incomplete data)';
+            console.log(`⚠ Using: ${selectionReason} (ID: ${defaultAddr.id})`);
+          } else {
+            // Strategy 4: Použít první adresu jako fallback
+            bestAddress = customer.addresses[0];
+            selectionReason = 'First address (fallback)';
+            console.log(`⚠ Using: ${selectionReason} (ID: ${bestAddress.id})`);
+          }
         }
       }
-      
-      // If no complete address found, use first address (even if incomplete)
-      if (!bestAddress && customer.addresses.length > 0) {
-        bestAddress = customer.addresses[0];
-        console.log('Using first address from addresses array (may be incomplete)');
-      }
     }
     
-    // Fallback to default_address if addresses array didn't have anything
+    // Fallback: Pokud addresses array je prázdný, použít default_address
     if (!bestAddress && customer.default_address) {
       bestAddress = customer.default_address;
-      console.log('Using default_address from customer object');
+      selectionReason = 'default_address from customer object';
+      console.log(`⚠ Using: ${selectionReason}`);
     }
-
-    console.log('Selected address:', JSON.stringify(bestAddress, null, 2));
+    
+    console.log('=== ADDRESS SELECTION RESULT ===');
+    console.log({
+      selectedAddressId: bestAddress?.id,
+      selectionReason: selectionReason,
+      addressDetails: bestAddress ? {
+        default: bestAddress.default,
+        address1: bestAddress.address1,
+        city: bestAddress.city,
+        zip: bestAddress.zip,
+        country: bestAddress.country,
+        hasCompleteData: hasAddressData(bestAddress)
+      } : null
+    });
 
     // Extract address data - include if it exists, even if some fields are missing
     // We'll let the frontend decide if it's complete or not
