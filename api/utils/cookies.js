@@ -31,8 +31,20 @@ export function setAuthCookie(res, token, expiresAt, customerData = null) {
     `SameSite=None`
   ].filter(Boolean).join('; ');
 
-  // Set the cookie
-  res.setHeader('Set-Cookie', cookieString);
+  // Set the cookie - always use array to allow multiple cookies
+  const existingCookies = res.getHeader('Set-Cookie');
+  let cookieArray = [];
+  
+  if (existingCookies) {
+    if (Array.isArray(existingCookies)) {
+      cookieArray = existingCookies;
+    } else {
+      cookieArray = [existingCookies];
+    }
+  }
+  
+  cookieArray.push(cookieString);
+  res.setHeader('Set-Cookie', cookieArray);
 }
 
 /**
