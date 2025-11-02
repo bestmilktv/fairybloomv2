@@ -241,6 +241,11 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Shopify Shop ID is not configured' });
   }
 
+  // DEBUG: Log all headers to see what's being sent
+  console.log('[Customer API] All request headers:', JSON.stringify(Object.keys(req.headers || {})));
+  console.log('[Customer API] Authorization header:', req.headers.authorization ? 'present' : 'missing');
+  console.log('[Customer API] Authorization header value:', req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'none');
+  
   // DEBUG: Log cookie debugging
   const hasCookies = !!req.headers.cookie;
   console.log('[Customer API] Request has cookies header:', hasCookies);
@@ -270,12 +275,21 @@ export default async function handler(req, res) {
     console.log('[Customer API] authData.access_token exists, preview:', `${authData.access_token.slice(0, 10)}...${authData.access_token.slice(-6)}`);
   } else {
     // Fallback: Try Authorization header (from postMessage token)
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      customerAccessToken = authHeader.substring(7);
-      authMethod = 'authorization-header';
-      console.log('[Customer API] Authentication method: Authorization header');
-      console.log('[Customer API] Token from header, preview:', `${customerAccessToken.slice(0, 10)}...${customerAccessToken.slice(-6)}`);
+    // Try multiple possible header names (case variations)
+    const authHeader = req.headers.authorization || req.headers.Authorization || req.headers['authorization'] || req.headers['Authorization'];
+    console.log('[Customer API] Checking Authorization header:', authHeader ? 'found' : 'not found');
+    
+    if (authHeader && typeof authHeader === 'string') {
+      if (authHeader.startsWith('Bearer ')) {
+        customerAccessToken = authHeader.substring(7);
+        authMethod = 'authorization-header';
+        console.log('[Customer API] Authentication method: Authorization header');
+        console.log('[Customer API] Token from header, preview:', `${customerAccessToken.slice(0, 10)}...${customerAccessToken.slice(-6)}`);
+      } else {
+        console.log('[Customer API] Authorization header does not start with "Bearer "');
+      }
+    } else {
+      console.log('[Customer API] No valid Authorization header found');
     }
   }
 

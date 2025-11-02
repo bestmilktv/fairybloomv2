@@ -150,9 +150,14 @@ export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | 
     if (useToken) {
       headers['Authorization'] = `Bearer ${tokenFromStorage}`;
       console.log('fetchCustomerProfile: Using token from sessionStorage in Authorization header');
+      console.log('fetchCustomerProfile: Token preview:', `${tokenFromStorage.substring(0, 10)}...${tokenFromStorage.substring(tokenFromStorage.length - 6)}`);
+      console.log('fetchCustomerProfile: Header value:', `Bearer ${tokenFromStorage.substring(0, 20)}...`);
+    } else {
+      console.log('fetchCustomerProfile: No token in sessionStorage or token expired');
     }
     
     console.log('fetchCustomerProfile: Calling /api/auth/customer...');
+    console.log('fetchCustomerProfile: Headers being sent:', Object.keys(headers));
     const response = await fetch('/api/auth/customer', {
       method: 'GET',
       credentials: 'include', // Include cookies so backend can forward them
