@@ -1,25 +1,37 @@
 /**
  * Customer Data Endpoint
- * Uses Shopify Storefront API (GraphQL) to fetch and update customer data
+ * Uses Shopify Customer Account API (GraphQL) to fetch and update customer data
  */
 
 import { getAuthCookie } from '../utils/cookies.js';
 
-const API_VERSION = '2025-07';
-const STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN || process.env.VITE_SHOPIFY_STORE_DOMAIN;
-
-const STOREFRONT_API_URL = STORE_DOMAIN
-  ? `https://${STORE_DOMAIN}/api/${API_VERSION}/graphql.json`
-  : null;
+const SHOP_ID = process.env.SHOPIFY_SHOP_ID || process.env.VITE_SHOPIFY_SHOP_ID;
+const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/api/unstable/graphql`;
 
 const CUSTOMER_QUERY = `
-  query getCustomer($customerAccessToken: String!) {
-    customer(customerAccessToken: $customerAccessToken) {
+  query {
+    customer {
       id
       firstName
       lastName
-      email
-      phone
+      emailAddress {
+        emailAddress
+      }
+      phoneNumber {
+        phoneNumber
+      }
+      defaultAddress {
+        id
+        address1
+        address2
+        city
+        province
+        zip
+        countryCode
+        phoneNumber {
+          phoneNumber
+        }
+      }
       addresses(first: 10) {
         edges {
           node {
@@ -29,8 +41,10 @@ const CUSTOMER_QUERY = `
             city
             province
             zip
-            countryCodeV2
-            phone
+            countryCode
+            phoneNumber {
+              phoneNumber
+            }
           }
         }
       }
@@ -39,14 +53,30 @@ const CUSTOMER_QUERY = `
 `;
 
 const CUSTOMER_UPDATE_MUTATION = `
-  mutation customerUpdate($customerAccessToken: String!, $customer: CustomerUpdateInput!) {
-    customerUpdate(customerAccessToken: $customerAccessToken, customer: $customer) {
+  mutation customerUpdate($customer: CustomerUpdateInput!) {
+    customerUpdate(customer: $customer) {
       customer {
         id
         firstName
         lastName
-        email
-        phone
+        emailAddress {
+          emailAddress
+        }
+        phoneNumber {
+          phoneNumber
+        }
+        defaultAddress {
+          id
+          address1
+          address2
+          city
+          province
+          zip
+          countryCode
+          phoneNumber {
+            phoneNumber
+          }
+        }
         addresses(first: 10) {
           edges {
             node {
@@ -56,13 +86,15 @@ const CUSTOMER_UPDATE_MUTATION = `
               city
               province
               zip
-              countryCodeV2
-              phone
+              countryCode
+              phoneNumber {
+                phoneNumber
+              }
             }
           }
         }
       }
-      customerUserErrors {
+      userErrors {
         field
         message
       }
@@ -70,16 +102,23 @@ const CUSTOMER_UPDATE_MUTATION = `
   }
 `;
 
-async function callStorefrontAPI(query, variables) {
-  if (!STOREFRONT_API_URL) {
-    throw new Error('Storefront API URL not configured');
+async function callCustomerAccountAPI(query, variables, accessToken) {
+  if (!SHOP_ID) {
+    throw new Error('Shopify Shop ID not configured');
   }
 
-  const response = await fetch(STOREFRONT_API_URL, {
+  if (!accessToken || typeof accessToken !== 'string') {
+    throw new Error('Authentication required - missing customer access token');
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Shopify-Customer-Access-Token': accessToken,
+  };
+
+  const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
       query,
       variables,
@@ -92,16 +131,16 @@ async function callStorefrontAPI(query, variables) {
   try {
     payload = JSON.parse(responseText);
   } catch (parseError) {
-    throw new Error('Invalid response from Storefront API');
+    throw new Error('Invalid response from Customer Account API');
   }
 
   if (!response.ok) {
-    throw new Error('Storefront API request failed');
+    throw new Error('Customer Account API request failed');
   }
 
   if (payload.errors && payload.errors.length > 0) {
     const errorMessages = payload.errors.map((error) => error?.message || 'Unknown error').join(', ');
-    throw new Error(`Storefront API errors: ${errorMessages}`);
+    throw new Error(`Customer Account API errors: ${errorMessages}`);
   }
 
   return payload.data;
@@ -112,25 +151,28 @@ function mapCustomerResponse(customer) {
     return null;
   }
 
+  const email = customer.emailAddress?.emailAddress || '';
+  const phone = customer.phoneNumber?.phoneNumber || '';
+  const defaultAddress = customer.defaultAddress;
   const addresses = customer.addresses?.edges || [];
-  const defaultAddress = addresses.length > 0 ? addresses[0].node : null;
+  const primaryAddress = defaultAddress || (addresses.length > 0 ? addresses[0].node : null);
 
   return {
-    id: customer.id,
+    id: customer.id || '',
     firstName: customer.firstName || '',
     lastName: customer.lastName || '',
-    email: customer.email || '',
-    phone: customer.phone || '',
-    address: defaultAddress
+    email: email,
+    phone: phone,
+    address: primaryAddress
       ? {
-          id: defaultAddress.id,
-          address1: defaultAddress.address1 || '',
-          address2: defaultAddress.address2 || '',
-          city: defaultAddress.city || '',
-          province: defaultAddress.province || '',
-          zip: defaultAddress.zip || '',
-          countryCode: defaultAddress.countryCodeV2 || '',
-          phone: defaultAddress.phone || '',
+          id: primaryAddress.id || '',
+          address1: primaryAddress.address1 || '',
+          address2: primaryAddress.address2 || '',
+          city: primaryAddress.city || '',
+          province: primaryAddress.province || '',
+          zip: primaryAddress.zip || '',
+          countryCode: primaryAddress.countryCode || '',
+          phone: primaryAddress.phoneNumber?.phoneNumber || '',
         }
       : null,
   };
@@ -149,11 +191,11 @@ function buildCustomerInput(payload = {}) {
     hasChanges = true;
   }
   if (payload.email !== undefined) {
-    input.email = payload.email;
+    input.emailAddress = { emailAddress: payload.email };
     hasChanges = true;
   }
   if (payload.phone !== undefined) {
-    input.phone = payload.phone;
+    input.phoneNumber = { phoneNumber: payload.phone };
     hasChanges = true;
   }
 
@@ -161,8 +203,8 @@ function buildCustomerInput(payload = {}) {
 }
 
 export default async function handler(req, res) {
-  if (!STOREFRONT_API_URL) {
-    return res.status(500).json({ error: 'Storefront API is not configured' });
+  if (!SHOP_ID) {
+    return res.status(500).json({ error: 'Shopify Shop ID is not configured' });
   }
 
   const authData = getAuthCookie(req);
@@ -175,9 +217,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const data = await callStorefrontAPI(CUSTOMER_QUERY, {
-        customerAccessToken,
-      });
+      const data = await callCustomerAccountAPI(CUSTOMER_QUERY, {}, customerAccessToken);
 
       if (!data?.customer) {
         return res.status(404).json({ error: 'Customer not found' });
@@ -212,12 +252,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No customer updates provided' });
       }
 
-      const data = await callStorefrontAPI(CUSTOMER_UPDATE_MUTATION, {
-        customerAccessToken,
+      const data = await callCustomerAccountAPI(CUSTOMER_UPDATE_MUTATION, {
         customer: customerInput,
-      });
+      }, customerAccessToken);
 
-      const userErrors = data?.customerUpdate?.customerUserErrors;
+      const userErrors = data?.customerUpdate?.userErrors;
       if (userErrors && userErrors.length > 0) {
         return res.status(400).json({
           error: 'Unable to update customer',
