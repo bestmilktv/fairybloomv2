@@ -9,6 +9,8 @@ export interface CustomerAccountCustomer {
   firstName: string;
   lastName: string;
   email: string;
+  address?: CustomerAccountAddress;
+  acceptsMarketing?: boolean;
 }
 
 export interface CustomerAccountAddress {
@@ -117,41 +119,175 @@ async function fetchCustomerAccount<T>(
 }
 
 /**
- * Fetch customer profile data via backend API
+ * Fetch customer profile data directly from Customer Account API (browser has cookies)
+ * Falls back to backend API if Customer Account API fails
  * @returns {Promise<CustomerAccountCustomer | null>} Customer data or null if not authenticated
  */
 export async function fetchCustomerProfile(): Promise<CustomerAccountCustomer | null> {
   try {
-    console.log('fetchCustomerProfile: Calling /api/auth/customer...');
-    const response = await fetch('/api/auth/customer', {
-      method: 'GET',
-      credentials: 'include',
-    });
-
-    console.log('fetchCustomerProfile: Response status:', response.status, response.statusText);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('fetchCustomerProfile: API error response:', errorText);
-      if (response.status === 401) {
-        return null;
+    // PRIMÁRNÍ: Zkusit Customer Account API přímo z browseru (má cookies z shopify.com)
+    console.log('fetchCustomerProfile: Attempting Customer Account API directly from browser...');
+    
+    const query = `
+      query {
+        customer {
+          id
+          firstName
+          lastName
+          emailAddress {
+            emailAddress
+          }
+          defaultAddress {
+            address1
+            address2
+            city
+            province
+            zip
+            country
+            phone
+          }
+          addresses(first: 5) {
+            edges {
+              node {
+                id
+                address1
+                address2
+                city
+                province
+                zip
+                country
+                phone
+              }
+            }
+          }
+          emailMarketingSubscriptionState {
+            emailMarketingSubscriptionState
+          }
+        }
       }
-      throw new Error(`Failed to fetch customer profile: ${response.status} - ${errorText}`);
-    }
+    `;
 
-    const data = await response.json();
-    console.log('fetchCustomerProfile: Received data from API:', JSON.stringify(data, null, 2));
-    
-    // Check if data is actually empty
-    if (data && (!data.firstName || !data.lastName || !data.email)) {
-      console.warn('fetchCustomerProfile: Received data but fields are empty!', data);
+    try {
+      const response = await fetchCustomerAccount<{ 
+        customer: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          emailAddress: { emailAddress: string };
+          defaultAddress?: {
+            address1: string;
+            address2?: string;
+            city: string;
+            province?: string;
+            zip: string;
+            country: string;
+            phone?: string;
+          };
+          addresses?: {
+            edges: Array<{
+              node: {
+                id: string;
+                address1: string;
+                address2?: string;
+                city: string;
+                province?: string;
+                zip: string;
+                country: string;
+                phone?: string;
+              };
+            }>;
+          };
+          emailMarketingSubscriptionState?: {
+            emailMarketingSubscriptionState: string;
+          };
+        } | null;
+      }>(query);
+      
+      if (response.data && response.data.customer) {
+        const caCustomer = response.data.customer;
+        
+        // Transformovat na formát, který očekává frontend
+        let address: CustomerAccountAddress | undefined = undefined;
+        
+        if (caCustomer.defaultAddress) {
+          address = {
+            id: '',
+            address1: caCustomer.defaultAddress.address1 || '',
+            address2: caCustomer.defaultAddress.address2,
+            city: caCustomer.defaultAddress.city || '',
+            province: caCustomer.defaultAddress.province,
+            zip: caCustomer.defaultAddress.zip || '',
+            country: caCustomer.defaultAddress.country || '',
+            phone: caCustomer.defaultAddress.phone
+          };
+        } else if (caCustomer.addresses?.edges && caCustomer.addresses.edges.length > 0) {
+          const addr = caCustomer.addresses.edges[0].node;
+          address = {
+            id: addr.id || '',
+            address1: addr.address1 || '',
+            address2: addr.address2,
+            city: addr.city || '',
+            province: addr.province,
+            zip: addr.zip || '',
+            country: addr.country || '',
+            phone: addr.phone
+          };
+        }
+
+        const customerData: CustomerAccountCustomer = {
+          id: caCustomer.id || '',
+          firstName: caCustomer.firstName || '',
+          lastName: caCustomer.lastName || '',
+          email: caCustomer.emailAddress?.emailAddress || '',
+        };
+
+        // Přidat address pokud existuje (rozšířit interface pokud je potřeba)
+        const result: any = customerData;
+        if (address) {
+          result.address = address;
+        }
+        result.acceptsMarketing = caCustomer.emailMarketingSubscriptionState?.emailMarketingSubscriptionState === 'SUBSCRIBED';
+
+        console.log('fetchCustomerProfile: Successfully fetched from Customer Account API:', result);
+        return result;
+      }
+    } catch (customerAccountError) {
+      console.warn('fetchCustomerProfile: Customer Account API failed, falling back to backend:', customerAccountError);
+      
+      // FALLBACK: Zkusit backend API
+      console.log('fetchCustomerProfile: Calling /api/auth/customer (backend fallback)...');
+      const response = await fetch('/api/auth/customer', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      console.log('fetchCustomerProfile: Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('fetchCustomerProfile: Backend API error response:', errorText);
+        if (response.status === 401) {
+          return null;
+        }
+        throw new Error(`Failed to fetch customer profile: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('fetchCustomerProfile: Received data from backend API:', JSON.stringify(data, null, 2));
+      
+      // Check if data is actually empty
+      if (data && (!data.firstName || !data.lastName || !data.email)) {
+        console.warn('fetchCustomerProfile: Received data but fields are empty!', data);
+      }
+      
+      return data;
     }
-    
-    return data;
   } catch (error) {
     console.error('Error fetching customer profile:', error);
     return null;
   }
+
+  return null;
 }
 
 /**
