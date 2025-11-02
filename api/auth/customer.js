@@ -175,6 +175,27 @@ async function fetchCustomerFromAdminREST(customerId) {
   }
 
   const adminData = await adminResponse.json();
+  
+  // DETAILNÍ LOGOVÁNÍ PRO DEBUGGING
+  console.log('[Admin REST API] Raw response from Shopify:', JSON.stringify(adminData, null, 2));
+  
+  if (adminData.customer) {
+    console.log('[Admin REST API] Customer object keys:', Object.keys(adminData.customer));
+    console.log('[Admin REST API] Customer first_name:', adminData.customer.first_name);
+    console.log('[Admin REST API] Customer last_name:', adminData.customer.last_name);
+    console.log('[Admin REST API] Customer email:', adminData.customer.email);
+    console.log('[Admin REST API] Has default_address:', !!adminData.customer.default_address);
+    if (adminData.customer.default_address) {
+      console.log('[Admin REST API] Default address keys:', Object.keys(adminData.customer.default_address));
+      console.log('[Admin REST API] Default address:', JSON.stringify(adminData.customer.default_address, null, 2));
+    }
+    console.log('[Admin REST API] Has addresses array:', !!adminData.customer.addresses);
+    if (adminData.customer.addresses && adminData.customer.addresses.length > 0) {
+      console.log('[Admin REST API] Addresses count:', adminData.customer.addresses.length);
+      console.log('[Admin REST API] First address:', JSON.stringify(adminData.customer.addresses[0], null, 2));
+    }
+  }
+  
   return adminData.customer || null;
 }
 
@@ -196,6 +217,18 @@ export default async function handler(req, res) {
 
     // ========== PRIMARY: TRY CUSTOMER ACCOUNT API GRAPHQL ==========
     console.log('=== ATTEMPTING CUSTOMER ACCOUNT API (PRIMARY) ===');
+    
+    // DEBUG: Logovat cookies, které máme v requestu
+    console.log('[DEBUG] Request cookies:', req.headers.cookie);
+    console.log('[DEBUG] Cookie header length:', req.headers.cookie ? req.headers.cookie.length : 0);
+    if (req.headers.cookie) {
+      const cookies = req.headers.cookie.split(';');
+      console.log('[DEBUG] Cookie count:', cookies.length);
+      cookies.forEach((cookie, index) => {
+        const [name] = cookie.trim().split('=');
+        console.log(`[DEBUG] Cookie ${index + 1}: ${name} (length: ${cookie.length})`);
+      });
+    }
     
     let customerData = null;
     let dataSource = 'unknown';
