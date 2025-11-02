@@ -109,6 +109,66 @@ const CUSTOMER_UPDATE_MUTATION = `
   }
 `;
 
+const CUSTOMER_ADDRESS_CREATE_MUTATION = `
+  mutation customerAddressCreate($address: MailingAddressInput!, $addressListId: ID) {
+    customerAddressCreate(address: $address, addressListId: $addressListId) {
+      customerAddress {
+        id
+        address1
+        address2
+        city
+        province
+        zip
+        countryCode
+        phoneNumber {
+          phoneNumber
+        }
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+const CUSTOMER_ADDRESS_UPDATE_MUTATION = `
+  mutation customerAddressUpdate($address: MailingAddressInput!, $id: ID!) {
+    customerAddressUpdate(address: $address, id: $id) {
+      customerAddress {
+        id
+        address1
+        address2
+        city
+        province
+        zip
+        countryCode
+        phoneNumber {
+          phoneNumber
+        }
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+const CUSTOMER_DEFAULT_ADDRESS_UPDATE_MUTATION = `
+  mutation customerDefaultAddressUpdate($addressId: ID!) {
+    customerDefaultAddressUpdate(addressId: $addressId) {
+      customer {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
 async function callCustomerAccountAPI(query, variables, accessToken) {
   if (!SHOP_ID) {
     throw new Error('Shopify Shop ID not configured');
@@ -205,6 +265,7 @@ function mapCustomerResponse(customer) {
           city: primaryAddress.city || '',
           province: primaryAddress.province || '',
           zip: primaryAddress.zip || '',
+          country: primaryAddress.countryCode || '', // Map countryCode to country for frontend
           countryCode: primaryAddress.countryCode || '',
           phone: primaryAddress.phoneNumber?.phoneNumber || '',
         }
@@ -236,71 +297,74 @@ function buildCustomerInput(payload = {}) {
   return hasChanges ? input : null;
 }
 
+function buildAddressInput(address = {}) {
+  if (!address || typeof address !== 'object') {
+    return null;
+  }
+
+  // Customer Account API expects MailingAddressInput format
+  const input = {};
+  let hasFields = false;
+
+  if (address.address1 !== undefined) {
+    input.address1 = address.address1;
+    hasFields = true;
+  }
+  if (address.address2 !== undefined) {
+    input.address2 = address.address2;
+    hasFields = true;
+  }
+  if (address.city !== undefined) {
+    input.city = address.city;
+    hasFields = true;
+  }
+  if (address.province !== undefined) {
+    input.province = address.province;
+    hasFields = true;
+  }
+  if (address.zip !== undefined) {
+    input.zip = address.zip;
+    hasFields = true;
+  }
+  if (address.country !== undefined || address.countryCode !== undefined) {
+    // Customer Account API expects countryCode (e.g., "CZ")
+    const countryCode = address.countryCode || (address.country && address.country.length === 2 ? address.country.toUpperCase() : address.country);
+    if (countryCode) {
+      input.countryCode = countryCode;
+      hasFields = true;
+    }
+  }
+  if (address.phone !== undefined) {
+    input.phoneNumber = { phoneNumber: address.phone };
+    hasFields = true;
+  }
+  if (address.firstName !== undefined) {
+    input.firstName = address.firstName;
+    hasFields = true;
+  }
+  if (address.lastName !== undefined) {
+    input.lastName = address.lastName;
+    hasFields = true;
+  }
+
+  return hasFields ? input : null;
+}
+
 export default async function handler(req, res) {
   if (!SHOP_ID) {
     return res.status(500).json({ error: 'Shopify Shop ID is not configured' });
   }
 
-  // DEBUG: Log all headers to see what's being sent
-  console.log('[Customer API] All request headers:', JSON.stringify(Object.keys(req.headers || {})));
-  console.log('[Customer API] Authorization header:', req.headers.authorization ? 'present' : 'missing');
-  console.log('[Customer API] Authorization header value:', req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'none');
+  // Get token from cookie (primary and only method)
+  const authData = getAuthCookie(req);
   
-  // DEBUG: Log cookie debugging
-  const hasCookies = !!req.headers.cookie;
-  console.log('[Customer API] Request has cookies header:', hasCookies);
-  
-  if (hasCookies) {
-    const cookieHeader = req.headers.cookie || '';
-    console.log('[Customer API] Cookie header (first 100 chars):', cookieHeader.substring(0, 100));
-    const hasShopifyToken = cookieHeader.includes('shopify_access_token');
-    console.log('[Customer API] shopify_access_token cookie present:', hasShopifyToken);
-    
-    if (hasShopifyToken) {
-      const tokenMatch = cookieHeader.match(/shopify_access_token=([^;]+)/);
-      if (tokenMatch) {
-        console.log('[Customer API] Cookie value found (length):', tokenMatch[1]?.length || 0);
-      }
-    }
-  }
-
-  // Try to get token from cookie (primary method)
-  let authData = getAuthCookie(req);
-  let authMethod = 'cookie';
-  let customerAccessToken = null;
-  
-  if (authData && authData.access_token) {
-    customerAccessToken = authData.access_token;
-    console.log('[Customer API] Authentication method: cookie');
-    console.log('[Customer API] authData.access_token exists, preview:', `${authData.access_token.slice(0, 10)}...${authData.access_token.slice(-6)}`);
-  } else {
-    // Fallback: Try Authorization header (from postMessage token)
-    // Try multiple possible header names (case variations)
-    const authHeader = req.headers.authorization || req.headers.Authorization || req.headers['authorization'] || req.headers['Authorization'];
-    console.log('[Customer API] Checking Authorization header:', authHeader ? 'found' : 'not found');
-    
-    if (authHeader && typeof authHeader === 'string') {
-      if (authHeader.startsWith('Bearer ')) {
-        customerAccessToken = authHeader.substring(7);
-        authMethod = 'authorization-header';
-        console.log('[Customer API] Authentication method: Authorization header');
-        console.log('[Customer API] Token from header, preview:', `${customerAccessToken.slice(0, 10)}...${customerAccessToken.slice(-6)}`);
-      } else {
-        console.log('[Customer API] Authorization header does not start with "Bearer "');
-      }
-    } else {
-      console.log('[Customer API] No valid Authorization header found');
-    }
-  }
-
-  // Log authentication status
-  console.log('[Customer API] Authentication method used:', authMethod);
-  console.log('[Customer API] Token available:', !!customerAccessToken);
-  
-  if (!customerAccessToken) {
-    console.log('[Customer API] No token found in cookie or Authorization header');
+  if (!authData || !authData.access_token) {
+    console.log('[Customer API] No valid authentication cookie found');
     return res.status(401).json({ error: 'Not authenticated' });
   }
+
+  const customerAccessToken = authData.access_token;
+  console.log('[Customer API] Using token from cookie, preview:', `${customerAccessToken.slice(0, 10)}...${customerAccessToken.slice(-6)}`);
 
   if (req.method === 'GET') {
     try {
@@ -348,31 +412,107 @@ export default async function handler(req, res) {
 
       const body = parsedBody && typeof parsedBody === 'object' ? parsedBody : {};
       const customerInput = buildCustomerInput(body);
+      const addressInput = buildAddressInput(body.address);
 
-      if (!customerInput) {
+      if (!customerInput && !addressInput) {
         return res.status(400).json({ error: 'No customer updates provided' });
       }
 
-      const result = await callCustomerAccountAPI(CUSTOMER_UPDATE_MUTATION, {
-        customer: customerInput,
-      }, customerAccessToken);
+      // First, get current customer data to check existing addresses
+      const currentCustomerResult = await callCustomerAccountAPI(CUSTOMER_QUERY, {}, customerAccessToken);
+      const currentCustomer = currentCustomerResult?.data?.customer;
+      const existingAddressId = currentCustomer?.defaultAddress?.id || 
+                               (currentCustomer?.addresses?.edges?.[0]?.node?.id);
 
-      if (!result || !result.data || !result.data.customerUpdate) {
-        console.error('[Customer API] Invalid response from customerUpdate mutation');
-        return res.status(500).json({ error: 'Invalid response from Shopify API' });
+      // Update customer fields (firstName, lastName, email, phone)
+      if (customerInput) {
+        const customerUpdateResult = await callCustomerAccountAPI(CUSTOMER_UPDATE_MUTATION, {
+          customer: customerInput,
+        }, customerAccessToken);
+
+        if (!customerUpdateResult || !customerUpdateResult.data || !customerUpdateResult.data.customerUpdate) {
+          console.error('[Customer API] Invalid response from customerUpdate mutation');
+          return res.status(500).json({ error: 'Invalid response from Shopify API' });
+        }
+
+        const userErrors = customerUpdateResult.data.customerUpdate.userErrors;
+        if (userErrors && userErrors.length > 0) {
+          const errorMessages = userErrors.map((err) => err.message);
+          console.error('[Customer API] customerUpdate userErrors:', errorMessages);
+          return res.status(400).json({
+            error: 'Unable to update customer',
+            details: errorMessages,
+          });
+        }
       }
 
-      const userErrors = result.data.customerUpdate.userErrors;
-      if (userErrors && userErrors.length > 0) {
-        const errorMessages = userErrors.map((err) => err.message);
-        console.error('[Customer API] customerUpdate userErrors:', errorMessages);
-        return res.status(400).json({
-          error: 'Unable to update customer',
-          details: errorMessages,
-        });
+      // Update or create address
+      let addressId = existingAddressId;
+      if (addressInput) {
+        if (existingAddressId) {
+          // Update existing address
+          const addressUpdateResult = await callCustomerAccountAPI(CUSTOMER_ADDRESS_UPDATE_MUTATION, {
+            address: addressInput,
+            id: existingAddressId,
+          }, customerAccessToken);
+
+          if (!addressUpdateResult || !addressUpdateResult.data || !addressUpdateResult.data.customerAddressUpdate) {
+            console.error('[Customer API] Invalid response from customerAddressUpdate mutation');
+            return res.status(500).json({ error: 'Invalid response from Shopify API' });
+          }
+
+          const addressErrors = addressUpdateResult.data.customerAddressUpdate.userErrors;
+          if (addressErrors && addressErrors.length > 0) {
+            const errorMessages = addressErrors.map((err) => err.message);
+            console.error('[Customer API] customerAddressUpdate userErrors:', errorMessages);
+            return res.status(400).json({
+              error: 'Unable to update address',
+              details: errorMessages,
+            });
+          }
+
+          addressId = addressUpdateResult.data.customerAddressUpdate.customerAddress?.id || existingAddressId;
+        } else {
+          // Create new address
+          const addressCreateResult = await callCustomerAccountAPI(CUSTOMER_ADDRESS_CREATE_MUTATION, {
+            address: addressInput,
+          }, customerAccessToken);
+
+          if (!addressCreateResult || !addressCreateResult.data || !addressCreateResult.data.customerAddressCreate) {
+            console.error('[Customer API] Invalid response from customerAddressCreate mutation');
+            return res.status(500).json({ error: 'Invalid response from Shopify API' });
+          }
+
+          const addressErrors = addressCreateResult.data.customerAddressCreate.userErrors;
+          if (addressErrors && addressErrors.length > 0) {
+            const errorMessages = addressErrors.map((err) => err.message);
+            console.error('[Customer API] customerAddressCreate userErrors:', errorMessages);
+            return res.status(400).json({
+              error: 'Unable to create address',
+              details: errorMessages,
+            });
+          }
+
+          addressId = addressCreateResult.data.customerAddressCreate.customerAddress?.id;
+        }
+
+        // Set as default address if addressId exists
+        if (addressId) {
+          const defaultResult = await callCustomerAccountAPI(CUSTOMER_DEFAULT_ADDRESS_UPDATE_MUTATION, {
+            addressId: addressId,
+          }, customerAccessToken);
+
+          const defaultErrors = defaultResult?.data?.customerDefaultAddressUpdate?.userErrors;
+          if (defaultErrors && defaultErrors.length > 0) {
+            console.warn('[Customer API] customerDefaultAddressUpdate userErrors:', defaultErrors.map((err) => err.message));
+            // Don't fail if setting default fails, just log warning
+          }
+        }
       }
 
-      const updatedCustomer = mapCustomerResponse(result.data.customerUpdate.customer);
+      // Fetch updated customer data
+      const updatedResult = await callCustomerAccountAPI(CUSTOMER_QUERY, {}, customerAccessToken);
+      const updatedCustomer = mapCustomerResponse(updatedResult?.data?.customer);
 
       if (!updatedCustomer) {
         return res.status(404).json({ error: 'Customer not found after update' });

@@ -59,19 +59,50 @@ export function getAuthCookie(req) {
     return null;
   }
 
-  const tokenMatch = cookies.match(/shopify_access_token=([^;]+)/);
+  // Try to find cookie - handle both direct match and URL-encoded values
+  let tokenMatch = cookies.match(/shopify_access_token=([^;]+)/);
+  if (!tokenMatch) {
+    // Try URL-encoded version
+    tokenMatch = cookies.match(/shopify_access_token=([^;,\s]+)/);
+  }
+  
   if (!tokenMatch) {
     console.log('[getAuthCookie] shopify_access_token cookie not found in header');
+    console.log('[getAuthCookie] Available cookies:', cookies.substring(0, 200));
     return null;
   }
   
   try {
-    const decoded = Buffer.from(tokenMatch[1], 'base64').toString('utf-8');
+    const cookieValue = tokenMatch[1].trim();
+    const decoded = Buffer.from(cookieValue, 'base64').toString('utf-8');
     const parsed = JSON.parse(decoded);
+    
+    // Validate that parsed object has required fields
+    if (!parsed || typeof parsed !== 'object') {
+      console.error('[getAuthCookie] Parsed cookie is not an object');
+      return null;
+    }
+    
+    if (!parsed.access_token) {
+      console.error('[getAuthCookie] Parsed cookie missing access_token');
+      return null;
+    }
+    
+    // Check if token is expired
+    if (parsed.expires_at) {
+      const expiresDate = new Date(parsed.expires_at);
+      const now = new Date();
+      if (expiresDate < now) {
+        console.log('[getAuthCookie] Token expired:', parsed.expires_at);
+        return null;
+      }
+    }
+    
     console.log('[getAuthCookie] Successfully decoded cookie, has access_token:', !!parsed.access_token);
     return parsed;
   } catch (error) {
     console.error('[getAuthCookie] Failed to decode auth cookie:', error.message);
+    console.error('[getAuthCookie] Cookie value preview:', tokenMatch[1]?.substring(0, 50));
     return null;
   }
 }

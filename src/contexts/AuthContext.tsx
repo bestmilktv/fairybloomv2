@@ -101,7 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Mark that user just logged in - this will allow modal to show if needed
       setJustLoggedIn(true)
       
-      // OAuth was successful, fetch customer data
+      // Wait for cookie to be set after OAuth callback
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // OAuth was successful, fetch customer data with retry
       // Pass checkJustLoggedIn=true to ensure modal check uses the correct flag
       await refreshUser(false, true)
       
@@ -260,18 +263,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       province?: string
       zip: string
       country: string
+      countryCode?: string
       phone?: string
     }
     acceptsMarketing?: boolean
   }): Promise<{ success: boolean; error?: string }> => {
     try {
-      const response = await fetch('/api/auth/customer/admin-update', {
+      // Normalize country to countryCode if needed
+      const normalizedUpdates = { ...updates };
+      if (normalizedUpdates.address?.country && !normalizedUpdates.address.countryCode) {
+        // Convert country name to code if it's a known country
+        const countryName = normalizedUpdates.address.country;
+        if (countryName === 'Czech Republic' || countryName === 'Czechia') {
+          normalizedUpdates.address.countryCode = 'CZ';
+        } else if (countryName.length === 2) {
+          normalizedUpdates.address.countryCode = countryName.toUpperCase();
+        } else {
+          normalizedUpdates.address.countryCode = countryName;
+        }
+      }
+
+      const response = await fetch('/api/auth/customer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(updates),
+        body: JSON.stringify(normalizedUpdates),
       })
 
       if (!response.ok) {
