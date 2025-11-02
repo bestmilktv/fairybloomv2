@@ -100,44 +100,84 @@ export default async function handler(req, res) {
       })) : null
     }, null, 2));
 
-    // Get default address (first address or null)
-    // Shopify Admin API returns addresses in customer.addresses array
-    // We should also check customer.default_address as fallback
-    let defaultAddress = null;
+    // Helper function to check if address has meaningful data (not just country)
+    const hasAddressData = (addr) => {
+      if (!addr) return false;
+      return !!(addr.address1 && addr.address1.trim() && addr.city && addr.city.trim() && addr.zip && addr.zip.trim());
+    };
+
+    // Find the best address - prefer one with complete data (address1, city, zip)
+    // Check all addresses in the array, not just default_address
+    let bestAddress = null;
     
-    if (customer.default_address) {
-      defaultAddress = customer.default_address;
+    // First, try to find an address with complete data in addresses array
+    if (customer.addresses && customer.addresses.length > 0) {
+      for (const addr of customer.addresses) {
+        if (hasAddressData(addr)) {
+          bestAddress = addr;
+          console.log('Found complete address in addresses array:', addr.id);
+          break;
+        }
+      }
+      
+      // If no complete address found, use first address (even if incomplete)
+      if (!bestAddress && customer.addresses.length > 0) {
+        bestAddress = customer.addresses[0];
+        console.log('Using first address from addresses array (may be incomplete)');
+      }
+    }
+    
+    // Fallback to default_address if addresses array didn't have anything
+    if (!bestAddress && customer.default_address) {
+      bestAddress = customer.default_address;
       console.log('Using default_address from customer object');
-    } else if (customer.addresses && customer.addresses.length > 0) {
-      defaultAddress = customer.addresses[0];
-      console.log('Using first address from addresses array');
     }
 
-    console.log('Default address:', JSON.stringify(defaultAddress, null, 2));
+    console.log('Selected address:', JSON.stringify(bestAddress, null, 2));
 
     // Extract address data - include if it exists, even if some fields are missing
     // We'll let the frontend decide if it's complete or not
-    const address = defaultAddress ? {
-      address1: defaultAddress.address1 || '',
-      address2: defaultAddress.address2 || '',
-      city: defaultAddress.city || '',
-      province: defaultAddress.province || '',
-      zip: defaultAddress.zip || '',
-      country: defaultAddress.country || '',
-      phone: defaultAddress.phone || ''
+    const address = bestAddress ? {
+      address1: bestAddress.address1 || '',
+      address2: bestAddress.address2 || '',
+      city: bestAddress.city || '',
+      province: bestAddress.province || '',
+      zip: bestAddress.zip || '',
+      country: bestAddress.country || bestAddress.country_name || bestAddress.country_code || '',
+      phone: bestAddress.phone || ''
     } : undefined;
 
     // Check email marketing consent
     const acceptsMarketing = customer.email_marketing_consent?.state === 'subscribed' || 
                              customer.accepts_marketing === true;
 
+    // Use email from JWT as fallback if customer.email is empty
+    // This is common with OAuth - email might be in JWT but not in customer object
+    const customerEmail = customer.email && customer.email.trim() 
+      ? customer.email.trim() 
+      : (authData.customer.email || '');
+    
+    // Use first_name and last_name from customer object (may be empty)
+    const customerFirstName = customer.first_name && customer.first_name.trim() 
+      ? customer.first_name.trim() 
+      : '';
+    const customerLastName = customer.last_name && customer.last_name.trim() 
+      ? customer.last_name.trim() 
+      : '';
+
+    console.log('Email fallback check:', {
+      customerEmail: customer.email,
+      jwtEmail: authData.customer.email,
+      finalEmail: customerEmail
+    });
+
     // Ensure we're reading the data correctly
     // Shopify Admin API uses snake_case for field names
     const responseData = {
       id: customer.id ? String(customer.id) : '',
-      email: customer.email || '',
-      firstName: customer.first_name || customer.firstName || '',
-      lastName: customer.last_name || customer.lastName || '',
+      email: customerEmail,
+      firstName: customerFirstName,
+      lastName: customerLastName,
       address: address,
       acceptsMarketing: acceptsMarketing
     };
