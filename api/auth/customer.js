@@ -39,9 +39,12 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
     }),
   });
 
+  console.log('[Customer Account API] HTTP status:', response.status, response.statusText);
+  const responseText = await response.text();
+  console.log('[Customer Account API] Raw response text:', responseText);
+
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[Customer Account API] Error ${response.status}:`, errorText);
+    console.error(`[Customer Account API] Error ${response.status}:`, responseText);
     
     if (response.status === 401) {
       throw new Error('Authentication required');
@@ -49,7 +52,13 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (parseError) {
+    console.error('[Customer Account API] Failed to parse JSON:', parseError);
+    throw new Error('Failed to parse Customer Account API response');
+  }
 
   if (data.errors && data.errors.length > 0) {
     const errorMessages = data.errors.map((error) => error.message).join(', ');

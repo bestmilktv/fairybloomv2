@@ -36,9 +36,12 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
     }),
   });
 
+  console.log('[Favorites] Customer Account API status:', response.status, response.statusText);
+  const responseText = await response.text();
+  console.log('[Favorites] Customer Account API raw response:', responseText);
+
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Shopify Customer Account API error: ${response.status}`, errorText);
+    console.error(`Shopify Customer Account API error: ${response.status}`, responseText);
     
     if (response.status === 401) {
       throw new Error('Authentication required');
@@ -46,7 +49,13 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (parseError) {
+    console.error('[Favorites] Failed to parse Customer Account API JSON:', parseError);
+    throw new Error('Failed to parse Shopify response');
+  }
 
   if (data.errors && data.errors.length > 0) {
     const errorMessages = data.errors.map((error) => error.message).join(', ');
