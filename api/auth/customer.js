@@ -480,7 +480,7 @@ export default async function handler(req, res) {
 
     // Ensure we're reading the data correctly
     // Shopify Admin API uses snake_case for field names
-    const responseData = {
+    let responseData = {
       id: customer.id ? String(customer.id) : '',
       email: customerEmail,
       firstName: customerFirstName,
@@ -493,8 +493,160 @@ export default async function handler(req, res) {
     console.log('Response data being sent to frontend:', JSON.stringify(responseData, null, 2));
     
     // Double-check that we're getting actual values
-    if (!responseData.email && !responseData.firstName && !responseData.lastName) {
-      console.error('WARNING: All customer fields are empty! Full customer object:', JSON.stringify(customer, null, 2));
+    const hasCompleteData = responseData.email && 
+                            responseData.firstName && 
+                            responseData.lastName && 
+                            responseData.address && 
+                            responseData.address.address1;
+    
+    // ========== FALLBACK TO CUSTOMER ACCOUNT API IF ADMIN API DATA IS INCOMPLETE ==========
+    if (!hasCompleteData) {
+      console.log('=== ADMIN API DATA INCOMPLETE - TRYING CUSTOMER ACCOUNT API FALLBACK ===');
+      console.log('Missing data:', {
+        hasEmail: !!responseData.email,
+        hasFirstName: !!responseData.firstName,
+        hasLastName: !!responseData.lastName,
+        hasAddress: !!responseData.address?.address1
+      });
+      
+      try {
+        const shopId = process.env.SHOPIFY_SHOP_ID || process.env.VITE_SHOPIFY_SHOP_ID;
+        if (!shopId) {
+          console.warn('SHOPIFY_SHOP_ID not configured - skipping Customer Account API fallback');
+        } else {
+          // Zkusit použít access_token z auth cookie pro autentizaci
+          const accessToken = authData?.access_token;
+          if (!accessToken) {
+            console.warn('No access_token in auth cookie - skipping Customer Account API fallback');
+          } else {
+            const customerAccountApiUrl = `https://shopify.com/${shopId}/account/customer/api/unstable/graphql`;
+            
+            const customerAccountQuery = `
+              query {
+                customer {
+                  id
+                  firstName
+                  lastName
+                  emailAddress {
+                    emailAddress
+                  }
+                  defaultAddress {
+                    address1
+                    address2
+                    city
+                    province
+                    zip
+                    country
+                    phone
+                  }
+                  addresses(first: 5) {
+                    edges {
+                      node {
+                        id
+                        address1
+                        address2
+                        city
+                        province
+                        zip
+                        country
+                        phone
+                      }
+                    }
+                  }
+                  emailMarketingSubscriptionState {
+                    emailMarketingSubscriptionState
+                  }
+                }
+              }
+            `;
+            
+            console.log('Calling Customer Account API:', customerAccountApiUrl);
+            console.log('Using access_token from auth cookie:', accessToken ? 'present' : 'missing');
+            
+            // Použít Bearer token authentication pro Customer Account API
+            // Předat také cookies z requestu pro případ, že API vyžaduje oba
+            const customerAccountResponse = await fetch(customerAccountApiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+                'Cookie': req.headers.cookie || '', // Fallback na cookies pokud Bearer nefunguje
+              },
+              body: JSON.stringify({
+                query: customerAccountQuery,
+              }),
+            });
+            
+            if (customerAccountResponse.ok) {
+              const customerAccountData = await customerAccountResponse.json();
+              console.log('Customer Account API response:', JSON.stringify(customerAccountData, null, 2));
+              
+              if (customerAccountData.data && customerAccountData.data.customer) {
+                const caCustomer = customerAccountData.data.customer;
+                
+                // Doplnit chybějící data z Customer Account API
+                if (!responseData.firstName && caCustomer.firstName) {
+                  responseData.firstName = caCustomer.firstName;
+                  console.log('✓ Using firstName from Customer Account API');
+                }
+                if (!responseData.lastName && caCustomer.lastName) {
+                  responseData.lastName = caCustomer.lastName;
+                  console.log('✓ Using lastName from Customer Account API');
+                }
+                if (!responseData.email && caCustomer.emailAddress?.emailAddress) {
+                  responseData.email = caCustomer.emailAddress.emailAddress;
+                  console.log('✓ Using email from Customer Account API');
+                }
+                
+                // Zkontrolovat defaultAddress nebo addresses
+                let caAddress = null;
+                if (caCustomer.defaultAddress) {
+                  caAddress = caCustomer.defaultAddress;
+                  console.log('✓ Using defaultAddress from Customer Account API');
+                } else if (caCustomer.addresses?.edges && caCustomer.addresses.edges.length > 0) {
+                  caAddress = caCustomer.addresses.edges[0].node;
+                  console.log('✓ Using first address from Customer Account API');
+                }
+                
+                // Pokud máme adresu z Customer Account API a Admin API adresa je neúplná
+                if (caAddress && (!responseData.address || !responseData.address.address1)) {
+                  responseData.address = {
+                    address1: caAddress.address1 || '',
+                    address2: caAddress.address2 || '',
+                    city: caAddress.city || '',
+                    province: caAddress.province || '',
+                    zip: caAddress.zip || '',
+                    country: caAddress.country || '',
+                    phone: caAddress.phone || ''
+                  };
+                  console.log('✓ Using address from Customer Account API');
+                }
+                
+                // Email marketing subscription state
+                if (caCustomer.emailMarketingSubscriptionState?.emailMarketingSubscriptionState === 'SUBSCRIBED') {
+                  responseData.acceptsMarketing = true;
+                  console.log('✓ Using acceptsMarketing from Customer Account API');
+                }
+                
+                console.log('=== CUSTOMER ACCOUNT API FALLBACK SUCCESSFUL ===');
+                console.log('Final responseData after fallback:', JSON.stringify(responseData, null, 2));
+              } else {
+                console.warn('Customer Account API returned no customer data:', customerAccountData);
+              }
+            } else {
+              const errorText = await customerAccountResponse.text();
+              console.warn('Customer Account API fallback failed:', {
+                status: customerAccountResponse.status,
+                statusText: customerAccountResponse.statusText,
+                error: errorText
+              });
+            }
+          }
+        }
+      } catch (fallbackError) {
+        // Nepřerušit - použít data z Admin API i když jsou neúplná
+        console.error('Customer Account API fallback error:', fallbackError);
+      }
     }
 
     console.log('Customer data from Shopify Admin API (response):', JSON.stringify({
