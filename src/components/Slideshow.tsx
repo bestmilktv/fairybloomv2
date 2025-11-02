@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
@@ -13,11 +13,16 @@ interface Slide {
   cta: string;
 }
 
+const AUTO_ADVANCE_DELAY = 5000;
+
 const Slideshow = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(1);
   const [slideshowRef, slideshowVisible] = useScrollAnimation();
   const [slides, setSlides] = useState<Slide[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch featured products for slideshow
   useEffect(() => {
@@ -116,21 +121,133 @@ const Slideshow = () => {
     fetchSlideshowData();
   }, []);
 
-  // Auto-advance slides
+  const extendedSlides = useMemo(() => {
+    if (slides.length === 0) {
+      return [];
+    }
+
+    const first = slides[0];
+    const last = slides[slides.length - 1];
+
+    return [last, ...slides, first];
+  }, [slides]);
+
+  const activeSlideIndex = slides.length
+    ? (currentIndex - 1 + slides.length) % slides.length
+    : 0;
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const startTimer = useCallback(() => {
+    if (slides.length <= 1) {
+      return;
+    }
+
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      setIsTransitionEnabled(true);
+      setCurrentIndex((prev) => prev + 1);
+    }, AUTO_ADVANCE_DELAY);
+  }, [slides.length, clearTimer]);
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 6000);
+    return () => {
+      clearTimer();
+    };
+  }, [clearTimer]);
 
-    return () => clearInterval(timer);
-  }, [slides.length]);
+  useEffect(() => {
+    if (slides.length === 0) {
+      clearTimer();
+      setCurrentIndex(0);
+      return;
+    }
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
-  };
+    setIsTransitionEnabled(false);
+    setCurrentIndex(1);
+    clearTimer();
+  }, [slides.length, clearTimer]);
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  useEffect(() => {
+    if (slides.length <= 1) {
+      clearTimer();
+      return;
+    }
+
+    startTimer();
+
+    return () => {
+      clearTimer();
+    };
+  }, [currentIndex, slides.length, startTimer, clearTimer]);
+
+  useEffect(() => {
+    if (!isTransitionEnabled) {
+      const id = requestAnimationFrame(() => {
+        setIsTransitionEnabled(true);
+      });
+
+      return () => cancelAnimationFrame(id);
+    }
+  }, [isTransitionEnabled]);
+
+  const nextSlide = useCallback(() => {
+    if (slides.length <= 1) {
+      return;
+    }
+
+    clearTimer();
+    setIsTransitionEnabled(true);
+    setCurrentIndex((prev) => prev + 1);
+  }, [slides.length, clearTimer]);
+
+  const prevSlide = useCallback(() => {
+    if (slides.length <= 1) {
+      return;
+    }
+
+    clearTimer();
+    setIsTransitionEnabled(true);
+    setCurrentIndex((prev) => prev - 1);
+  }, [slides.length, clearTimer]);
+
+  const goToSlide = useCallback(
+    (index: number) => {
+      if (slides.length === 0) {
+        return;
+      }
+
+      const target = index + 1;
+
+      clearTimer();
+      if (currentIndex === target) {
+        startTimer();
+        return;
+      }
+
+      setIsTransitionEnabled(true);
+      setCurrentIndex(target);
+    },
+    [slides.length, clearTimer, startTimer, currentIndex]
+  );
+
+  const handleTransitionEnd = () => {
+    if (slides.length === 0) {
+      return;
+    }
+
+    if (currentIndex === slides.length + 1) {
+      setIsTransitionEnabled(false);
+      setCurrentIndex(1);
+    } else if (currentIndex === 0) {
+      setIsTransitionEnabled(false);
+      setCurrentIndex(slides.length);
+    }
   };
 
   if (isLoading) {
@@ -164,10 +281,14 @@ const Slideshow = () => {
           {/* Slides */}
           <div 
             className="flex transition-transform duration-700 ease-in-out"
-            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            style={{
+              transform: `translateX(-${currentIndex * 100}%)`,
+              transition: isTransitionEnabled ? undefined : 'none',
+            }}
+            onTransitionEnd={handleTransitionEnd}
           >
-            {slides.map((slide, index) => (
-              <div key={slide.id} className="w-full flex-shrink-0">
+            {extendedSlides.map((slide, index) => (
+              <div key={`${slide.id}-${index}`} className="w-full flex-shrink-0">
                 <div className="relative h-96 md:h-[500px] flex items-center">
                   {/* Background */}
                   <div 
@@ -179,7 +300,7 @@ const Slideshow = () => {
                   
                   {/* Content */}
                   <div className="relative z-10 max-w-2xl mx-auto text-center px-8">
-                    <div className={`fade-in-up ${index === currentSlide ? 'animate-fade-in' : ''}`}>
+                    <div className={`fade-in-up ${index === currentIndex ? 'animate-fade-in' : ''}`}>
                       <p className="text-gold font-medium mb-2 tracking-wide text-sm uppercase">
                         {slide.subtitle}
                       </p>
@@ -219,9 +340,9 @@ const Slideshow = () => {
             {slides.map((_, index) => (
               <button
                 key={index}
-                onClick={() => setCurrentSlide(index)}
+                onClick={() => goToSlide(index)}
                 className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  index === currentSlide 
+                  index === activeSlideIndex 
                     ? 'bg-gold scale-125' 
                     : 'bg-luxury-foreground/30 hover:bg-luxury-foreground/50'
                 }`}
