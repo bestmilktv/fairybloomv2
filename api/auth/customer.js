@@ -14,33 +14,24 @@ const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN;
 const ADMIN_API_VERSION = '2024-04';
 
 /**
- * Fetch Customer Account API using cookies and access_token (same pattern as api/favorites/index.js)
+ * Fetch Customer Account API using cookies (same pattern as api/favorites/index.js)
+ * DŮLEŽITÉ: Customer Account API funguje POUZE přes cookies z shopify.com domény
+ * Cookies jsou nastavené během OAuth redirectu na shopify.com
  */
-async function fetchCustomerAccount(query, variables = {}, req = null, accessToken = null) {
+async function fetchCustomerAccount(query, variables = {}, req = null) {
   const headers = {
     'Content-Type': 'application/json',
   };
 
-  // DŮLEŽITÉ: Customer Account API vyžaduje Authorization header s Bearer tokenem
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
-    console.log('[Customer Account API] Using Authorization header with access_token');
-  }
-
-  // Shopify Customer Account API také vyžaduje session cookies z shopify.com domain
+  // Shopify Customer Account API vyžaduje session cookies z shopify.com domain
   // These cookies are set during OAuth flow and contain authentication session
   // We must forward ALL cookies from the browser request to Shopify API
   if (req && req.headers.cookie) {
     headers['Cookie'] = req.headers.cookie;
     console.log('[Customer Account API] Forwarding cookies (length):', req.headers.cookie.length);
   } else {
-    console.warn('[Customer Account API] No cookies found in request headers');
-  }
-
-  // Pokud nemáme ani access token ani cookies, je to problém
-  if (!accessToken && !req?.headers?.cookie) {
-    console.error('[Customer Account API] Missing both access_token and cookies');
-    throw new Error('Authentication required - missing access_token and cookies');
+    console.error('[Customer Account API] No cookies found in request headers');
+    throw new Error('Authentication required - missing cookies');
   }
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
@@ -74,17 +65,101 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
 }
 
 /**
- * Fallback: Fetch customer data from Admin API
+ * Fallback: Fetch customer data from Admin GraphQL API
+ * GraphQL API má lepší kontrolu nad tím, co vrací než REST API
  */
-async function fetchCustomerFromAdminAPI(customerId) {
+async function fetchCustomerFromAdminGraphQL(customerId) {
   if (!STORE_DOMAIN || !ADMIN_TOKEN) {
-    console.warn('[Admin API] Missing configuration');
+    console.warn('[Admin GraphQL API] Missing configuration');
+    return null;
+  }
+
+  const adminGraphQLUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/graphql.json`;
+  
+  console.log('[Admin GraphQL API] Fetching customer:', customerId);
+  
+  // GraphQL query pro získání kompletních customer dat včetně adres
+  const query = `
+    query getCustomer($id: ID!) {
+      customer(id: $id) {
+        id
+        firstName
+        lastName
+        email
+        defaultAddress {
+          address1
+          address2
+          city
+          province
+          zip
+          countryCodeV2
+          phone
+        }
+        addresses(first: 5) {
+          address1
+          address2
+          city
+          province
+          zip
+          countryCodeV2
+          phone
+        }
+        emailMarketingConsent {
+          marketingState
+        }
+      }
+    }
+  `;
+
+  // Shopify GraphQL Admin API používá GID formát: gid://shopify/Customer/{id}
+  const customerGid = `gid://shopify/Customer/${customerId}`;
+  
+  try {
+    const graphqlResponse = await fetch(adminGraphQLUrl, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': ADMIN_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        variables: {
+          id: customerGid
+        }
+      }),
+    });
+
+    if (!graphqlResponse.ok) {
+      console.warn('[Admin GraphQL API] Failed:', graphqlResponse.status, graphqlResponse.statusText);
+      return null;
+    }
+
+    const graphqlData = await graphqlResponse.json();
+    
+    if (graphqlData.errors) {
+      console.error('[Admin GraphQL API] GraphQL errors:', graphqlData.errors);
+      return null;
+    }
+
+    return graphqlData.data?.customer || null;
+  } catch (error) {
+    console.error('[Admin GraphQL API] Error:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Fallback: Fetch customer data from Admin REST API (legacy)
+ */
+async function fetchCustomerFromAdminREST(customerId) {
+  if (!STORE_DOMAIN || !ADMIN_TOKEN) {
+    console.warn('[Admin REST API] Missing configuration');
     return null;
   }
 
   const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${customerId}.json`;
   
-  console.log('[Admin API] Fetching customer:', adminApiUrl);
+  console.log('[Admin REST API] Fetching customer:', adminApiUrl);
   
   const adminResponse = await fetch(adminApiUrl, {
     method: 'GET',
@@ -95,7 +170,7 @@ async function fetchCustomerFromAdminAPI(customerId) {
   });
 
   if (!adminResponse.ok) {
-    console.warn('[Admin API] Failed:', adminResponse.status, adminResponse.statusText);
+    console.warn('[Admin REST API] Failed:', adminResponse.status, adminResponse.statusText);
     return null;
   }
 
@@ -168,9 +243,8 @@ export default async function handler(req, res) {
           }
         `;
 
-        // Předat access_token z auth cookie pro Authorization header
-        const accessToken = authData.access_token;
-        const response = await fetchCustomerAccount(customerAccountQuery, {}, req, accessToken);
+        // Customer Account API funguje POUZE přes cookies, nepotřebuje Authorization header
+        const response = await fetchCustomerAccount(customerAccountQuery, {}, req);
         console.log('[Customer Account API] Response received:', JSON.stringify(response, null, 2));
 
         if (response.data && response.data.customer) {
@@ -234,53 +308,33 @@ export default async function handler(req, res) {
       console.log('[Customer Account API] Falling back to Admin API...');
     }
 
-    // ========== FALLBACK: TRY ADMIN API ==========
+    // ========== FALLBACK: TRY ADMIN GRAPHQL API ==========
     if (!customerData) {
-      console.log('=== FALLING BACK TO ADMIN API ===');
+      console.log('=== FALLING BACK TO ADMIN GRAPHQL API ===');
       
       try {
-        const adminCustomer = await fetchCustomerFromAdminAPI(numericCustomerId);
+        // Zkusit Admin GraphQL API (lepší než REST)
+        let adminCustomer = await fetchCustomerFromAdminGraphQL(numericCustomerId);
         
         if (adminCustomer) {
-          dataSource = 'admin_api';
-
-          // Extract email (fallback to JWT)
+          dataSource = 'admin_graphql_api';
+          
+          // Admin GraphQL API používá camelCase
           const email = adminCustomer.email && adminCustomer.email.trim()
             ? adminCustomer.email.trim()
             : (authData.customer.email || '');
 
-          // Extract name from customer root or addresses
-          let firstName = adminCustomer.first_name && adminCustomer.first_name.trim()
-            ? adminCustomer.first_name.trim()
+          const firstName = adminCustomer.firstName && adminCustomer.firstName.trim()
+            ? adminCustomer.firstName.trim()
             : '';
-          let lastName = adminCustomer.last_name && adminCustomer.last_name.trim()
-            ? adminCustomer.last_name.trim()
+          const lastName = adminCustomer.lastName && adminCustomer.lastName.trim()
+            ? adminCustomer.lastName.trim()
             : '';
-
-          // Try to extract name from default_address or addresses if not in root
-          if ((!firstName || !lastName) && adminCustomer.default_address) {
-            if (!firstName && adminCustomer.default_address.first_name) {
-              firstName = adminCustomer.default_address.first_name.trim();
-            }
-            if (!lastName && adminCustomer.default_address.last_name) {
-              lastName = adminCustomer.default_address.last_name.trim();
-            }
-          }
-
-          if ((!firstName || !lastName) && adminCustomer.addresses && adminCustomer.addresses.length > 0) {
-            const firstAddr = adminCustomer.addresses[0];
-            if (!firstName && firstAddr.first_name) {
-              firstName = firstAddr.first_name.trim();
-            }
-            if (!lastName && firstAddr.last_name) {
-              lastName = firstAddr.last_name.trim();
-            }
-          }
 
           // Extract address
           let address = null;
-          if (adminCustomer.default_address) {
-            const addr = adminCustomer.default_address;
+          if (adminCustomer.defaultAddress) {
+            const addr = adminCustomer.defaultAddress;
             if (addr.address1 || addr.city || addr.zip) {
               address = {
                 address1: addr.address1 || '',
@@ -288,7 +342,7 @@ export default async function handler(req, res) {
                 city: addr.city || '',
                 province: addr.province || '',
                 zip: addr.zip || '',
-                country: addr.country || addr.country_name || addr.country_code || '',
+                country: addr.countryCodeV2 || '',
                 phone: addr.phone || ''
               };
             }
@@ -301,15 +355,14 @@ export default async function handler(req, res) {
                 city: addr.city || '',
                 province: addr.province || '',
                 zip: addr.zip || '',
-                country: addr.country || addr.country_name || addr.country_code || '',
+                country: addr.countryCodeV2 || '',
                 phone: addr.phone || ''
               };
             }
           }
 
           // Extract email marketing consent
-          const acceptsMarketing = adminCustomer.email_marketing_consent?.state === 'subscribed' ||
-                                 adminCustomer.accepts_marketing === true;
+          const acceptsMarketing = adminCustomer.emailMarketingConsent?.marketingState === 'SUBSCRIBED';
 
           customerData = {
             id: numericCustomerId,
@@ -320,7 +373,92 @@ export default async function handler(req, res) {
             acceptsMarketing: acceptsMarketing
           };
 
-          console.log('[Admin API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
+          console.log('[Admin GraphQL API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
+        } else {
+          // Pokud GraphQL selže, zkusit REST API jako poslední možnost
+          console.log('=== FALLING BACK TO ADMIN REST API (LEGACY) ===');
+          adminCustomer = await fetchCustomerFromAdminREST(numericCustomerId);
+          
+          if (adminCustomer) {
+            dataSource = 'admin_rest_api';
+
+            // REST API používá snake_case
+            const email = adminCustomer.email && adminCustomer.email.trim()
+              ? adminCustomer.email.trim()
+              : (authData.customer.email || '');
+
+            let firstName = adminCustomer.first_name && adminCustomer.first_name.trim()
+              ? adminCustomer.first_name.trim()
+              : '';
+            let lastName = adminCustomer.last_name && adminCustomer.last_name.trim()
+              ? adminCustomer.last_name.trim()
+              : '';
+
+            // Try to extract name from default_address or addresses if not in root
+            if ((!firstName || !lastName) && adminCustomer.default_address) {
+              if (!firstName && adminCustomer.default_address.first_name) {
+                firstName = adminCustomer.default_address.first_name.trim();
+              }
+              if (!lastName && adminCustomer.default_address.last_name) {
+                lastName = adminCustomer.default_address.last_name.trim();
+              }
+            }
+
+            if ((!firstName || !lastName) && adminCustomer.addresses && adminCustomer.addresses.length > 0) {
+              const firstAddr = adminCustomer.addresses[0];
+              if (!firstName && firstAddr.first_name) {
+                firstName = firstAddr.first_name.trim();
+              }
+              if (!lastName && firstAddr.last_name) {
+                lastName = firstAddr.last_name.trim();
+              }
+            }
+
+            // Extract address
+            let address = null;
+            if (adminCustomer.default_address) {
+              const addr = adminCustomer.default_address;
+              if (addr.address1 || addr.city || addr.zip) {
+                address = {
+                  address1: addr.address1 || '',
+                  address2: addr.address2 || '',
+                  city: addr.city || '',
+                  province: addr.province || '',
+                  zip: addr.zip || '',
+                  country: addr.country || addr.country_name || addr.country_code || '',
+                  phone: addr.phone || ''
+                };
+              }
+            } else if (adminCustomer.addresses && adminCustomer.addresses.length > 0) {
+              const addr = adminCustomer.addresses[0];
+              if (addr.address1 || addr.city || addr.zip) {
+                address = {
+                  address1: addr.address1 || '',
+                  address2: addr.address2 || '',
+                  city: addr.city || '',
+                  province: addr.province || '',
+                  zip: addr.zip || '',
+                  country: addr.country || addr.country_name || addr.country_code || '',
+                  phone: addr.phone || ''
+                };
+              }
+            }
+
+            // Extract email marketing consent
+            const acceptsMarketing = adminCustomer.email_marketing_consent?.state === 'subscribed' ||
+                                   adminCustomer.accepts_marketing === true;
+
+            customerData = {
+              id: numericCustomerId,
+              email: email,
+              firstName: firstName,
+              lastName: lastName,
+      address: address,
+      acceptsMarketing: acceptsMarketing
+    };
+
+            console.log('[Admin REST API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
+          }
         }
       } catch (adminApiError) {
         console.error('[Admin API] Fallback error:', adminApiError.message);
