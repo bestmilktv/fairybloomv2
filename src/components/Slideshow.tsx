@@ -25,6 +25,7 @@ const Slideshow = () => {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
+  const isTransitioningRef = useRef(false);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -209,9 +210,11 @@ const Slideshow = () => {
     if (slides.length === 0) {
       clearTimer();
       setCurrentIndex(0);
+      isTransitioningRef.current = false;
       return;
     }
 
+    isTransitioningRef.current = false;
     setIsTransitionEnabled(false);
     setCurrentIndex(1);
     clearTimer();
@@ -232,8 +235,11 @@ const Slideshow = () => {
 
   useEffect(() => {
     if (!isTransitionEnabled) {
+      // Po vypnutí transition počkáme jeden frame a pak ji znovu zapneme
       const id = requestAnimationFrame(() => {
-        setIsTransitionEnabled(true);
+        requestAnimationFrame(() => {
+          setIsTransitionEnabled(true);
+        });
       });
 
       return () => cancelAnimationFrame(id);
@@ -241,28 +247,44 @@ const Slideshow = () => {
   }, [isTransitionEnabled]);
 
   const nextSlide = useCallback(() => {
-    if (slides.length <= 1) {
+    if (slides.length <= 1 || isTransitioningRef.current) {
       return;
     }
 
+    isTransitioningRef.current = true;
     clearTimer();
     setIsTransitionEnabled(true);
-    setCurrentIndex((prev) => prev + 1);
+    setCurrentIndex((prev) => {
+      const next = prev + 1;
+      // Pokud jsme na posledním skutečném slidu, jdeme na klon prvního
+      if (prev >= slides.length) {
+        return slides.length + 1;
+      }
+      return next;
+    });
   }, [slides.length, clearTimer]);
 
   const prevSlide = useCallback(() => {
-    if (slides.length <= 1) {
+    if (slides.length <= 1 || isTransitioningRef.current) {
       return;
     }
 
+    isTransitioningRef.current = true;
     clearTimer();
     setIsTransitionEnabled(true);
-    setCurrentIndex((prev) => prev - 1);
+    setCurrentIndex((prev) => {
+      const next = prev - 1;
+      // Pokud jsme na prvním skutečném slidu, jdeme na klon posledního
+      if (prev <= 1) {
+        return 0;
+      }
+      return next;
+    });
   }, [slides.length, clearTimer]);
 
   const goToSlide = useCallback(
     (index: number) => {
-      if (slides.length === 0) {
+      if (slides.length === 0 || isTransitioningRef.current) {
         return;
       }
 
@@ -274,25 +296,48 @@ const Slideshow = () => {
         return;
       }
 
+      isTransitioningRef.current = true;
       setIsTransitionEnabled(true);
       setCurrentIndex(target);
     },
     [slides.length, clearTimer, startTimer, currentIndex]
   );
 
-  const handleTransitionEnd = () => {
-    if (slides.length === 0) {
+  const handleTransitionEnd = useCallback(() => {
+    if (slides.length === 0 || !isTransitioningRef.current) {
       return;
     }
 
-    if (currentIndex === slides.length + 1) {
+    isTransitioningRef.current = false;
+
+    // Pokud jsme na klonu posledního slidu (index 0), přeskočíme na skutečný poslední slide
+    if (currentIndex === 0) {
       setIsTransitionEnabled(false);
-      setCurrentIndex(1);
-    } else if (currentIndex === 0) {
-      setIsTransitionEnabled(false);
-      setCurrentIndex(slides.length);
+      // Použijeme setTimeout, abychom zajistili, že transition je dokončená
+      setTimeout(() => {
+        setCurrentIndex(slides.length);
+        // Znovu zapneme transition po resetu
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setIsTransitionEnabled(true);
+          });
+        });
+      }, 50);
     }
-  };
+    // Pokud jsme na klonu prvního slidu (index slides.length + 1), přeskočíme na skutečný první slide
+    else if (currentIndex === slides.length + 1) {
+      setIsTransitionEnabled(false);
+      setTimeout(() => {
+        setCurrentIndex(1);
+        // Znovu zapneme transition po resetu
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setIsTransitionEnabled(true);
+          });
+        });
+      }, 50);
+    }
+  }, [slides.length, currentIndex]);
 
   const handleCtaClick = (ctaLink?: string) => {
     if (ctaLink) {
@@ -333,7 +378,7 @@ const Slideshow = () => {
             className="flex transition-transform duration-700 ease-in-out"
             style={{
               transform: `translateX(-${currentIndex * 100}%)`,
-              transition: isTransitionEnabled ? undefined : 'none',
+              transition: isTransitionEnabled ? 'transform 0.7s ease-in-out' : 'none',
             }}
             onTransitionEnd={handleTransitionEnd}
           >
