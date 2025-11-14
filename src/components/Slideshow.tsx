@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { getProductsByCollection } from '@/lib/shopify';
+import { getProductsByCollection, getProductByHandle } from '@/lib/shopify';
+import { slideshowConfig } from '@/config/slideshow';
+import { useNavigate } from 'react-router-dom';
 
 interface Slide {
   id: string;
@@ -11,11 +13,13 @@ interface Slide {
   description: string;
   image: string;
   cta: string;
+  ctaLink?: string;
 }
 
 const AUTO_ADVANCE_DELAY = 5000;
 
 const Slideshow = () => {
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(1);
   const [slideshowRef, slideshowVisible] = useScrollAnimation();
   const [slides, setSlides] = useState<Slide[]>([]);
@@ -24,60 +28,100 @@ const Slideshow = () => {
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch featured products for slideshow
+  // Fetch slideshow data based on configuration
   useEffect(() => {
     const fetchSlideshowData = async () => {
       try {
         setIsLoading(true);
         
-        // Get featured products from different collections
-        const collections = ['nahrdelniky', 'nausnice', 'prsteny'];
+        // Sort config by order and filter enabled slides
+        const enabledConfigs = slideshowConfig
+          .filter(config => config.enabled)
+          .sort((a, b) => a.order - b.order);
+        
         const slidesData: Slide[] = [];
         
-        for (let i = 0; i < collections.length; i++) {
-          const collection = await getProductsByCollection(collections[i], 1);
-          
-          if (collection && collection.products?.edges.length > 0) {
-            const firstProduct = collection.products.edges[0].node;
-            const firstImage = firstProduct.images?.edges?.[0]?.node;
-            
-            slidesData.push({
-              id: `${i + 1}`,
-              title: collection.title || 'Nová kolekce',
-              subtitle: firstProduct.title,
-              description: firstProduct.description || 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
-              image: firstImage?.url || '/placeholder.jpg',
-              cta: 'Zobrazit kolekci'
-            });
+        for (const config of enabledConfigs) {
+          try {
+            if (config.type === 'custom') {
+              // Custom static banner
+              slidesData.push({
+                id: `custom-${config.order}`,
+                title: config.title || 'Nová kolekce',
+                subtitle: config.subtitle || 'Elegantní šperky',
+                description: config.description || 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
+                image: config.image || '/placeholder.jpg',
+                cta: config.cta || 'Zobrazit kolekci',
+                ctaLink: config.ctaLink,
+              });
+            } else if (config.type === 'collection' && config.shopifyHandle) {
+              // Collection banner - fetch from Shopify
+              const collection = await getProductsByCollection(config.shopifyHandle, 1);
+              
+              if (collection && collection.products?.edges.length > 0) {
+                const firstProduct = collection.products.edges[0].node;
+                const firstImage = firstProduct.images?.edges?.[0]?.node;
+                
+                slidesData.push({
+                  id: `collection-${config.shopifyHandle}`,
+                  title: config.customTitle || collection.title || 'Nová kolekce',
+                  subtitle: config.customSubtitle || firstProduct.title || 'Elegantní šperky',
+                  description: config.customDescription || firstProduct.description || collection.description || 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
+                  image: firstImage?.url || '/placeholder.jpg',
+                  cta: config.customCta || 'Zobrazit kolekci',
+                  ctaLink: `/${config.shopifyHandle}`,
+                });
+              }
+            } else if (config.type === 'product' && config.shopifyHandle) {
+              // Product banner - fetch from Shopify
+              const product = await getProductByHandle(config.shopifyHandle);
+              
+              if (product) {
+                const firstImage = product.images?.edges?.[0]?.node;
+                
+                slidesData.push({
+                  id: `product-${config.shopifyHandle}`,
+                  title: config.customTitle || product.title || 'Nový produkt',
+                  subtitle: config.customSubtitle || 'Exkluzivní design',
+                  description: config.customDescription || product.description || 'Objevte tento jedinečný šperk.',
+                  image: firstImage?.url || '/placeholder.jpg',
+                  cta: config.customCta || 'Zobrazit produkt',
+                  ctaLink: `/produkt/${config.shopifyHandle}`,
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching slide data for ${config.type} ${config.shopifyHandle}:`, error);
+            // Continue with other slides even if one fails
           }
         }
         
-        // Fallback slides if no products found
+        // Fallback slides if no slides were loaded
         if (slidesData.length === 0) {
           slidesData.push(
             {
-              id: '1',
+              id: 'fallback-1',
               title: 'Nová kolekce',
               subtitle: 'Elegantní šperky',
               description: 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
               image: '/placeholder.jpg',
-              cta: 'Zobrazit kolekci'
+              cta: 'Zobrazit kolekci',
             },
             {
-              id: '2',
+              id: 'fallback-2',
               title: 'Limitovaná edice',
               subtitle: 'Exkluzivní designy',
               description: 'Exkluzivní série s jedinečnými designy. Pouze omezené množství.',
               image: '/placeholder.jpg',
-              cta: 'Koupit nyní'
+              cta: 'Koupit nyní',
             },
             {
-              id: '3',
+              id: 'fallback-3',
               title: 'Personalizace',
               subtitle: 'Váš jedinečný šperk',
               description: 'Vytvořte si šperk podle svých představ. Vyberte si design podle svého gusta.',
               image: '/placeholder.jpg',
-              cta: 'Začít vytváření'
+              cta: 'Začít vytváření',
             }
           );
         }
@@ -89,28 +133,28 @@ const Slideshow = () => {
         // Fallback slides on error
         setSlides([
           {
-            id: '1',
+            id: 'error-1',
             title: 'Nová kolekce',
             subtitle: 'Elegantní šperky',
             description: 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
             image: '/placeholder.jpg',
-            cta: 'Zobrazit kolekci'
+            cta: 'Zobrazit kolekci',
           },
           {
-            id: '2',
+            id: 'error-2',
             title: 'Limitovaná edice',
             subtitle: 'Exkluzivní designy',
             description: 'Exkluzivní série s jedinečnými designy. Pouze omezené množství.',
             image: '/placeholder.jpg',
-            cta: 'Koupit nyní'
+            cta: 'Koupit nyní',
           },
           {
-            id: '3',
+            id: 'error-3',
             title: 'Personalizace',
             subtitle: 'Váš jedinečný šperk',
             description: 'Vytvořte si šperk podle svých představ. Vyberte si design podle svého gusta.',
             image: '/placeholder.jpg',
-            cta: 'Začít vytváření'
+            cta: 'Začít vytváření',
           }
         ]);
       } finally {
@@ -250,6 +294,12 @@ const Slideshow = () => {
     }
   };
 
+  const handleCtaClick = (ctaLink?: string) => {
+    if (ctaLink) {
+      navigate(ctaLink);
+    }
+  };
+
   if (isLoading) {
     return (
       <section 
@@ -310,7 +360,11 @@ const Slideshow = () => {
                       <p className="text-lg text-luxury-foreground/90 mb-8 leading-relaxed">
                         {slide.description}
                       </p>
-                      <Button variant="gold" size="lg">
+                      <Button 
+                        variant="gold" 
+                        size="lg"
+                        onClick={() => handleCtaClick(slide.ctaLink)}
+                      >
                         {slide.cta}
                       </Button>
                     </div>
