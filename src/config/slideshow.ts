@@ -27,37 +27,32 @@ export interface SlideshowSlideConfig {
 }
 
 export const slideshowConfig: SlideshowSlideConfig[] = [
-  // Banner 1: Dynamický z kolekce náhrdelníků
+  // Banner 1: Statický - halloween
   {
-    type: 'collection',
-    shopifyHandle: 'nahrdelniky',
+    type: 'custom',
     enabled: true,
     order: 1,
-    customTitle: null, // použije se název kolekce z Shopify
-    customDescription: null,
-    customCta: null,
+    image: '/slideshow/halloween.jpg',  // <-- tady je cesta k obrázku
+    title: 'Halloweenská akce',
+    // ...
   },
   
-  // Banner 2: Dynamický z kolekce náušnic
+  // Banner 2: Statický - vanoece
   {
-    type: 'collection',
-    shopifyHandle: 'nausnice',
+    type: 'custom',
     enabled: true,
     order: 2,
-    customTitle: null,
-    customDescription: null,
-    customCta: null,
+    image: '/slideshow/christmas.jpg',  // <-- tady je cesta k obrázku
+    title: 'Vánoční akce',
   },
   
-  // Banner 3: Dynamický z kolekce prstenů
+  // Banner 3: Statický - valentyn
   {
-    type: 'collection',
-    shopifyHandle: 'prsteny',
+    type: 'custom',
     enabled: true,
     order: 3,
-    customTitle: null,
-    customDescription: null,
-    customCta: null,
+    image: '/slideshow/valentine.jpg',  // <-- tady je cesta k obrázku
+    title: 'Valentýnská akce',
   },
   
   // Příklad: Statický custom banner (zakomentovaný - můžeš odkomentovat a použít)
