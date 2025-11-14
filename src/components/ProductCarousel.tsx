@@ -170,7 +170,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     } else if (config.sideCount === 0.5) {
       // Tablet/Menší notebooky: currentIndex začíná na 1 (ukazuje na první hlavní produkt)
       // offset = (currentIndex - 1) * totalWidth zobrazí 0.5 boční vlevo + hlavní produkty
-      const offset = (currentIndex - 1) * totalWidth;
+      // Musíme posunout o polovinu produktu vlevo, aby se boční produkt vlevo zobrazil správně
+      const offset = (currentIndex - 1) * totalWidth - (config.cardWidth / 2);
       return `translateX(-${offset}px)`;
     } else {
       // Large Desktop: currentIndex začíná na 1
@@ -184,14 +185,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Large Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů (plně viditelných)
   // Menší notebooky/Tablet: 3-2 hlavní + 0.5 boční na každé straně (částečně viditelné)
   // Mobil: 100% (full width)
-  // Pro tablet/mobil potřebujeme místo pro mainCount + 1 produktů (hlavní + 1 boční vpravo, boční vlevo je částečně viditelný)
+  // Pro tablet/menší notebooky: mainCount hlavních + 0.5 boční vlevo + 0.5 boční vpravo
+  // Šířka = mainCount * (cardWidth + gap) + 0.5 * cardWidth (vlevo) + 0.5 * cardWidth (vpravo) + gap mezi hlavními
   const containerWidth = config.isMobile 
     ? '100%' // Full width na mobilu
     : config.sideCount === 1
       ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů: (3 + 1*2) * (320 + 32) - 32 = 1728px
-      : (config.mainCount + 1) * (config.cardWidth + config.gap) + (config.cardWidth / 2); // mainCount + 1 produktů + polovina produktu navíc pro boční vlevo
-      // Tablet: (2 + 1) * totalWidth + cardWidth/2 = 3 * totalWidth + 150px (pro 2 hlavní + 0.5 vlevo + 0.5 vpravo)
-      // Menší notebooky: (3 + 1) * totalWidth + cardWidth/2 = 4 * totalWidth + 150px (pro 3 hlavní + 0.5 vlevo + 0.5 vpravo)
+      : config.mainCount * (config.cardWidth + config.gap) + config.cardWidth; // mainCount produktů + 1 celý produkt (0.5 vlevo + 0.5 vpravo)
+      // Tablet: 2 * totalWidth + cardWidth = 2 * (cardWidth + gap) + cardWidth (pro 2 hlavní + 0.5 vlevo + 0.5 vpravo)
+      // Menší notebooky: 3 * totalWidth + cardWidth = 3 * (cardWidth + gap) + cardWidth (pro 3 hlavní + 0.5 vlevo + 0.5 vpravo)
 
   return (
     <div 
@@ -207,7 +209,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         className="relative" 
         style={{ 
           width: config.isMobile ? containerWidth : `${containerWidth}px`, 
-          maxWidth: config.isMobile ? '100%' : config.sideCount === 0.5 ? '100%' : 'none',
+          maxWidth: config.isMobile ? '100%' : config.sideCount === 0.5 ? `${containerWidth}px` : 'none',
         }}
       >
         {/* Carousel Viewport */}
