@@ -238,10 +238,8 @@ const Slideshow = () => {
       return;
     }
 
-    // Spustíme timer pouze pokud neprobíhá transition
-    if (!isTransitioningRef.current) {
-      startTimer();
-    }
+    // Spustíme timer po každé změně currentIndex (včetně po resetu)
+    startTimer();
 
     return () => {
       clearTimer();
@@ -267,7 +265,7 @@ const Slideshow = () => {
     }
 
     isTransitioningRef.current = true;
-    clearTimer();
+    clearTimer(); // Zastavíme aktuální timer
     setIsTransitionEnabled(true);
     setCurrentIndex((prev) => {
       const next = prev + 1;
@@ -277,6 +275,7 @@ const Slideshow = () => {
       }
       return next;
     });
+    // Timer se automaticky spustí díky useEffect, který sleduje currentIndex
   }, [slides.length, clearTimer]);
 
   const prevSlide = useCallback(() => {
@@ -285,7 +284,7 @@ const Slideshow = () => {
     }
 
     isTransitioningRef.current = true;
-    clearTimer();
+    clearTimer(); // Zastavíme aktuální timer
     setIsTransitionEnabled(true);
     setCurrentIndex((prev) => {
       const next = prev - 1;
@@ -295,6 +294,7 @@ const Slideshow = () => {
       }
       return next;
     });
+    // Timer se automaticky spustí díky useEffect, který sleduje currentIndex
   }, [slides.length, clearTimer]);
 
   const goToSlide = useCallback(
@@ -305,15 +305,16 @@ const Slideshow = () => {
 
       const target = index + 1;
 
-      clearTimer();
+      clearTimer(); // Zastavíme aktuální timer
       if (currentIndex === target) {
-        startTimer();
+        startTimer(); // Pokud už jsme na cílovém slidu, jen restartujeme timer
         return;
       }
 
       isTransitioningRef.current = true;
       setIsTransitionEnabled(true);
       setCurrentIndex(target);
+      // Timer se automaticky spustí díky useEffect, který sleduje currentIndex
     },
     [slides.length, clearTimer, startTimer, currentIndex]
   );
@@ -347,6 +348,7 @@ const Slideshow = () => {
         requestAnimationFrame(() => {
           setIsTransitionEnabled(true);
           isTransitioningRef.current = false;
+          // Timer se automaticky spustí díky useEffect, který sleduje currentIndex
         });
       } else if (needsReset.type === 'start') {
         setCurrentIndex(1);
@@ -355,6 +357,7 @@ const Slideshow = () => {
         requestAnimationFrame(() => {
           setIsTransitionEnabled(true);
           isTransitioningRef.current = false;
+          // Timer se automaticky spustí díky useEffect, který sleduje currentIndex
         });
       }
     }
