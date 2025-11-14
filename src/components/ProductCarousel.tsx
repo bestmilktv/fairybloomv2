@@ -30,27 +30,29 @@ const getCarouselConfig = (width: number) => {
       isMobile: true,
     };
   } else if (width < 1024) {
-    // Tablet: 2 hlavní + 1 boční na každé straně
+    // Tablet: 2 hlavní + 0.5 boční na každé straně (částečně viditelný)
     return {
       mainCount: 2,
-      sideCount: 1,
-      cardWidth: Math.min(300, (width - 64) / 3.5), // 3.5 = 2 main + 1 side + gaps
+      sideCount: 0.5, // Částečně viditelný boční produkt
+      cardWidth: Math.min(300, (width - 64) / 3), // 3 = 2 main + 0.5 side na každé straně
       gap: 24,
       step: 2,
       isMobile: false,
+      isTablet: true,
     };
   } else if (width < 1536) {
-    // Desktop: 3 hlavní + 1 boční na každé straně
+    // Menší notebooky: 3 hlavní + 0.5 boční na každé straně (částečně viditelný) nebo menší karty
     return {
       mainCount: 3,
-      sideCount: 1,
-      cardWidth: Math.min(320, (width - 96) / 4.5), // 4.5 = 3 main + 1 side + gaps
+      sideCount: 0.5, // Částečně viditelný boční produkt
+      cardWidth: Math.min(300, (width - 96) / 4), // 4 = 3 main + 0.5 side na každé straně
       gap: 32,
       step: 3,
       isMobile: false,
+      isTablet: false,
     };
   } else {
-    // Large Desktop/TV: 3 hlavní + 1 boční na každé straně
+    // Large Desktop/TV: 3 hlavní + 1 boční na každé straně (plně viditelný)
     return {
       mainCount: 3,
       sideCount: 1,
@@ -58,6 +60,7 @@ const getCarouselConfig = (width: number) => {
       gap: 32,
       step: 3,
       isMobile: false,
+      isTablet: false,
     };
   }
 };
@@ -83,15 +86,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Počáteční currentIndex podle velikosti obrazovky
   // Desktop/Tablet: začíná na 1 (ukazuje na první hlavní produkt, index 0 je boční vlevo)
   // Mobil: začíná na 0 (ukazuje na hlavní produkt)
-  const [currentIndex, setCurrentIndex] = useState(config.isMobile ? 0 : 1);
+  const initialIndex = windowWidth < 768 ? 0 : 1;
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   
   // Reset currentIndex když se změní velikost obrazovky
   useEffect(() => {
-    setCurrentIndex(config.isMobile ? 0 : 1);
-  }, [config.isMobile]);
+    const newIndex = windowWidth < 768 ? 0 : 1;
+    setCurrentIndex(newIndex);
+  }, [windowWidth]);
 
-  // If we have fewer products than mainCount + 1, show them in a simple grid
-  if (products.length <= config.mainCount + 1) {
+  // Carousel se zobrazí jen když je více než 3 produkty
+  // Pokud je 3 nebo méně, zobrazí se grid
+  if (products.length <= 3) {
     const gridCols = windowWidth < 768 ? 1 : windowWidth < 1024 ? 2 : 3;
     return (
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${gridCols} gap-8`}>
@@ -170,12 +176,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // Calculate container width dynamically
-  // Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů
-  // Tablet: 2 hlavní + 1 boční na každé straně = 4 produkty
+  // Large Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů (plně viditelných)
+  // Menší notebooky/Tablet: 3-2 hlavní + 0.5 boční na každé straně (částečně viditelné)
   // Mobil: 100% (full width)
   const containerWidth = config.isMobile 
     ? '100%' // Full width na mobilu
-    : (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap;
+    : config.sideCount === 1
+      ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů
+      : (config.mainCount + 1) * (config.cardWidth + config.gap) - config.gap; // mainCount + 1 (protože boční jsou jen z poloviny)
 
   return (
     <div 
@@ -218,18 +226,22 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 isSideProduct = relativePosition === -1 || relativePosition === 1;
                 isVisible = relativePosition >= -1 && relativePosition <= 1;
               } else {
-                // Desktop: relativePosition -1 až 3 (1 boční vlevo, 3 hlavní, 1 boční vpravo)
-                // Tablet: relativePosition -1 až 2 (1 boční vlevo, 2 hlavní, 1 boční vpravo)
-                const maxVisible = config.mainCount + config.sideCount;
-                isMainProduct = relativePosition >= 0 && relativePosition < config.mainCount;
-                isSideProduct = 
-                  (relativePosition >= -config.sideCount && relativePosition < 0) ||
-                  (relativePosition >= config.mainCount && relativePosition < maxVisible);
-                isVisible = relativePosition >= -config.sideCount && relativePosition < maxVisible;
+                // Desktop/Tablet: určení podle sideCount
+                if (config.sideCount === 1) {
+                  // Large Desktop: relativePosition -1 až 3 (1 boční vlevo, 3 hlavní, 1 boční vpravo)
+                  isMainProduct = relativePosition >= 0 && relativePosition < config.mainCount;
+                  isSideProduct = relativePosition === -1 || relativePosition === config.mainCount;
+                  isVisible = relativePosition >= -1 && relativePosition <= config.mainCount;
+                } else {
+                  // Tablet/Menší notebooky: relativePosition -1 až 2 (0.5 boční vlevo, 2-3 hlavní, 0.5 boční vpravo)
+                  isMainProduct = relativePosition >= 0 && relativePosition < config.mainCount;
+                  isSideProduct = relativePosition === -1 || relativePosition === config.mainCount;
+                  isVisible = relativePosition >= -1 && relativePosition <= config.mainCount;
+                }
               }
 
-              // Pro mobil: boční produkty mají clip-path pro zobrazení jen poloviny
-              const sideClipStyle = config.isMobile && isSideProduct 
+              // Clip-path pro částečně viditelné boční produkty (sideCount === 0.5)
+              const sideClipStyle = (config.isMobile || config.sideCount === 0.5) && isSideProduct 
                 ? { clipPath: relativePosition === -1 ? 'inset(0 50% 0 0)' : 'inset(0 0 0 50%)' }
                 : {};
 
