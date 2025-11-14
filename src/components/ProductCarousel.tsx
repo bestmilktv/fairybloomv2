@@ -182,7 +182,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const containerWidth = config.isMobile 
     ? '100%' // Full width na mobilu
     : config.sideCount === 1
-      ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů
+      ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů: (3 + 1*2) * (320 + 32) - 32 = 1728px
       : (config.mainCount + 1) * (config.cardWidth + config.gap) - config.gap; // mainCount + 1 (protože boční jsou jen z poloviny)
 
   return (
@@ -199,7 +199,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         className="relative" 
         style={{ 
           width: config.isMobile ? containerWidth : `${containerWidth}px`, 
-          maxWidth: config.isMobile ? '100%' : '100%',
+          maxWidth: config.isMobile ? '100%' : 'none',
         }}
       >
         {/* Carousel Viewport */}
@@ -229,14 +229,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 // Desktop/Tablet: určení podle sideCount
                 if (config.sideCount === 1) {
                   // Large Desktop: relativePosition -1 až 3 (1 boční vlevo, 3 hlavní, 1 boční vpravo)
+                  // mainCount = 3, takže hlavní jsou na pozicích 0, 1, 2
+                  // Boční vlevo je na pozici -1, boční vpravo je na pozici 3
                   isMainProduct = relativePosition >= 0 && relativePosition < config.mainCount;
                   isSideProduct = relativePosition === -1 || relativePosition === config.mainCount;
-                  isVisible = relativePosition >= -1 && relativePosition <= config.mainCount;
+                  isVisible = relativePosition >= -1 && relativePosition <= config.mainCount; // -1 až 3
                 } else {
-                  // Tablet/Menší notebooky: relativePosition -1 až 2 (0.5 boční vlevo, 2-3 hlavní, 0.5 boční vpravo)
+                  // Tablet/Menší notebooky: relativePosition -1 až mainCount (0.5 boční vlevo, 2-3 hlavní, 0.5 boční vpravo)
+                  // Tablet: mainCount = 2, takže hlavní jsou na pozicích 0, 1, boční vpravo na pozici 2
+                  // Menší notebooky: mainCount = 3, takže hlavní jsou na pozicích 0, 1, 2, boční vpravo na pozici 3
                   isMainProduct = relativePosition >= 0 && relativePosition < config.mainCount;
                   isSideProduct = relativePosition === -1 || relativePosition === config.mainCount;
-                  isVisible = relativePosition >= -1 && relativePosition <= config.mainCount;
+                  isVisible = relativePosition >= -1 && relativePosition <= config.mainCount; // -1 až mainCount
                 }
               }
 
