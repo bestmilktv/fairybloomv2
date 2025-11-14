@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
@@ -26,6 +26,7 @@ const Slideshow = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
   const isTransitioningRef = useRef(false);
+  const [needsReset, setNeedsReset] = useState<{ type: 'start' | 'end' } | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -195,8 +196,19 @@ const Slideshow = () => {
 
     clearTimer();
     timerRef.current = setTimeout(() => {
+      if (isTransitioningRef.current) {
+        return; // Pokud už probíhá transition, nezačínáme nový
+      }
+      isTransitioningRef.current = true;
       setIsTransitionEnabled(true);
-      setCurrentIndex((prev) => prev + 1);
+      setCurrentIndex((prev) => {
+        const next = prev + 1;
+        // Pokud jsme na posledním skutečném slidu, jdeme na klon prvního
+        if (prev >= slides.length) {
+          return slides.length + 1;
+        }
+        return next;
+      });
     }, AUTO_ADVANCE_DELAY);
   }, [slides.length, clearTimer]);
 
@@ -226,7 +238,10 @@ const Slideshow = () => {
       return;
     }
 
-    startTimer();
+    // Spustíme timer pouze pokud neprobíhá transition
+    if (!isTransitioningRef.current) {
+      startTimer();
+    }
 
     return () => {
       clearTimer();
@@ -304,40 +319,46 @@ const Slideshow = () => {
   );
 
   const handleTransitionEnd = useCallback(() => {
-    if (slides.length === 0 || !isTransitioningRef.current) {
+    if (slides.length === 0) {
       return;
     }
 
-    isTransitioningRef.current = false;
-
-    // Pokud jsme na klonu posledního slidu (index 0), přeskočíme na skutečný poslední slide
+    // Pokud jsme na klonu posledního slidu (index 0), označíme potřebu resetu
     if (currentIndex === 0) {
       setIsTransitionEnabled(false);
-      // Použijeme setTimeout, abychom zajistili, že transition je dokončená
-      setTimeout(() => {
-        setCurrentIndex(slides.length);
-        // Znovu zapneme transition po resetu
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setIsTransitionEnabled(true);
-          });
-        });
-      }, 50);
+      setNeedsReset({ type: 'end' });
     }
-    // Pokud jsme na klonu prvního slidu (index slides.length + 1), přeskočíme na skutečný první slide
+    // Pokud jsme na klonu prvního slidu (index slides.length + 1), označíme potřebu resetu
     else if (currentIndex === slides.length + 1) {
       setIsTransitionEnabled(false);
-      setTimeout(() => {
-        setCurrentIndex(1);
-        // Znovu zapneme transition po resetu
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setIsTransitionEnabled(true);
-          });
-        });
-      }, 50);
+      setNeedsReset({ type: 'start' });
+    } else {
+      isTransitioningRef.current = false;
     }
   }, [slides.length, currentIndex]);
+
+  // Synchronní reset pozice bez viditelné animace
+  useLayoutEffect(() => {
+    if (needsReset && slides.length > 0) {
+      if (needsReset.type === 'end') {
+        setCurrentIndex(slides.length);
+        setNeedsReset(null);
+        // Znovu zapneme transition v dalším frame
+        requestAnimationFrame(() => {
+          setIsTransitionEnabled(true);
+          isTransitioningRef.current = false;
+        });
+      } else if (needsReset.type === 'start') {
+        setCurrentIndex(1);
+        setNeedsReset(null);
+        // Znovu zapneme transition v dalším frame
+        requestAnimationFrame(() => {
+          setIsTransitionEnabled(true);
+          isTransitioningRef.current = false;
+        });
+      }
+    }
+  }, [needsReset, slides.length]);
 
   const handleCtaClick = (ctaLink?: string) => {
     if (ctaLink) {
@@ -377,7 +398,7 @@ const Slideshow = () => {
           <div 
             className="flex transition-transform duration-700 ease-in-out"
             style={{
-              transform: `translateX(-${currentIndex * 100}%)`,
+              transform: `translateX(calc(-${currentIndex} * 100%))`,
               transition: isTransitionEnabled ? 'transform 0.7s ease-in-out' : 'none',
             }}
             onTransitionEnd={handleTransitionEnd}
