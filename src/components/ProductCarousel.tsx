@@ -269,17 +269,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 ? { clipPath: relativePosition === -1 ? 'inset(0 0 0 50%)' : 'inset(0 50% 0 0)' } // Boční vlevo: pravá polovina, boční vpravo: levá polovina
                 : {};
 
-              // Transformace pro boční produkty - posune je tak, aby mezery byly konzistentní
-              // Boční vlevo: posune o polovinu šířky vlevo, aby viditelná část byla blíž k hlavním
-              // Boční vpravo: posune o polovinu šířky vpravo, aby viditelná část byla blíž k hlavním
-              let sideTransform = '';
+              // Margin pro boční produkty - posune viditelnou část tak, aby mezery byly konzistentní
+              // Boční vlevo: margin-right negativní, aby se viditelná část (pravá polovina) posunula vlevo
+              // Boční vpravo: margin-left negativní, aby se viditelná část (levá polovina) posunula vpravo
+              // Tím se zmenší mezera mezi viditelnou částí bočního produktu a hlavními produkty
+              let sideMargin = {};
               if (isHalfSideProduct) {
                 if (relativePosition === -1) {
-                  // Boční vlevo: posunout vlevo
-                  sideTransform = ` translateX(${config.cardWidth / 2}px)`;
+                  // Boční vlevo: margin-right negativní o polovinu šířky, aby viditelná část byla blíž k hlavním
+                  sideMargin = { marginRight: `-${config.cardWidth / 2}px` };
                 } else if (relativePosition === config.mainCount) {
-                  // Boční vpravo: posunout vpravo
-                  sideTransform = ` translateX(-${config.cardWidth / 2}px)`;
+                  // Boční vpravo: margin-left negativní o polovinu šířky, aby viditelná část byla blíž k hlavním
+                  sideMargin = { marginLeft: `-${config.cardWidth / 2}px` };
                 }
               }
 
@@ -290,10 +291,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   style={{
                     width: `${productWidth}px`,
                     opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0,
-                    transform: `${isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)'}${sideTransform}`,
-                    transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
+                    transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)',
+                    transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out, margin 1000ms ease-out' : 'none',
                     visibility: isVisible ? 'visible' : 'hidden',
                     ...sideClipStyle,
+                    ...sideMargin,
                   }}
                 >
                   <Link 
