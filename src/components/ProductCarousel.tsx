@@ -267,11 +267,19 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 ? { clipPath: relativePosition === -1 ? 'inset(0 50% 0 0)' : 'inset(0 0 0 50%)' } // Zobrazí jen polovinu produktu
                 : {};
 
-              // Transformace pro boční produkt vlevo - posune ho o polovinu šířky vlevo,
-              // aby mezera mezi viditelnou částí a prvním hlavním produktem byla stejná jako mezi hlavními
-              const sideTransform = isHalfSideProduct && relativePosition === -1
-                ? ` translateX(${config.cardWidth / 2}px)` // Posune boční vlevo o polovinu šířky vlevo
-                : '';
+              // Transformace pro boční produkty - posune je tak, aby mezery byly konzistentní
+              // Boční vlevo: posune o polovinu šířky vlevo, aby viditelná část byla blíž k hlavním
+              // Boční vpravo: posune o polovinu šířky vpravo, aby viditelná část byla blíž k hlavním
+              let sideTransform = '';
+              if (isHalfSideProduct) {
+                if (relativePosition === -1) {
+                  // Boční vlevo: posunout vlevo
+                  sideTransform = ` translateX(${config.cardWidth / 2}px)`;
+                } else if (relativePosition === config.mainCount) {
+                  // Boční vpravo: posunout vpravo
+                  sideTransform = ` translateX(-${config.cardWidth / 2}px)`;
+                }
+              }
 
               return (
                 <div
@@ -306,52 +314,52 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             })}
           </div>
         </div>
-
-        {/* Navigation Arrows - responzivní pozice */}
-        <button
-          onClick={prevSlide}
-          className={`absolute top-1/2 -translate-y-1/2 z-30
-                     w-10 h-10 md:w-12 md:h-12 rounded-full
-                     bg-background/90 backdrop-blur-sm border border-border/50
-                     flex items-center justify-center
-                     hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
-                     transition-all duration-300 ease-in-out
-                     group
-                     ${config.isMobile ? 'left-2' : config.sideCount === 0.5 ? '-left-4' : '-left-8'}`}
-          aria-label="Předchozí produkty"
-        >
-          <svg 
-            className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-gold transition-colors duration-300" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <button
-          onClick={nextSlide}
-          className={`absolute top-1/2 -translate-y-1/2 z-30
-                     w-10 h-10 md:w-12 md:h-12 rounded-full
-                     bg-background/90 backdrop-blur-sm border border-border/50
-                     flex items-center justify-center
-                     hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
-                     transition-all duration-300 ease-in-out
-                     group
-                     ${config.isMobile ? 'right-2' : config.sideCount === 0.5 ? '-right-4' : '-right-8'}`}
-          aria-label="Další produkty"
-        >
-          <svg 
-            className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-gold transition-colors duration-300" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
       </div>
+
+      {/* Navigation Arrows - responzivní pozice (umístěné ve vnějším kontejneru pro viditelnost) */}
+      <button
+        onClick={prevSlide}
+        className={`absolute top-1/2 -translate-y-1/2 z-30
+                   w-10 h-10 md:w-12 md:h-12 rounded-full
+                   bg-background/90 backdrop-blur-sm border border-border/50
+                   flex items-center justify-center
+                   hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
+                   transition-all duration-300 ease-in-out
+                   group
+                   ${config.isMobile ? 'left-2' : config.sideCount === 0.5 ? 'left-4' : 'left-8'}`}
+        aria-label="Předchozí produkty"
+      >
+        <svg 
+          className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-gold transition-colors duration-300" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <button
+        onClick={nextSlide}
+        className={`absolute top-1/2 -translate-y-1/2 z-30
+                   w-10 h-10 md:w-12 md:h-12 rounded-full
+                   bg-background/90 backdrop-blur-sm border border-border/50
+                   flex items-center justify-center
+                   hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
+                   transition-all duration-300 ease-in-out
+                   group
+                   ${config.isMobile ? 'right-2' : config.sideCount === 0.5 ? 'right-4' : 'right-8'}`}
+        aria-label="Další produkty"
+      >
+        <svg 
+          className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-gold transition-colors duration-300" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
     </div>
   );
 };
