@@ -187,15 +187,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Large Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů (plně viditelných)
   // Menší notebooky/Tablet: 3-2 hlavní + 0.5 boční vlevo + 0.5 boční vpravo (částečně viditelné)
   // Mobil: 100% (full width)
-  // Pro tablet/menší notebooky: všechny produkty mají plnou šířku, boční jsou zobrazeny pomocí clip-path
-  // Šířka = (mainCount + 2) * (cardWidth + gap) - gap (mainCount hlavních + 2 boční)
+  // Pro tablet/menší notebooky: kontejner by měl být široký jen pro viditelné části
+  // Šířka = 0.5*cardWidth (boční vlevo) + gap + mainCount*(cardWidth + gap) - gap + gap + 0.5*cardWidth (boční vpravo)
+  // = 0.5*cardWidth + mainCount*cardWidth + mainCount*gap + 0.5*cardWidth + gap
+  // = (mainCount + 1)*cardWidth + (mainCount + 1)*gap
+  // = (mainCount + 1) * (cardWidth + gap)
   const containerWidth = config.isMobile 
     ? '100%' // Full width na mobilu
     : config.sideCount === 1
       ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů: (3 + 1*2) * (320 + 32) - 32 = 1728px
-      : (config.mainCount + 2) * (config.cardWidth + config.gap) - config.gap; // mainCount hlavních + 2 boční (vlevo + vpravo)
-      // Tablet: (2 + 2) * (cardWidth + gap) - gap = 4 * (cardWidth + gap) - gap
-      // Menší notebooky: (3 + 2) * (cardWidth + gap) - gap = 5 * (cardWidth + gap) - gap
+      : (config.mainCount + 1) * (config.cardWidth + config.gap); // mainCount hlavních + 1 celý produkt (0.5 vlevo + 0.5 vpravo)
+      // Tablet: (2 + 1) * (cardWidth + gap) = 3 * (cardWidth + gap)
+      // Menší notebooky: (3 + 1) * (cardWidth + gap) = 4 * (cardWidth + gap)
 
   return (
     <div 
@@ -310,7 +313,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                      hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                      transition-all duration-300 ease-in-out
                      group
-                     ${config.isMobile ? 'left-2' : '-left-8'}`}
+                     ${config.isMobile ? 'left-2' : config.sideCount === 0.5 ? '-left-4' : '-left-8'}`}
           aria-label="Předchozí produkty"
         >
           <svg 
@@ -332,7 +335,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                      hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                      transition-all duration-300 ease-in-out
                      group
-                     ${config.isMobile ? 'right-2' : '-right-8'}`}
+                     ${config.isMobile ? 'right-2' : config.sideCount === 0.5 ? '-right-4' : '-right-8'}`}
           aria-label="Další produkty"
         >
           <svg 
