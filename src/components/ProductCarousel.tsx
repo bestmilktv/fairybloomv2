@@ -263,8 +263,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               const productWidth = config.cardWidth; // VŠECHNY produkty mají plnou šířku
               
               // Clip-path pro částečně viditelné boční produkty (sideCount === 0.5)
+              // Boční vlevo: zobrazíme pravou polovinu produktu (tu část, která je blíž k hlavním)
+              // Boční vpravo: zobrazíme levou polovinu produktu (tu část, která je blíž k hlavním)
               const sideClipStyle = isHalfSideProduct
-                ? { clipPath: relativePosition === -1 ? 'inset(0 50% 0 0)' : 'inset(0 0 0 50%)' } // Zobrazí jen polovinu produktu
+                ? { clipPath: relativePosition === -1 ? 'inset(0 0 0 50%)' : 'inset(0 50% 0 0)' } // Boční vlevo: pravá polovina, boční vpravo: levá polovina
                 : {};
 
               // Transformace pro boční produkty - posune je tak, aby mezery byly konzistentní
@@ -326,7 +328,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                    hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                    transition-all duration-300 ease-in-out
                    group
-                   ${config.isMobile ? 'left-2' : config.sideCount === 0.5 ? 'left-4' : 'left-8'}`}
+                   ${config.isMobile ? 'left-2' : config.sideCount === 0.5 ? 'left-4' : '-left-8'}`}
         aria-label="Předchozí produkty"
       >
         <svg 
@@ -348,7 +350,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                    hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                    transition-all duration-300 ease-in-out
                    group
-                   ${config.isMobile ? 'right-2' : config.sideCount === 0.5 ? 'right-4' : 'right-8'}`}
+                   ${config.isMobile ? 'right-2' : config.sideCount === 0.5 ? 'right-4' : '-right-8'}`}
         aria-label="Další produkty"
       >
         <svg 
