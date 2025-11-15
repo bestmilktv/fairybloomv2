@@ -267,6 +267,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 ? { clipPath: relativePosition === -1 ? 'inset(0 50% 0 0)' : 'inset(0 0 0 50%)' } // Zobrazí jen polovinu produktu
                 : {};
 
+              // Transformace pro boční produkt vlevo - posune ho o polovinu šířky vlevo,
+              // aby mezera mezi viditelnou částí a prvním hlavním produktem byla stejná jako mezi hlavními
+              const sideTransform = isHalfSideProduct && relativePosition === -1
+                ? ` translateX(${config.cardWidth / 2}px)` // Posune boční vlevo o polovinu šířky vlevo
+                : '';
+
               return (
                 <div
                   key={`${product.id}-${index}`}
@@ -274,7 +280,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   style={{
                     width: `${productWidth}px`,
                     opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0,
-                    transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)',
+                    transform: `${isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)'}${sideTransform}`,
                     transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
                     visibility: isVisible ? 'visible' : 'hidden',
                     ...sideClipStyle,
