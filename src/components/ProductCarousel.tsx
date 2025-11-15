@@ -187,18 +187,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Large Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů (plně viditelných)
   // Menší notebooky/Tablet: 3-2 hlavní + 0.5 boční vlevo + 0.5 boční vpravo (částečně viditelné)
   // Mobil: 100% (full width)
-  // Pro tablet/menší notebooky: kontejner by měl být široký jen pro viditelné části
-  // Šířka = 0.5*cardWidth (boční vlevo) + gap + mainCount*(cardWidth + gap) - gap + gap + 0.5*cardWidth (boční vpravo)
-  // = 0.5*cardWidth + mainCount*cardWidth + mainCount*gap + 0.5*cardWidth + gap
-  // = (mainCount + 1)*cardWidth + (mainCount + 1)*gap
-  // = (mainCount + 1) * (cardWidth + gap)
+  // Pro tablet/menší notebooky: v layoutu máme 5 produktů (index 0-4), každý s plnou šířkou
+  // Kontejner musí být široký pro všechny produkty, aby se boční produkt vpravo zobrazil
+  // Šířka kontejneru = (mainCount + 2) * (cardWidth + gap) - gap (5 produktů pro menší notebooky)
   const containerWidth = config.isMobile 
     ? '100%' // Full width na mobilu
     : config.sideCount === 1
       ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů: (3 + 1*2) * (320 + 32) - 32 = 1728px
-      : (config.mainCount + 1) * (config.cardWidth + config.gap); // mainCount hlavních + 1 celý produkt (0.5 vlevo + 0.5 vpravo)
-      // Tablet: (2 + 1) * (cardWidth + gap) = 3 * (cardWidth + gap)
-      // Menší notebooky: (3 + 1) * (cardWidth + gap) = 4 * (cardWidth + gap)
+      : (config.mainCount + 2) * (config.cardWidth + config.gap) - config.gap; // 5 produktů: (3 + 2) * (cardWidth + gap) - gap
+      // Tablet: (2 + 2) * (cardWidth + gap) - gap = 4 * (cardWidth + gap) - gap
+      // Menší notebooky: (3 + 2) * (cardWidth + gap) - gap = 5 * (cardWidth + gap) - gap
 
   return (
     <div 
@@ -214,7 +212,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         className="relative" 
         style={{ 
           width: config.isMobile ? containerWidth : `${containerWidth}px`, 
-          maxWidth: config.isMobile ? '100%' : config.sideCount === 0.5 ? `${containerWidth}px` : 'none',
+          maxWidth: config.isMobile ? '100%' : 'none',
         }}
       >
         {/* Carousel Viewport */}
