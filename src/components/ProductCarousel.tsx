@@ -164,18 +164,19 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (config.isMobile) {
       // Na mobilu: centrujeme hlavní produkt uprostřed obrazovky
       // currentIndex ukazuje na hlavní produkt (začíná na 0)
-      const offset = currentIndex * totalWidth;
-      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky karty
+      // Struktura: 0.5*cardWidth (vlevo) + gap + cardWidth (hlavní) + gap + 0.5*cardWidth (vpravo)
+      // Pro currentIndex = 0: offset = 0.5*cardWidth + gap (pro boční vlevo a mezeru)
+      const sideProductWidth = config.cardWidth / 2;
+      const offset = currentIndex * (config.cardWidth + config.gap) + sideProductWidth + config.gap;
+      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky hlavního produktu
       return `translateX(calc(-${offset}px + 50% - ${config.cardWidth / 2}px))`;
     } else if (config.sideCount === 0.5) {
       // Tablet/Menší notebooky: currentIndex začíná na 1 (ukazuje na první hlavní produkt)
-      // Pro správné zobrazení s konzistentními mezerami:
-      // - Boční vlevo (index 0, relativePosition -1) by měl být částečně viditelný vlevo
-      // - Hlavní produkty (index 1,2,3..., relativePosition 0,1,2...) jsou plně viditelné
-      // - Boční vpravo (index mainCount+1, relativePosition mainCount) by měl být částečně viditelný vpravo
-      // Transformace: použijeme stejnou logiku jako desktop pro konzistentní mezery
-      // Boční produkt vlevo se zobrazí částečně díky clip-path, ne díky transformaci
-      const offset = (currentIndex - 1) * totalWidth;
+      // Boční produkty mají poloviční šířku v layoutu, takže transformace musí to brát v úvahu
+      // Struktura: 0.5*cardWidth (vlevo) + gap + cardWidth (hlavní 1) + gap + cardWidth (hlavní 2) + gap + cardWidth (hlavní 3) + gap + 0.5*cardWidth (vpravo)
+      // Pro currentIndex = 1: offset = 0.5*cardWidth + gap (pro boční vlevo a mezeru)
+      const sideProductWidth = config.cardWidth / 2;
+      const offset = (currentIndex - 1) * (config.cardWidth + config.gap) + sideProductWidth + config.gap;
       return `translateX(-${offset}px)`;
     } else {
       // Large Desktop: currentIndex začíná na 1
@@ -189,16 +190,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Large Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů (plně viditelných)
   // Menší notebooky/Tablet: 3-2 hlavní + 0.5 boční vlevo + 0.5 boční vpravo (částečně viditelné)
   // Mobil: 100% (full width)
-  // Pro tablet/menší notebooky: zobrazujeme mainCount + 1 produktů (mainCount hlavních + 1 boční vpravo)
-  // Boční vlevo je částečně viditelný, takže potřebujeme místo pro mainCount + 1 produktů s mezerami
-  // Šířka = (mainCount + 1) * (cardWidth + gap) - gap
+  // Pro tablet/menší notebooky: boční produkty mají skutečně poloviční šířku v layoutu
+  // Šířka = 0.5*cardWidth (vlevo) + gap + mainCount*(cardWidth + gap) - gap + gap + 0.5*cardWidth (vpravo)
+  // = 0.5*cardWidth + mainCount*(cardWidth + gap) + 0.5*cardWidth + gap
+  // = mainCount*(cardWidth + gap) + cardWidth + gap
   const containerWidth = config.isMobile 
     ? '100%' // Full width na mobilu
     : config.sideCount === 1
       ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů: (3 + 1*2) * (320 + 32) - 32 = 1728px
-      : (config.mainCount + 1) * (config.cardWidth + config.gap) - config.gap; // mainCount + 1 produktů s konzistentními mezerami
-      // Tablet: (2 + 1) * (cardWidth + gap) - gap = 3 * (cardWidth + gap) - gap
-      // Menší notebooky: (3 + 1) * (cardWidth + gap) - gap = 4 * (cardWidth + gap) - gap
+      : config.mainCount * (config.cardWidth + config.gap) + config.cardWidth + config.gap; // mainCount hlavních + 0.5 vlevo + 0.5 vpravo + mezery
+      // Tablet: 2*(cardWidth + gap) + cardWidth + gap = 2*cardWidth + 2*gap + cardWidth + gap = 3*cardWidth + 3*gap
+      // Menší notebooky: 3*(cardWidth + gap) + cardWidth + gap = 3*cardWidth + 3*gap + cardWidth + gap = 4*cardWidth + 4*gap
 
   return (
     <div 
@@ -259,9 +261,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 }
               }
 
+              // Pro boční produkty s sideCount === 0.5 použijeme skutečnou poloviční šířku v layoutu
+              // aby nezabíraly celou šířku a nevytvářely velkou mezeru
+              const isHalfSideProduct = (config.isMobile || config.sideCount === 0.5) && isSideProduct;
+              const productWidth = isHalfSideProduct ? config.cardWidth / 2 : config.cardWidth;
+              
               // Clip-path pro částečně viditelné boční produkty (sideCount === 0.5)
-              const sideClipStyle = (config.isMobile || config.sideCount === 0.5) && isSideProduct 
-                ? { clipPath: relativePosition === -1 ? 'inset(0 50% 0 0)' : 'inset(0 0 0 50%)' }
+              const sideClipStyle = isHalfSideProduct
+                ? { clipPath: relativePosition === -1 ? 'inset(0 0 0 0)' : 'inset(0 0 0 0)' } // Žádný clip, protože už máme poloviční šířku
                 : {};
 
               return (
@@ -269,7 +276,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   key={`${product.id}-${index}`}
                   className="flex-shrink-0"
                   style={{
-                    width: `${config.cardWidth}px`,
+                    width: `${productWidth}px`,
                     opacity: isMainProduct ? 1 : isSideProduct ? 0.5 : 0,
                     transform: isMainProduct ? 'scale(1)' : isSideProduct ? 'scale(0.7)' : 'scale(0.6)',
                     transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
