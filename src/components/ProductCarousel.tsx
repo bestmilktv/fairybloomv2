@@ -316,7 +316,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging, dragStart, cardWidth, gap, dragStartIndex, products.length]);
 
   const handleEnd = useCallback(() => {
-    if (!isDragging || cardWidth === 0 || viewportWidth === 0) {
+    // VŽDY resetujeme isDragging, i když nejsme v dragu nebo jsou chybějící hodnoty
+    if (!isDragging) {
+      setIsDragging(false);
+      setDragOffset(0);
+      return;
+    }
+
+    if (cardWidth === 0 || viewportWidth === 0) {
       setIsDragging(false);
       setDragOffset(0);
       return;
@@ -353,6 +360,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     
     // Nastavíme cíl a zapneme plynulou transition
     goToIndex(targetIndex, true);
+    
+    // VŽDY resetujeme isDragging na false
     setIsDragging(false);
     
     // Reset dragOffset po dokončení animace
@@ -382,7 +391,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [handleStart]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // Striktní kontrola: Pokud nedržím tlačítko (isDragging === false), OKAMŽITĚ SKONČI
     if (!isDragging) return;
+    
+    e.preventDefault();
     handleMove(e.clientX);
   }, [isDragging, handleMove]);
 
@@ -390,15 +402,31 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     handleEnd();
   }, [handleEnd]);
 
+  // Speciální handler pro mouse leave - vždy resetuje dragging a spustí snap
+  const handleMouseLeave = useCallback(() => {
+    if (isDragging) {
+      // Pokud jsme v dragu, spustíme end (což spustí snap)
+      handleEnd();
+    } else {
+      // Pokud nejsme v dragu, jen ujistíme se, že isDragging je false
+      setIsDragging(false);
+      setDragOffset(0);
+    }
+  }, [isDragging, handleEnd]);
+
   // Global mouse events pro drag mimo komponentu
   useEffect(() => {
     if (!isDragging) return;
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
+      // Striktní kontrola: Pokud nedržím tlačítko, OKAMŽITĚ SKONČI
+      if (!isDragging) return;
       handleMove(e.clientX);
     };
 
     const handleGlobalMouseUp = () => {
+      // Striktní kontrola: Pokud nedržím tlačítko, OKAMŽITĚ SKONČI
+      if (!isDragging) return;
       handleEnd();
     };
 
@@ -568,7 +596,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
       >
         {/* Carousel Track */}
         <div
