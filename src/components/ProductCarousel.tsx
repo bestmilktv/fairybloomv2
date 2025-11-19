@@ -127,47 +127,93 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Teprve po dokončení animace (transition end) resetujeme infinite loop
   const handleTransitionEnd = useCallback(() => {
     // Zkontrolujeme, že animace skutečně skončila a nejsme v dragu
-    if (isDragging || isTransitioning || cardWidth === 0 || viewportWidth === 0) return;
+    if (isDragging || isTransitioning || cardWidth === 0 || viewportWidth === 0 || !trackRef.current) return;
 
-    const totalProducts = products.length;
-    const startOfOriginals = CLONE_COUNT * totalProducts;
-    const endOfOriginals = startOfOriginals + totalProducts - 1;
+    // Definice konstant
+    const realLength = products.length; // Počet originálních produktů
+    const CLONES_AT_START = CLONE_COUNT * realLength; // Počet klonů na začátku
 
-    // Pokud jsme už v originálech, nic neděláme
-    if (currentIndex >= startOfOriginals && currentIndex <= endOfOriginals) {
-      return;
+    // 1. Zjisti přesnou šířku jedné položky
+    const firstChild = trackRef.current.children[0] as HTMLElement;
+    if (!firstChild) return;
+    const itemWidth = firstChild.getBoundingClientRect().width + gap;
+
+    // 2. Zjisti aktuální pozici (negativní hodnota) z DOM
+    // Zkusíme nejdřív inline style, pak computed style
+    let currentX = 0;
+    const transformStyle = trackRef.current.style.transform;
+    if (transformStyle) {
+      const match = transformStyle.match(/translateX\(([^)]+)\)/);
+      if (match) {
+        currentX = parseFloat(match[1].replace('px', ''));
+      }
+    } else {
+      // Pokud není v inline style, použijeme computed style
+      const computedStyle = window.getComputedStyle(trackRef.current);
+      const transform = computedStyle.transform;
+      if (transform && transform !== 'none') {
+        const matrix = transform.match(/matrix\(([^)]+)\)/);
+        if (matrix) {
+          const values = matrix[1].split(',').map(v => parseFloat(v.trim()));
+          currentX = values[4] || 0; // translateX je na pozici 4 v matrix
+        }
+      }
     }
 
-    // Vypočítáme realIndex z aktuálního currentIndex
-    const realIndex = getRealIndex(currentIndex);
-    
-    // Vypočítáme cílový index v originální sadě
-    const targetIndex = startOfOriginals + realIndex;
+    // 3. Vypočítej vizuální index (zaokrouhleno, aby se eliminovaly sub-pixel chyby)
+    const rawIndex = Math.round(-currentX / itemWidth);
 
-    // Zajistíme pixel-perfect match - vypočítáme aktuální a cílový translateX
-    const totalCardWidth = cardWidth + gap;
-    const centerOffset = (viewportWidth - cardWidth) / 2;
-    const currentTranslateX = -(currentIndex * totalCardWidth) + centerOffset;
-    const targetTranslateX = -(targetIndex * totalCardWidth) + centerOffset;
+    // 4. Normalizuj index na délku originálního pole (modulo)
+    let normalizedIndex = (rawIndex - CLONES_AT_START) % realLength;
+    // Ošetření záporných čísel v JS (např. -1 % 5 = -1, ale chceme 4)
+    if (normalizedIndex < 0) normalizedIndex += realLength;
 
-    // Ověříme, že jsou stejné (nebo velmi blízko kvůli zaokrouhlování)
-    // Pokud se liší o více než 1px, je něco špatně
-    if (Math.abs(currentTranslateX - targetTranslateX) > 1) {
-      console.warn('Pixel-perfect match failed:', {
-        currentIndex,
-        targetIndex,
-        currentTranslateX,
-        targetTranslateX,
-        diff: Math.abs(currentTranslateX - targetTranslateX)
-      });
-    }
+    // 5. HARD RESET: Pokud jsme mimo "bezpečnou zónu" (v klonech), přeskoč na střed
+    const isClone = rawIndex < CLONES_AT_START || rawIndex >= (CLONES_AT_START + realLength);
 
-    // Okamžitě (bez transition) přesuneme na targetIndex
-    setIsTransitioning(false);
-    requestAnimationFrame(() => {
-      setCurrentIndex(targetIndex);
+    // Debugging
+    const slideWidth = itemWidth;
+    const calculatedVisualIndex = rawIndex;
+    console.log('handleTransitionEnd Debug:', {
+      currentTranslateX: currentX,
+      slideWidth,
+      calculatedVisualIndex,
+      rawIndex,
+      normalizedIndex,
+      CLONES_AT_START,
+      realLength,
+      isClone,
+      currentIndex
     });
-  }, [currentIndex, products.length, isDragging, isTransitioning, cardWidth, viewportWidth, getRealIndex]);
+
+    if (isClone) {
+      // Vypni animaci
+      setIsTransitioning(false);
+      trackRef.current.style.transition = 'none';
+
+      // Vypočítej novou pozici v bezpečné zóně (uprostřed)
+      // Chceme být na pozici: CLONES_AT_START + normalizedIndex
+      const centerOffset = (viewportWidth - cardWidth) / 2;
+      const newPosition = -((CLONES_AT_START + normalizedIndex) * itemWidth) + centerOffset;
+
+      trackRef.current.style.transform = `translateX(${newPosition}px)`;
+      setCurrentIndex(CLONES_AT_START + normalizedIndex);
+
+      // Vynutit reflow (flush CSS changes)
+      void trackRef.current.offsetWidth;
+
+      // Zapni animaci zpět (na příští tick)
+      requestAnimationFrame(() => {
+        if (trackRef.current) {
+          trackRef.current.style.transition = 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)';
+        }
+      });
+    } else {
+      // Jsme v bezpečné zóně, jen aktualizuj state
+      setCurrentIndex(CLONES_AT_START + normalizedIndex);
+      setIsTransitioning(false);
+    }
+  }, [isDragging, isTransitioning, cardWidth, viewportWidth, gap, products.length, currentIndex]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
