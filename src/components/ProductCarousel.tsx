@@ -125,7 +125,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   // Reset pozice když jsme v klonované oblasti - bezviditelný skok na originály
   // Teprve po dokončení animace (transition end) resetujeme infinite loop
-  const handleTransitionEnd = useCallback(() => {
+  const handleTransitionEnd = useCallback((e: React.TransitionEvent<HTMLDivElement>) => {
+    // 1. Ignoruj eventy, které probublaly z dětí (tlačítek, obrázků uvnitř)
+    if (e.target !== trackRef.current) return;
+
+    // 2. Pokud zrovna neprobíhá námi řízená tranzice, ignoruj to.
+    // (Tohle zabrání tomu, aby se reset spustil sám ze sebe)
+    if (!isTransitioning) return;
+
     if (!trackRef.current) return;
 
     // Definice konstant
@@ -170,33 +177,27 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     });
 
     if (isClone) {
-      // Vypni animaci
-      setIsTransitioning(false);
+      // A) Okamžitě vypni CSS transition
       trackRef.current.style.transition = 'none';
 
-      // Vypočítej novou pozici v bezpečné zóně (uprostřed)
-      // Chceme být na pozici: CLONES_AT_START + normalizedIndex
+      // B) Přehoď pozici (teleport)
       const centerOffset = (viewportWidth - cardWidth) / 2;
       const newPosition = -((CLONES_AT_START + normalizedIndex) * itemWidth) + centerOffset;
-
       trackRef.current.style.transform = `translateX(${newPosition}px)`;
+
+      // C) Vynutit Reflow (aby prohlížeč zaregistroval změnu bez animace)
+      trackRef.current.getBoundingClientRect();
+
+      // D) Nastav state
+      setIsTransitioning(false);
       setCurrentIndex(normalizedIndex);
-
-      // Vynutit reflow (flush CSS changes)
-      void trackRef.current.offsetWidth;
-
-      // Zapni animaci zpět (na příští tick)
-      requestAnimationFrame(() => {
-        if (trackRef.current) {
-          trackRef.current.style.transition = 'transform 0.5s ease-out';
-        }
-      });
+      // POZOR: Nezapínej transition zpět hned tady! Zapínej ho až v onTouchStart/onMouseDown nebo nextSlide.
     } else {
       // Jsme v bezpečné zóně, jen aktualizuj state
       setCurrentIndex(normalizedIndex);
       setIsTransitioning(false);
     }
-  }, [cardWidth, viewportWidth, gap, products.length, currentIndex]);
+  }, [cardWidth, viewportWidth, gap, products.length, currentIndex, isTransitioning]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
