@@ -114,55 +114,87 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   // INFINITE LOOP RESET
   // ============================================================================
+  // Helper funkce pro výpočet realIndex z visualIndex
+  // Převádí index v klonovaném poli na index originálního produktu
+  const getRealIndex = useCallback((visualIndex: number): number => {
+    const totalItems = products.length;
+    const CLONES_COUNT = CLONE_COUNT * totalItems; // Počet klonů na začátku
+    // Použijeme robustní modulo pro záporná čísla
+    return ((visualIndex - CLONES_COUNT) % totalItems + totalItems) % totalItems;
+  }, [products.length]);
+
   // Reset pozice když jsme v klonované oblasti - bezviditelný skok na originály
   // Teprve po dokončení animace (transition end) resetujeme infinite loop
   const handleTransitionEnd = useCallback(() => {
     // Zkontrolujeme, že animace skutečně skončila a nejsme v dragu
-    if (isDragging || isTransitioning || cardWidth === 0) return;
+    if (isDragging || isTransitioning || cardWidth === 0 || viewportWidth === 0) return;
 
     const totalProducts = products.length;
     const startOfOriginals = CLONE_COUNT * totalProducts;
     const endOfOriginals = startOfOriginals + totalProducts - 1;
 
-    // Pokud jsme na konci klonů vpravo, skočíme na začátek originálů
-    if (currentIndex >= endOfOriginals + totalProducts) {
-      // Vypneme transition pro okamžitý reset (bez animace)
-      setIsTransitioning(false);
-      requestAnimationFrame(() => {
-        setCurrentIndex(startOfOriginals);
+    // Pokud jsme už v originálech, nic neděláme
+    if (currentIndex >= startOfOriginals && currentIndex <= endOfOriginals) {
+      return;
+    }
+
+    // Vypočítáme realIndex z aktuálního currentIndex
+    const realIndex = getRealIndex(currentIndex);
+    
+    // Vypočítáme cílový index v originální sadě
+    const targetIndex = startOfOriginals + realIndex;
+
+    // Zajistíme pixel-perfect match - vypočítáme aktuální a cílový translateX
+    const totalCardWidth = cardWidth + gap;
+    const centerOffset = (viewportWidth - cardWidth) / 2;
+    const currentTranslateX = -(currentIndex * totalCardWidth) + centerOffset;
+    const targetTranslateX = -(targetIndex * totalCardWidth) + centerOffset;
+
+    // Ověříme, že jsou stejné (nebo velmi blízko kvůli zaokrouhlování)
+    // Pokud se liší o více než 1px, je něco špatně
+    if (Math.abs(currentTranslateX - targetTranslateX) > 1) {
+      console.warn('Pixel-perfect match failed:', {
+        currentIndex,
+        targetIndex,
+        currentTranslateX,
+        targetTranslateX,
+        diff: Math.abs(currentTranslateX - targetTranslateX)
       });
     }
-    // Pokud jsme na začátku klonů vlevo, skočíme na konec originálů
-    else if (currentIndex < startOfOriginals - totalProducts) {
-      // Vypneme transition pro okamžitý reset (bez animace)
-      setIsTransitioning(false);
-      requestAnimationFrame(() => {
-        setCurrentIndex(endOfOriginals);
-      });
-    }
-  }, [currentIndex, products.length, isDragging, isTransitioning, cardWidth]);
+
+    // Okamžitě (bez transition) přesuneme na targetIndex
+    setIsTransitioning(false);
+    requestAnimationFrame(() => {
+      setCurrentIndex(targetIndex);
+    });
+  }, [currentIndex, products.length, isDragging, isTransitioning, cardWidth, viewportWidth, getRealIndex]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
   useEffect(() => {
-    if (isTransitioning || isDragging || cardWidth === 0) return;
+    if (isTransitioning || isDragging || cardWidth === 0 || viewportWidth === 0) return;
 
     const totalProducts = products.length;
     const startOfOriginals = CLONE_COUNT * totalProducts;
     const endOfOriginals = startOfOriginals + totalProducts - 1;
 
-    if (currentIndex >= endOfOriginals + totalProducts) {
-      setIsTransitioning(false);
-      requestAnimationFrame(() => {
-        setCurrentIndex(startOfOriginals);
-      });
-    } else if (currentIndex < startOfOriginals - totalProducts) {
-      setIsTransitioning(false);
-      requestAnimationFrame(() => {
-        setCurrentIndex(endOfOriginals);
-      });
+    // Pokud jsme už v originálech, nic neděláme
+    if (currentIndex >= startOfOriginals && currentIndex <= endOfOriginals) {
+      return;
     }
-  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth]);
+
+    // Vypočítáme realIndex z aktuálního currentIndex
+    const realIndex = getRealIndex(currentIndex);
+    
+    // Vypočítáme cílový index v originální sadě
+    const targetIndex = startOfOriginals + realIndex;
+
+    // Okamžitě (bez transition) přesuneme na targetIndex
+    setIsTransitioning(false);
+    requestAnimationFrame(() => {
+      setCurrentIndex(targetIndex);
+    });
+  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth, viewportWidth, getRealIndex]);
 
   // ============================================================================
   // NAVIGACE
