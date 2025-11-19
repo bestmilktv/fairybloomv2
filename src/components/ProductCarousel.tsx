@@ -157,25 +157,27 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   // Calculate transform with responzivní values
   const calculateTransform = () => {
-    const totalWidth = config.cardWidth + config.gap;
-    
     if (config.isMobile) {
       // Na mobilu: centrujeme hlavní produkt uprostřed obrazovky
       // currentIndex začíná na 1 (ukazuje na první hlavní produkt, index 0 je boční vlevo)
-      // Struktura: index 0 (boční vlevo) + gap + index 1 (hlavní) + gap + index 2 (boční vpravo)
-      const offset = (currentIndex - 1) * totalWidth;
+      // Struktura: index 0 (boční vlevo, šířka 0.25*cardWidth) + gap + index 1 (hlavní, šířka cardWidth) + gap + index 2 (boční vpravo, šířka 0.25*cardWidth)
+      const sideWidth = config.cardWidth * config.sideCount;
+      const sideGap = config.gap;
+      const mainGap = config.gap;
+      // Offset = šířka bočního vlevo + gap + (currentIndex - 1) * (cardWidth + gap)
+      const offset = sideWidth + sideGap + (currentIndex - 1) * (config.cardWidth + mainGap);
       // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky hlavního produktu
-      // Hlavní produkt je na pozici currentIndex v layoutu
       return `translateX(calc(-${offset}px + 50% - ${config.cardWidth / 2}px))`;
     } else if (config.sideCount === 0.5) {
       // Tablet/Menší notebooky: currentIndex začíná na 1 (ukazuje na první hlavní produkt)
-      // Všechny produkty mají plnou šířku v layoutu, boční jsou zobrazeny pomocí clip-path
-      // Transformace: stejná logika jako desktop pro konzistentní mezery
-      const offset = (currentIndex - 1) * totalWidth;
+      // Struktura: boční vlevo (0.5*cardWidth) + gap + hlavní produkty + gap + boční vpravo (0.5*cardWidth)
+      const sideWidth = config.cardWidth * config.sideCount;
+      const offset = sideWidth + config.gap + (currentIndex - 1) * (config.cardWidth + config.gap);
       return `translateX(-${offset}px)`;
     } else {
       // Large Desktop: currentIndex začíná na 1
       // offset = (currentIndex - 1) * totalWidth zobrazí 1 boční vlevo + hlavní produkty
+      const totalWidth = config.cardWidth + config.gap;
       const offset = (currentIndex - 1) * totalWidth;
       return `translateX(-${offset}px)`;
     }
@@ -184,18 +186,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Calculate container width dynamically
   // Large Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů (plně viditelných)
   // Menší notebooky/Tablet: 3-2 hlavní + 0.5 boční vlevo + 0.5 boční vpravo (částečně viditelné)
-  // Mobil: 100% (full width)
-  // Pro tablet/menší notebooky: v layoutu máme produkty, každý s plnou šířkou
-  // Kontejner musí být široký pro všechny produkty, aby se boční produkt vpravo zobrazil
-  // Šířka kontejneru = (mainCount + 2) * (cardWidth + gap) - gap
+  // Mobil: 1 hlavní + 0.25 boční vlevo + 0.25 boční vpravo
+  // Pro částečně viditelné produkty: wrapper má šířku sideCount * cardWidth
   const containerWidth = config.isMobile 
     ? '100%' // Full width na mobilu
     : config.sideCount === 1
       ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů: (3 + 1*2) * (320 + 32) - 32 = 1728px
-      : (config.mainCount + 2) * (config.cardWidth + config.gap) - config.gap; // Produkty: (mainCount + 2) * (cardWidth + gap) - gap
-      // Tablet: (2 + 2) * (cardWidth + gap) - gap = 4 * (cardWidth + gap) - gap
-      // Menší notebooky: (3 + 2) * (cardWidth + gap) - gap = 5 * (cardWidth + gap) - gap
-      // Telefon: 100% (full width)
+      : (config.sideCount * config.cardWidth) + // Boční vlevo
+        config.gap +
+        (config.mainCount * (config.cardWidth + config.gap)) - config.gap + // Hlavní produkty
+        config.gap +
+        (config.sideCount * config.cardWidth); // Boční vpravo
 
   return (
     <div 
@@ -259,49 +260,39 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 }
               }
 
-              // Všechny produkty mají plnou šířku v layoutu pro konzistentní mezery
-              // Boční produkty jsou zobrazeny pomocí clip-path (zobrazí se jen část)
+              // Určení šířky a stylů pro produkty
               const isPartialSideProduct = (config.isMobile || config.sideCount === 0.5 || config.sideCount === 0.25) && isSideProduct;
-              const productWidth = config.cardWidth; // VŠECHNY produkty mají plnou šířku
               
-              // Clip-path pro částečně viditelné boční produkty
-              // Telefon (0.25): zobrazíme 1/4 produktu
-              // Tablet/Menší notebook (0.5): zobrazíme 1/2 produktu
-              // Boční vlevo: zobrazíme pravou část produktu (tu část, která je blíž k hlavním)
-              // Boční vpravo: zobrazíme levou část produktu (tu část, která je blíž k hlavním)
-              let sideClipStyle = {};
-              let sideMargin = {};
+              // Pro boční produkty s částečnou viditelností: wrapper má šířku viditelné části
+              // Produkt uvnitř má plnou šířku a je posunutý tak, aby byla viditelná správná část
+              let wrapperWidth = config.cardWidth;
+              let productOffset = 0;
+              let wrapperStyle: React.CSSProperties = {};
+              
               if (isPartialSideProduct) {
                 if (config.sideCount === 0.25) {
                   // Telefon: 1/4 viditelné
-                  // Boční vlevo: zobrazíme pravou 1/4 produktu (blíž k hlavnímu)
-                  // Boční vpravo: zobrazíme levou 1/4 produktu (blíž k hlavnímu)
+                  wrapperWidth = config.cardWidth * 0.25;
                   if (relativePosition === -1) {
-                    // Boční vlevo: clip-path zobrazí pravou 1/4
-                    // Negativní margin-right posune produkt vlevo, takže viditelná část (pravá 1/4) je blíž k hlavnímu
-                    sideClipStyle = { clipPath: 'inset(0 0 0 75%)' };
-                    sideMargin = { marginRight: `-${config.cardWidth * 0.75}px` };
-                  } else if (relativePosition === 1) {
-                    // Boční vpravo (na mobilu je mainCount = 1, takže relativePosition 1 = boční vpravo)
-                    // clip-path zobrazí levou 1/4
-                    // Negativní margin-left posune produkt vpravo, takže viditelná část (levá 1/4) je blíž k hlavnímu
-                    sideClipStyle = { clipPath: 'inset(0 75% 0 0)' };
-                    sideMargin = { marginLeft: `-${config.cardWidth * 0.75}px` };
+                    // Boční vlevo: zobrazíme pravou 1/4 produktu
+                    // Produkt je posunutý vlevo o 75% své šířky, takže viditelná je pravá 1/4
+                    productOffset = -config.cardWidth * 0.75;
+                  } else if (relativePosition === 1 || relativePosition === config.mainCount) {
+                    // Boční vpravo: zobrazíme levou 1/4 produktu
+                    // Produkt není posunutý, takže viditelná je levá 1/4
+                    productOffset = 0;
                   }
                 } else if (config.sideCount === 0.5) {
                   // Tablet/Menší notebook: 1/2 viditelné
-                  // Boční vlevo: zobrazíme pravou polovinu produktu (blíž k hlavnímu)
-                  // Boční vpravo: zobrazíme levou polovinu produktu (blíž k hlavnímu)
+                  wrapperWidth = config.cardWidth * 0.5;
                   if (relativePosition === -1) {
-                    // Boční vlevo: clip-path zobrazí pravou polovinu
-                    // Negativní margin-right posune produkt vlevo, takže viditelná část (pravá 1/2) je blíž k hlavnímu
-                    sideClipStyle = { clipPath: 'inset(0 0 0 50%)' };
-                    sideMargin = { marginRight: `-${config.cardWidth * 0.5}px` };
+                    // Boční vlevo: zobrazíme pravou polovinu produktu
+                    // Produkt je posunutý vlevo o 50% své šířky, takže viditelná je pravá 1/2
+                    productOffset = -config.cardWidth * 0.5;
                   } else if (relativePosition === config.mainCount) {
-                    // Boční vpravo: clip-path zobrazí levou polovinu
-                    // Negativní margin-left posune produkt vpravo, takže viditelná část (levá 1/2) je blíž k hlavnímu
-                    sideClipStyle = { clipPath: 'inset(0 50% 0 0)' };
-                    sideMargin = { marginLeft: `-${config.cardWidth * 0.5}px` };
+                    // Boční vpravo: zobrazíme levou polovinu produktu
+                    // Produkt není posunutý, takže viditelná je levá 1/2
+                    productOffset = 0;
                   }
                 }
               }
@@ -311,7 +302,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   key={`${product.id}-${index}`}
                   className="flex-shrink-0"
                   style={{
-                    width: `${productWidth}px`,
+                    width: `${wrapperWidth}px`,
+                    overflow: isPartialSideProduct ? 'hidden' : 'visible',
                     opacity: isMainProduct 
                       ? 1 
                       : isSideProduct 
@@ -322,27 +314,34 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                       : isSideProduct 
                         ? (config.sideCount === 1 ? 'scale(0.85)' : 'scale(0.75)') // Plně viditelné: 0.85, částečně viditelné: 0.75
                         : 'scale(0.6)',
-                    transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out, margin 1000ms ease-out' : 'none',
+                    transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
                     visibility: isVisible ? 'visible' : 'hidden',
-                    ...sideClipStyle,
-                    ...sideMargin,
+                    ...wrapperStyle,
                   }}
                 >
-                  <Link 
-                    to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
-                    className="group cursor-pointer block"
+                  <div
+                    style={{
+                      width: `${config.cardWidth}px`,
+                      transform: productOffset !== 0 ? `translateX(${productOffset}px)` : 'none',
+                      transition: isTransitioning ? 'transform 1000ms ease-out' : 'none',
+                    }}
                   >
-                    <div className="transition-transform duration-300 ease-in-out hover:scale-105">
-                      <ProductCard
-                        id={product.id}
-                        title={product.title}
-                        price={product.price}
-                        image={product.image}
-                        description={product.description}
-                        inventoryQuantity={product.inventoryQuantity}
-                      />
-                    </div>
-                  </Link>
+                    <Link 
+                      to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
+                      className="group cursor-pointer block"
+                    >
+                      <div className="transition-transform duration-300 ease-in-out hover:scale-105">
+                        <ProductCard
+                          id={product.id}
+                          title={product.title}
+                          price={product.price}
+                          image={product.image}
+                          description={product.description}
+                          inventoryQuantity={product.inventoryQuantity}
+                        />
+                      </div>
+                    </Link>
+                  </div>
                 </div>
               );
             })}
