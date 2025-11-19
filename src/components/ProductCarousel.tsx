@@ -156,6 +156,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // Calculate transform with responzivní values
+  // Vždy centrujeme viditelnou část carouselu uprostřed obrazovky
   const calculateTransform = () => {
     if (config.isMobile) {
       // Na mobilu: centrujeme hlavní produkt uprostřed obrazovky
@@ -169,17 +170,27 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky hlavního produktu
       return `translateX(calc(-${offset}px + 50% - ${config.cardWidth / 2}px))`;
     } else if (config.sideCount === 0.5) {
-      // Tablet/Menší notebooky: currentIndex začíná na 1 (ukazuje na první hlavní produkt)
+      // Tablet/Menší notebooky: centrujeme celou viditelnou část
       // Struktura: boční vlevo (0.5*cardWidth) + gap + hlavní produkty + gap + boční vpravo (0.5*cardWidth)
       const sideWidth = config.cardWidth * config.sideCount;
+      const mainProductsWidth = config.mainCount * config.cardWidth + (config.mainCount - 1) * config.gap;
+      const totalVisibleWidth = sideWidth + config.gap + mainProductsWidth + config.gap + sideWidth;
+      
+      // Offset = šířka bočního vlevo + gap + (currentIndex - 1) * (cardWidth + gap)
       const offset = sideWidth + config.gap + (currentIndex - 1) * (config.cardWidth + config.gap);
-      return `translateX(-${offset}px)`;
+      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky viditelné části
+      return `translateX(calc(-${offset}px + 50% - ${totalVisibleWidth / 2}px))`;
     } else {
-      // Large Desktop: currentIndex začíná na 1
-      // offset = (currentIndex - 1) * totalWidth zobrazí 1 boční vlevo + hlavní produkty
+      // Large Desktop: centrujeme celou viditelnou část
+      // Struktura: 1 boční vlevo + 3 hlavní + 1 boční vpravo
       const totalWidth = config.cardWidth + config.gap;
+      const mainProductsWidth = config.mainCount * config.cardWidth + (config.mainCount - 1) * config.gap;
+      const totalVisibleWidth = config.cardWidth + config.gap + mainProductsWidth + config.gap + config.cardWidth;
+      
+      // Offset = (currentIndex - 1) * totalWidth zobrazí 1 boční vlevo + hlavní produkty
       const offset = (currentIndex - 1) * totalWidth;
-      return `translateX(-${offset}px)`;
+      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky viditelné části
+      return `translateX(calc(-${offset}px + 50% - ${totalVisibleWidth / 2}px))`;
     }
   };
 
@@ -207,16 +218,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         width: 'calc(100% + 3rem)' // 100% + kompenzace paddingů
       } : {}}
     >
-      {/* Carousel Container with dynamic width */}
+      {/* Carousel Container - vždy 100% šířky pro správné centrování */}
       <div 
-        className="relative" 
-        style={{ 
-          width: config.isMobile ? containerWidth : `${containerWidth}px`, 
-          maxWidth: config.isMobile ? '100%' : 'none',
-        }}
+        className="relative w-full"
       >
-        {/* Carousel Viewport */}
-        <div className="overflow-hidden">
+        {/* Carousel Viewport - overflow hidden pro skrytí neviditelných produktů */}
+        <div className="overflow-hidden w-full">
           <div 
             className="flex"
             style={{
