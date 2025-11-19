@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import { createProductPath } from '@/lib/slugify';
@@ -44,20 +44,39 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }
 
   // Infinite loop: klonujeme produkty na začátek a konec
-  // Klonujeme dostatečný počet pro plynulý infinite loop
-  // Struktura: [klony] + [originály] + [klony]
-  // Např. pro 5 produktů: [1,2,3,4,5, 1,2,3,4,5, 1,2,3,4,5] + [1,2,3,4,5] + [1,2,3,4,5, 1,2,3,4,5, 1,2,3,4,5]
-  // Začínáme na začátku originálů (index = CLONE_COUNT * products.length)
-  const CLONE_COUNT = 3;
-  const clonedProducts = [
-    ...Array(CLONE_COUNT).fill(null).flatMap(() => products),
-    ...products,
-    ...Array(CLONE_COUNT).fill(null).flatMap(() => products),
-  ];
+  // Struktura: [...KlonovanéPoložkyKonec, ...OriginálníPoložky, ...KlonovanéPoložkyZačátek]
+  // Klony na začátku = konec originálů (pro swipe doleva)
+  // Klony na konci = začátek originálů (pro swipe doprava)
+  // CLONE_COUNT = max(3, visibleItems + buffer)
+  // Desktop: 5 viditelných + 2 buffer = 7
+  // Mobil: 1 viditelný + 2 buffer = 3
+  const [cloneCount, setCloneCount] = useState(3);
+  
+  // Vypočítáme cloneCount na základě velikosti kontejneru
+  const calculateCloneCount = useCallback((containerWidth: number) => {
+    const visibleItems = containerWidth >= 768 ? 5 : 1;
+    const buffer = 2;
+    return Math.max(3, visibleItems + buffer);
+  }, []);
+
+  // Vytvoříme clonedProducts pole - přepočítá se při změně cloneCount
+  const clonedProducts = useMemo(() => [
+    ...Array(cloneCount).fill(null).flatMap(() => products), // Klony konce (na začátku)
+    ...products, // Originální produkty
+    ...Array(cloneCount).fill(null).flatMap(() => products), // Klony začátku (na konci)
+  ], [cloneCount, products]);
 
   const trackRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [currentIndex, setCurrentIndex] = useState(CLONE_COUNT * products.length);
+  // currentIndex se inicializuje později, když známe cloneCount
+  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
+  
+  // Inicializace currentIndex na začátek originálů po prvním výpočtu cloneCount
+  useEffect(() => {
+    if (cloneCount > 0 && currentIndex === null) {
+      setCurrentIndex(cloneCount * products.length);
+    }
+  }, [cloneCount, products.length, currentIndex]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
@@ -75,6 +94,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (!containerRef.current) return;
       
       const containerWidth = containerRef.current.offsetWidth;
+      
+      // Aktualizace cloneCount podle velikosti
+      const newCloneCount = calculateCloneCount(containerWidth);
+      setCloneCount(newCloneCount);
       
       // Desktop: 5 karet (3 hlavní + 2 boční) s gapy
       // Mobil: 1 hlavní karta
@@ -100,7 +123,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     resizeObserver.observe(containerRef.current);
 
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [calculateCloneCount]);
 
   // Infinite loop reset: když jsme na klonu, skočíme na originál bez transition
   // 
@@ -112,16 +135,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // 2. Když uživatel dojde na začátek klonů vlevo (index < startOfOriginals - totalProducts),
   //    okamžitě skočíme na konec originálů (endOfOriginals).
   //
-  // 3. Používáme requestAnimationFrame, aby se reset provedl v dalším render cyklu,
-  //    což zajišťuje, že transition je vypnutá a reset je bezviditelný.
+  // 3. Reset se provádí po dokončení transition (onTransitionEnd) nebo okamžitě pokud není transition
   //
-  // 4. Reset se provádí pouze když není aktivní transition ani drag,
-  //    aby nedošlo k konfliktu s uživatelským vstupem.
-  useEffect(() => {
-    if (isTransitioning || isDragging || cardWidth === 0) return;
+  // 4. Reset se provádí pouze když není aktivní drag, aby nedošlo k konfliktu s uživatelským vstupem.
+  const handleTransitionEnd = useCallback(() => {
+    if (isDragging || cardWidth === 0) return;
 
     const totalProducts = products.length;
-    const startOfOriginals = CLONE_COUNT * totalProducts;
+    const startOfOriginals = cloneCount * totalProducts;
     const endOfOriginals = startOfOriginals + totalProducts - 1;
 
     // Pokud jsme na konci klonů vpravo, skočíme na začátek originálů
@@ -140,12 +161,37 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         setCurrentIndex(endOfOriginals);
       });
     }
-  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth]);
+  }, [currentIndex, products.length, isDragging, cardWidth, cloneCount]);
+
+  // Také kontrolujeme při změně indexu (pro případy bez transition)
+  useEffect(() => {
+    if (isTransitioning || isDragging || cardWidth === 0) return;
+
+    const totalProducts = products.length;
+    const startOfOriginals = cloneCount * totalProducts;
+    const endOfOriginals = startOfOriginals + totalProducts - 1;
+
+    // Pokud jsme na konci klonů vpravo, skočíme na začátek originálů
+    if (currentIndex >= endOfOriginals + totalProducts) {
+      setIsTransitioning(false);
+      requestAnimationFrame(() => {
+        setCurrentIndex(startOfOriginals);
+      });
+    }
+    // Pokud jsme na začátku klonů vlevo, skočíme na konec originálů
+    else if (currentIndex < startOfOriginals - totalProducts) {
+      setIsTransitioning(false);
+      requestAnimationFrame(() => {
+        setCurrentIndex(endOfOriginals);
+      });
+    }
+  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth, cloneCount]);
 
   // Navigace
   const goToIndex = useCallback((newIndex: number, withTransition = true) => {
     // Povolíme navigaci i během transition, pokud je to drag
     if (isTransitioning && !isDragging) return;
+    if (currentIndex === null) return; // Čekáme na inicializaci
     
     setIsTransitioning(withTransition);
     setCurrentIndex(newIndex);
@@ -154,18 +200,33 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       // Timeout musí být delší než transition duration (500ms)
       setTimeout(() => setIsTransitioning(false), 600);
     }
-  }, [isTransitioning, isDragging]);
+  }, [isTransitioning, isDragging, currentIndex]);
 
   const nextSlide = useCallback(() => {
-    goToIndex(currentIndex + 1);
+    if (!containerRef.current) return;
+    
+    const containerWidth = containerRef.current.offsetWidth;
+    const isMobile = containerWidth < 768;
+    
+    // Desktop: posun o 3 produkty, Mobil: posun o 1 produkt
+    const step = isMobile ? 1 : 3;
+    goToIndex(currentIndex + step);
   }, [currentIndex, goToIndex]);
 
   const prevSlide = useCallback(() => {
-    goToIndex(currentIndex - 1);
+    if (!containerRef.current) return;
+    
+    const containerWidth = containerRef.current.offsetWidth;
+    const isMobile = containerWidth < 768;
+    
+    // Desktop: posun o 3 produkty, Mobil: posun o 1 produkt
+    const step = isMobile ? 1 : 3;
+    goToIndex(currentIndex - step);
   }, [currentIndex, goToIndex]);
 
   // Swipe/Drag handling
   const handleStart = useCallback((clientX: number) => {
+    if (currentIndex === null) return; // Čekáme na inicializaci
     setIsDragging(true);
     setDragStart(clientX);
     setDragStartTime(Date.now());
@@ -181,12 +242,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging, dragStart]);
 
   const handleEnd = useCallback(() => {
-    if (!isDragging || cardWidth === 0) {
+    if (!isDragging || cardWidth === 0 || !containerRef.current) {
       setIsDragging(false);
       setDragOffset(0);
       return;
     }
     
+    const containerWidth = containerRef.current.offsetWidth;
+    const isMobile = containerWidth < 768;
     const dragDuration = Date.now() - dragStartTime;
     const dragDistance = Math.abs(dragOffset);
     const dragVelocity = dragDistance / Math.max(dragDuration, 1); // px/ms
@@ -199,22 +262,33 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // dragOffset > 0 znamená tažení doprava → chceme vidět produkty vpravo → zvýšit index
     // dragOffset < 0 znamená tažení doleva → chceme vidět produkty vlevo → snížit index
     const cardStep = cardWidth + gap;
-    const cardsMoved = Math.round(dragOffset / cardStep);
+    const cardsMoved = dragOffset / cardStep; // Nezaokrouhlujeme ještě
     
     // Pokud je swipe dostatečně rychlý nebo daleký, posuneme se
-    // Nebo pokud jsme posunuli alespoň o jednu kartu
-    const shouldSnap = dragDistance > distanceThreshold || dragVelocity > velocityThreshold || Math.abs(cardsMoved) >= 1;
+    const shouldSnap = dragDistance > distanceThreshold || dragVelocity > velocityThreshold;
     
-    if (shouldSnap && cardsMoved !== 0) {
-      // Posuneme se o vypočítaný počet karet
-      // cardsMoved > 0 při tažení doprava → zvýšíme index (více produktů vpravo)
-      // cardsMoved < 0 při tažení doleva → snížíme index (více produktů vlevo)
-      const newIndex = dragStartIndex + cardsMoved;
-      goToIndex(newIndex, true);
+    let targetIndex: number;
+    
+    if (shouldSnap) {
+      // Vypočítáme target index na základě cardsMoved
+      const rawIndex = dragStartIndex + cardsMoved;
+      
+      if (isMobile) {
+        // Mobil: snap na každý produkt (zaokrouhlíme na nejbližší celé číslo)
+        targetIndex = Math.round(rawIndex);
+      } else {
+        // Desktop: snap na násobky (každý 3. produkt pro 3 hlavní)
+        // Zaokrouhlíme na nejbližší násobek 1 (každý produkt, protože máme 5 viditelných)
+        // Ale můžeme také snapnout na násobky 3, pokud chceme posunout o 3 produkty najednou
+        targetIndex = Math.round(rawIndex);
+      }
     } else {
-      // Vrátíme se na původní pozici s plynulou animací
-      goToIndex(dragStartIndex, true);
+      // Vrátíme se na původní pozici
+      targetIndex = dragStartIndex;
     }
+    
+    // Zajistíme, že targetIndex je v rozsahu originálů (infinite loop reset se postará o klony)
+    goToIndex(targetIndex, true);
     
     setIsDragging(false);
     // Reset dragOffset až po dokončení transition
@@ -274,80 +348,73 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     };
   }, [isDragging, handleMove, handleEnd]);
 
-  // Výpočet transform pozice
-  // Používáme jednoduchý výpočet: currentIndex * cardWidth pro posun
-  // Centrujeme pomocí 50% kontejneru mínus polovina šířky viditelné části
+  // Výpočet transform pozice - zjednodušený výpočet
+  // translateX = -currentIndex * cardStep + centerOffset + dragOffset
+  // cardStep = cardWidth + gap
+  // centerOffset = (containerWidth / 2) - (cardWidth / 2) pro mobil
+  // centerOffset = (containerWidth / 2) - (2.5 * cardWidth + 2 * gap) pro desktop (centrujeme prostřední z 5 karet)
   const calculateTransform = () => {
-    if (cardWidth === 0 || !containerRef.current) return 'translateX(0)';
+    if (cardWidth === 0 || !containerRef.current || currentIndex === null) return 'translateX(0)';
     
     const containerWidth = containerRef.current.offsetWidth;
     const isMobile = containerWidth < 768;
+    const cardStep = cardWidth + gap;
     
+    // Základní offset na základě currentIndex
+    const baseOffset = currentIndex * cardStep;
+    
+    // Centrovací offset
+    let centerOffset: number;
     if (isMobile) {
-      // Mobil: centrujeme hlavní produkt (index 0 z viditelných)
-      // Viditelná část: 1 karta uprostřed
-      const baseOffset = currentIndex * (cardWidth + gap);
-      const centerOffset = (containerWidth / 2) - (cardWidth / 2);
-      const finalOffset = -baseOffset + centerOffset + dragOffset;
-      return `translateX(${finalOffset}px)`;
+      // Mobil: centrujeme hlavní produkt (1 karta)
+      centerOffset = (containerWidth / 2) - (cardWidth / 2);
     } else {
-      // Desktop: centrujeme 3 hlavní produkty uprostřed
-      // Viditelná část: 1 boční vlevo + 3 hlavní + 1 boční vpravo = 5 karet
-      // Centrujeme prostřední hlavní produkt (index 2 z 5)
-      const baseOffset = currentIndex * (cardWidth + gap);
-      const visibleWidth = 5 * cardWidth + 4 * gap; // 5 karet + 4 gapy
-      const centerOffset = (containerWidth / 2) - (visibleWidth / 2);
-      // Upravíme offset tak, aby prostřední hlavní produkt (index 2) byl uprostřed
-      const centerCardOffset = 2 * (cardWidth + gap); // Offset pro 3. kartu (index 2)
-      const finalOffset = -baseOffset + centerOffset + centerCardOffset + dragOffset;
-      return `translateX(${finalOffset}px)`;
+      // Desktop: centrujeme prostřední hlavní produkt z 5 karet (index 2 z 5)
+      // Viditelná část: 5 karet, prostřední je na pozici 2
+      centerOffset = (containerWidth / 2) - (2.5 * cardWidth + 2 * gap);
     }
+    
+    // Finální offset: posuneme track doleva o baseOffset, pak centrujeme, pak přidáme dragOffset
+    const finalOffset = -baseOffset + centerOffset + dragOffset;
+    
+    return `translateX(${finalOffset}px)`;
   };
 
-  // Určení pozice karty relativně k centru
-  // Desktop: zobrazujeme 5 karet (-2, -1, 0, 1, 2), kde 0 je prostřední hlavní
-  // Mobil: zobrazujeme 3 karty (-1, 0, 1), kde 0 je hlavní
-  const getCardPosition = (index: number) => {
-    return index - currentIndex;
-  };
-
+  // Určení stylu karty - všechny karty jsou viditelné, pouze měníme opacity a scale
   const getCardStyle = (index: number) => {
-    if (cardWidth === 0 || !containerRef.current) {
+    if (cardWidth === 0 || !containerRef.current || currentIndex === null) {
       return {
-        width: '0px',
+        width: `${cardWidth}px`,
         opacity: 0,
-        transform: 'scale(0)',
-        visibility: 'hidden' as const,
+        transform: 'scale(0.85)',
       };
     }
 
-    const position = getCardPosition(index);
+    const position = index - currentIndex;
     const isMobile = containerRef.current.offsetWidth < 768;
     
     if (isMobile) {
       // Mobil: hlavní je na pozici 0, peek na -1 a 1
       const isMain = position === 0;
-      const isVisible = Math.abs(position) <= 1;
+      const distance = Math.abs(position);
       
+      // Všechny karty jsou viditelné, ale měníme opacity a scale podle vzdálenosti
       return {
         width: `${cardWidth}px`,
-        opacity: isMain ? 1 : 0.3,
-        transform: isMain ? 'scale(1)' : 'scale(0.9)',
-        visibility: isVisible ? 'visible' as const : 'hidden' as const,
+        opacity: isMain ? 1 : Math.max(0, 0.3 - (distance - 1) * 0.1),
+        transform: isMain ? 'scale(1)' : `scale(${Math.max(0.7, 0.9 - (distance - 1) * 0.1)})`,
         transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
       };
     } else {
       // Desktop: hlavní jsou na pozicích -1, 0, 1; boční na -2 a 2
-      // Celkem viditelných: 5 karet (-2 až 2)
       const isMain = Math.abs(position) <= 1;
-      const isSide = Math.abs(position) === 2;
-      const isVisible = Math.abs(position) <= 2;
+      const distance = Math.abs(position);
       
+      // Všechny karty jsou viditelné, ale měníme opacity a scale podle vzdálenosti
       return {
         width: `${cardWidth}px`,
-        opacity: isMain ? 1 : 0.5,
-        transform: isMain ? 'scale(1)' : 'scale(0.85)',
-        visibility: isVisible ? 'visible' as const : 'hidden' as const,
+        opacity: isMain ? 1 : Math.max(0, 0.5 - (distance - 2) * 0.1),
+        transform: isMain ? 'scale(1)' : `scale(${Math.max(0.7, 0.85 - (distance - 2) * 0.05)})`,
         transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
       };
     }
@@ -369,7 +436,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       {/* Carousel Track */}
       <div
         ref={trackRef}
-        className="flex"
+        className="flex flex-row flex-nowrap"
         style={{
           gap: `${gap}px`,
           transform: calculateTransform(),
@@ -377,6 +444,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           willChange: isDragging ? 'transform' : 'auto',
           cursor: isDragging ? 'grabbing' : 'grab',
         }}
+        onTransitionEnd={handleTransitionEnd}
       >
         {clonedProducts.map((product, index) => (
           <div
