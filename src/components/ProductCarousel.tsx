@@ -373,9 +373,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       // Mobil: centrujeme hlavní produkt (1 karta)
       centerOffset = (containerWidth / 2) - (cardWidth / 2);
     } else {
-      // Desktop: centrujeme prostřední hlavní produkt z 5 karet (index 2 z 5)
-      // Viditelná část: 5 karet, prostřední je na pozici 2
-      centerOffset = (containerWidth / 2) - (2.5 * cardWidth + 2 * gap);
+      // Desktop: centrujeme prostřední hlavní produkt (pozice 0) z 5 karet
+      // Struktura: pozice -2 (boční vlevo), -1, 0, 1 (hlavní), 2 (boční vpravo)
+      // Prostřední hlavní produkt (pozice 0) musí být uprostřed kontejneru
+      // Offset pro pozici 0: 2 * cardStep (protože před ním jsou pozice -2 a -1)
+      centerOffset = (containerWidth / 2) - (2 * cardStep);
     }
     
     // Finální offset: posuneme track doleva o baseOffset, pak centrujeme, pak přidáme dragOffset
@@ -394,7 +396,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       };
     }
 
-    const position = index - currentIndex;
+    // Během dragu používáme dragStartIndex, jinak currentIndex
+    // Tím zajistíme, že struktura zůstane zachovaná i během swipování
+    const baseIndex = isDragging ? dragStartIndex : currentIndex;
+    const position = index - baseIndex;
     const isMobile = containerRef.current.offsetWidth < 768;
     
     if (isMobile) {
@@ -410,17 +415,45 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
       };
     } else {
-      // Desktop: hlavní jsou na pozicích -1, 0, 1; boční na -2 a 2
-      const isMain = Math.abs(position) <= 1;
-      const distance = Math.abs(position);
+      // Desktop: struktura 3 hlavní + 2 boční produkty
+      // Pozice -2: boční vlevo → opacity 0.5, scale 0.85
+      // Pozice -1, 0, 1: hlavní produkty → opacity 1, scale 1
+      // Pozice 2: boční vpravo → opacity 0.5, scale 0.85
+      // Pozice mimo -2 až 2: skryté
       
-      // Všechny karty jsou viditelné, ale měníme opacity a scale podle vzdálenosti
-      return {
-        width: `${cardWidth}px`,
-        opacity: isMain ? 1 : Math.max(0, 0.5 - (distance - 2) * 0.1),
-        transform: isMain ? 'scale(1)' : `scale(${Math.max(0.7, 0.85 - (distance - 2) * 0.05)})`,
-        transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
-      };
+      if (position === -2) {
+        // Boční produkt vlevo
+        return {
+          width: `${cardWidth}px`,
+          opacity: 0.5,
+          transform: 'scale(0.85)',
+          transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
+        };
+      } else if (position >= -1 && position <= 1) {
+        // Hlavní produkty (3 uprostřed)
+        return {
+          width: `${cardWidth}px`,
+          opacity: 1,
+          transform: 'scale(1)',
+          transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
+        };
+      } else if (position === 2) {
+        // Boční produkt vpravo
+        return {
+          width: `${cardWidth}px`,
+          opacity: 0.5,
+          transform: 'scale(0.85)',
+          transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
+        };
+      } else {
+        // Mimo viditelnou oblast - skryté
+        return {
+          width: `${cardWidth}px`,
+          opacity: 0,
+          transform: 'scale(0.85)',
+          transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
+        };
+      }
     }
   };
 
