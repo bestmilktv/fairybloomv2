@@ -74,6 +74,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [cardWidth, setCardWidth] = useState(0);
   const [gap, setGap] = useState(16); // Fixní gap 16px podle specifikace
   const [isDesktop, setIsDesktop] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(0);
 
   // ============================================================================
   // MĚŘENÍ ROZMĚRŮ A RESPONZIVITA
@@ -84,19 +85,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const updateDimensions = () => {
       if (!viewportRef.current) return;
       
-      const viewportWidth = viewportRef.current.offsetWidth;
-      const desktop = viewportWidth >= 1024; // Breakpoint podle specifikace
+      const width = viewportRef.current.offsetWidth;
+      setViewportWidth(width);
+      const desktop = width >= 1024; // Breakpoint podle specifikace
       setIsDesktop(desktop);
       
       if (desktop) {
         // Desktop (>= 1024px): 5 karet (3 hlavní + 2 boční) + 4 gapy (16px)
         // cardWidth = (viewportWidth - 4 * 16) / 5
-        const calculatedCardWidth = (viewportWidth - (4 * gap)) / 5;
+        const calculatedCardWidth = (width - (4 * gap)) / 5;
         setCardWidth(calculatedCardWidth);
       } else {
         // Mobil (< 768px) nebo Tablet (768-1023px): 1 hlavní karta
         // cardWidth = viewportWidth - 32px (16px gap na každé straně pro peek)
-        const calculatedCardWidth = viewportWidth - 32;
+        const calculatedCardWidth = width - 32;
         setCardWidth(calculatedCardWidth);
       }
     };
@@ -208,10 +210,40 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [currentIndex]);
 
   const handleMove = useCallback((clientX: number) => {
-    if (!isDragging) return;
+    if (!isDragging || cardWidth === 0) return;
+    
     const offset = clientX - dragStart;
+    const totalCardWidth = cardWidth + gap;
+    
+    // Vypočítáme, na jaký index bychom se přesunuli
+    const cardsMoved = offset / totalCardWidth;
+    const potentialIndex = dragStartIndex + cardsMoved;
+    
+    // Kontrola infinite loop - pokud jsme mimo hranice, okamžitě resetujeme
+    const totalProducts = products.length;
+    const startOfOriginals = CLONE_COUNT * totalProducts;
+    const endOfOriginals = startOfOriginals + totalProducts - 1;
+    
+    // Pokud bychom byli na konci klonů vpravo, resetujeme na začátek originálů
+    if (potentialIndex >= endOfOriginals + totalProducts) {
+      const newDragStartIndex = startOfOriginals;
+      const newDragOffset = offset - ((newDragStartIndex - dragStartIndex) * totalCardWidth);
+      setDragStartIndex(newDragStartIndex);
+      setDragOffset(newDragOffset);
+      return;
+    }
+    
+    // Pokud bychom byli na začátku klonů vlevo, resetujeme na konec originálů
+    if (potentialIndex < startOfOriginals - totalProducts) {
+      const newDragStartIndex = endOfOriginals;
+      const newDragOffset = offset - ((newDragStartIndex - dragStartIndex) * totalCardWidth);
+      setDragStartIndex(newDragStartIndex);
+      setDragOffset(newDragOffset);
+      return;
+    }
+    
     setDragOffset(offset);
-  }, [isDragging, dragStart]);
+  }, [isDragging, dragStart, cardWidth, gap, dragStartIndex, products.length]);
 
   const handleEnd = useCallback(() => {
     if (!isDragging || cardWidth === 0 || !viewportRef.current) {
@@ -305,15 +337,19 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging, handleMove, handleEnd]);
 
   // ============================================================================
+  // OPTIMALIZACE: Cache viewportCenter
+  // ============================================================================
+  const viewportCenter = useMemo(() => viewportWidth / 2, [viewportWidth]);
+
+  // ============================================================================
   // VÝPOČET TRANSFORM POZICE
   // ============================================================================
   // currentIndex reprezentuje PROSTŘEDNÍ ze tří hlavních karet (desktop) nebo hlavní kartu (mobil)
   // Algoritmus: totalCardWidth = cardWidth + gap, centerOffset = (viewportWidth - cardWidth) / 2
   // x = -(currentIndex * totalCardWidth) + centerOffset
   const calculateTransform = () => {
-    if (cardWidth === 0 || !viewportRef.current) return 'translateX(0)';
+    if (cardWidth === 0 || viewportWidth === 0) return 'translateX(0)';
     
-    const viewportWidth = viewportRef.current.offsetWidth;
     const totalCardWidth = cardWidth + gap;
     
     // Během dragu používáme dragStartIndex pro plynulý pohyb 1:1
@@ -330,13 +366,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // ============================================================================
-  // URČENÍ STYLU KARTY
+  // URČENÍ STYLU KARTY - Distance-Based Interpolace
   // ============================================================================
-  // Layout: [Small] [Large] [Large] [Large] [Small]
-  // currentIndex reprezentuje PROSTŘEDNÍ ze tří hlavních karet (desktop) nebo hlavní kartu (mobil)
-  // position = index - baseIndex, kde baseIndex je currentIndex (nebo dragStartIndex při dragu)
+  // Vypočítá styly na základě aktuální fyzické pozice karty vůči středu viewportu
+  // Během dragu se karty plynule transformují (scale, opacity) podle jejich pozice
   const getCardStyle = (index: number) => {
-    if (cardWidth === 0) {
+    if (cardWidth === 0 || viewportWidth === 0) {
       return {
         width: '0px',
         opacity: 0,
@@ -344,61 +379,89 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       };
     }
 
+    const totalCardWidth = cardWidth + gap;
+    
     // Během dragu používáme dragStartIndex, jinak currentIndex
     const baseIndex = isDragging ? dragStartIndex : currentIndex;
-    const position = index - baseIndex;
+    
+    // Vypočítáme aktuální transform tracku
+    const centerOffset = (viewportWidth - cardWidth) / 2;
+    const trackX = -(baseIndex * totalCardWidth) + centerOffset + dragOffset;
+    
+    // Vypočítáme střed této karty v pixelech (v viewportu)
+    // Pozice karty v tracku: index * totalCardWidth
+    // Střed karty: trackX + (index * totalCardWidth) + (cardWidth / 2)
+    const cardCenter = trackX + (index * totalCardWidth) + (cardWidth / 2);
+    
+    // Vypočítáme distance od středu viewportu
+    const distance = Math.abs(viewportCenter - cardCenter);
+    
+    // Transition pouze když není drag a je transition
+    const transition = isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none';
     
     if (isDesktop) {
       // Desktop: layout [Small] [Large] [Large] [Large] [Small]
-      // position -2: Small (levý boční) - Scale 0.85, Opacity 0.5
-      // position -1: Large (levý hlavní) - Scale 1, Opacity 1
-      // position 0: Large (prostřední hlavní) - Scale 1, Opacity 1
-      // position 1: Large (pravý hlavní) - Scale 1, Opacity 1
-      // position 2: Small (pravý boční) - Scale 0.85, Opacity 0.5
-      if (position === -2) {
-        // Boční produkt vlevo (Small)
-        return {
-          width: `${cardWidth}px`,
-          opacity: 0.5,
-          transform: 'scale(0.85)',
-          transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
-        };
-      } else if (position >= -1 && position <= 1) {
-        // Hlavní produkty (3 uprostřed - Large)
-        return {
-          width: `${cardWidth}px`,
-          opacity: 1,
-          transform: 'scale(1)',
-          transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
-        };
-      } else if (position === 2) {
-        // Boční produkt vpravo (Small)
-        return {
-          width: `${cardWidth}px`,
-          opacity: 0.5,
-          transform: 'scale(0.85)',
-          transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
-        };
+      // Hlavní zóna: 3 karty uprostřed (cca 1.5 * totalCardWidth od středu)
+      // Boční zóna: 2 karty po stranách (cca 2.5 * totalCardWidth od středu)
+      
+      // Hlavní zóna: distance < 1.5 * totalCardWidth -> scale 1, opacity 1
+      // Boční zóna: 1.5 * totalCardWidth <= distance < 2.5 * totalCardWidth -> scale 0.85, opacity 0.5
+      // Mimo: distance >= 2.5 * totalCardWidth -> scale a opacity klesají
+      
+      const mainZoneDistance = 1.5 * totalCardWidth;
+      const sideZoneDistance = 2.5 * totalCardWidth;
+      
+      let scale: number;
+      let opacity: number;
+      
+      if (distance < mainZoneDistance) {
+        // Hlavní zóna - plná velikost
+        scale = 1;
+        opacity = 1;
+      } else if (distance < sideZoneDistance) {
+        // Boční zóna - interpolace mezi hlavní a boční
+        const t = (distance - mainZoneDistance) / (sideZoneDistance - mainZoneDistance);
+        scale = 1 - (t * 0.15); // 1 -> 0.85
+        opacity = 1 - (t * 0.5); // 1 -> 0.5
       } else {
-        // Mimo hlavní strukturu - viditelné s nižší opacity pro swipe efekt
-        const distance = Math.abs(position) - 2;
-        return {
-          width: `${cardWidth}px`,
-          opacity: Math.max(0, 0.3 - distance * 0.1),
-          transform: `scale(${Math.max(0.7, 0.85 - distance * 0.05)})`,
-          transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
-        };
+        // Mimo hlavní strukturu - klesající hodnoty
+        const extraDistance = distance - sideZoneDistance;
+        const fadeFactor = Math.min(1, extraDistance / totalCardWidth);
+        scale = Math.max(0.7, 0.85 - fadeFactor * 0.15);
+        opacity = Math.max(0, 0.5 - fadeFactor * 0.2);
       }
-    } else {
-      // Mobil: hlavní je na pozici 0 (currentIndex reprezentuje hlavní kartu)
-      const isMain = position === 0;
-      const distance = Math.abs(position);
       
       return {
         width: `${cardWidth}px`,
-        opacity: isMain ? 1 : Math.max(0, 0.3 - (distance - 1) * 0.1),
-        transform: isMain ? 'scale(1)' : `scale(${Math.max(0.7, 0.9 - (distance - 1) * 0.1)})`,
-        transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
+        opacity,
+        transform: `scale(${scale})`,
+        transition,
+      };
+    } else {
+      // Mobil: hlavní karta uprostřed, ostatní se zmenšují
+      // Hlavní zóna: distance < cardWidth / 2 -> scale 1, opacity 1
+      const mainZoneDistance = cardWidth / 2;
+      
+      let scale: number;
+      let opacity: number;
+      
+      if (distance < mainZoneDistance) {
+        // Hlavní karta
+        scale = 1;
+        opacity = 1;
+      } else {
+        // Ostatní karty - interpolace podle distance
+        const extraDistance = distance - mainZoneDistance;
+        const fadeFactor = Math.min(1, extraDistance / (cardWidth * 1.5));
+        scale = Math.max(0.7, 1 - fadeFactor * 0.3);
+        opacity = Math.max(0.3, 1 - fadeFactor * 0.7);
+      }
+      
+      return {
+        width: `${cardWidth}px`,
+        opacity,
+        transform: `scale(${scale})`,
+        transition,
       };
     }
   };
