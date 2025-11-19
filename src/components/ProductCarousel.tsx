@@ -126,77 +126,48 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Reset pozice když jsme v klonované oblasti - bezviditelný skok na originály
   // Teprve po dokončení animace (transition end) resetujeme infinite loop
   const handleTransitionEnd = useCallback(() => {
-    if (!trackRef.current) return;
+    // Zkontrolujeme, že animace skutečně skončila a nejsme v dragu
+    if (isDragging || isTransitioning || cardWidth === 0 || viewportWidth === 0) return;
 
-    // Definice konstant
-    const realLength = products.length; // Počet originálních produktů (bez klonů)
-    const CLONES_AT_START = CLONE_COUNT * realLength; // Počet klonů na začátku
+    const totalProducts = products.length;
+    const startOfOriginals = CLONE_COUNT * totalProducts;
+    const endOfOriginals = startOfOriginals + totalProducts - 1;
 
-    // 1. Zjisti přesnou šířku jedné položky
-    const firstChild = trackRef.current.children[0] as HTMLElement;
-    if (!firstChild) return;
-    const itemWidth = firstChild.getBoundingClientRect().width + gap;
-
-    // 2. Zjisti aktuální pozici (negativní hodnota)
-    const transformString = trackRef.current.style.transform || '';
-    const currentX = parseFloat(transformString.replace('translateX(', '').replace('px)', '').replace(')', '')) || 0;
-
-    // 3. Vypočítej vizuální index (zaokrouhleno, aby se eliminovaly sub-pixel chyby)
-    const rawIndex = Math.round(-currentX / itemWidth);
-
-    // 4. Normalizuj index na délku originálního pole (modulo)
-    // POZOR: realLength je počet originálních produktů (bez klonů)
-    let normalizedIndex = (rawIndex - CLONES_AT_START) % realLength;
-
-    // Ošetření záporných čísel v JS (např. -1 % 5 = -1, ale chceme 4)
-    if (normalizedIndex < 0) normalizedIndex += realLength;
-
-    // 5. HARD RESET: Pokud jsme mimo "bezpečnou zónu" (v klonech), přeskoč na střed
-    const isClone = rawIndex < CLONES_AT_START || rawIndex >= (CLONES_AT_START + realLength);
-
-    // Debugging
-    const slideWidth = itemWidth;
-    const calculatedVisualIndex = rawIndex;
-    console.log('handleTransitionEnd Debug:', {
-      currentTranslateX: currentX,
-      slideWidth,
-      calculatedVisualIndex,
-      rawIndex,
-      normalizedIndex,
-      CLONES_AT_START,
-      realLength,
-      isClone,
-      currentIndex
-    });
-
-    if (isClone) {
-      // Vypni animaci
-      setIsTransitioning(false);
-      trackRef.current.style.transition = 'none';
-
-      // Vypočítej novou pozici v bezpečné zóně (uprostřed)
-      // Chceme být na pozici: CLONES_AT_START + normalizedIndex
-      const centerOffset = (viewportWidth - cardWidth) / 2;
-      const newPosition = -((CLONES_AT_START + normalizedIndex) * itemWidth) + centerOffset;
-
-      trackRef.current.style.transform = `translateX(${newPosition}px)`;
-      setCurrentIndex(normalizedIndex);
-
-      // Vynutit reflow (flush CSS changes)
-      void trackRef.current.offsetWidth;
-
-      // Zapni animaci zpět (na příští tick)
-      requestAnimationFrame(() => {
-        if (trackRef.current) {
-          trackRef.current.style.transition = 'transform 0.5s ease-out';
-        }
-      });
-    } else {
-      // Jsme v bezpečné zóně, jen aktualizuj state
-      setCurrentIndex(normalizedIndex);
-      setIsTransitioning(false);
+    // Pokud jsme už v originálech, nic neděláme
+    if (currentIndex >= startOfOriginals && currentIndex <= endOfOriginals) {
+      return;
     }
-  }, [cardWidth, viewportWidth, gap, products.length, currentIndex]);
+
+    // Vypočítáme realIndex z aktuálního currentIndex
+    const realIndex = getRealIndex(currentIndex);
+    
+    // Vypočítáme cílový index v originální sadě
+    const targetIndex = startOfOriginals + realIndex;
+
+    // Zajistíme pixel-perfect match - vypočítáme aktuální a cílový translateX
+    const totalCardWidth = cardWidth + gap;
+    const centerOffset = (viewportWidth - cardWidth) / 2;
+    const currentTranslateX = -(currentIndex * totalCardWidth) + centerOffset;
+    const targetTranslateX = -(targetIndex * totalCardWidth) + centerOffset;
+
+    // Ověříme, že jsou stejné (nebo velmi blízko kvůli zaokrouhlování)
+    // Pokud se liší o více než 1px, je něco špatně
+    if (Math.abs(currentTranslateX - targetTranslateX) > 1) {
+      console.warn('Pixel-perfect match failed:', {
+        currentIndex,
+        targetIndex,
+        currentTranslateX,
+        targetTranslateX,
+        diff: Math.abs(currentTranslateX - targetTranslateX)
+      });
+    }
+
+    // Okamžitě (bez transition) přesuneme na targetIndex
+    setIsTransitioning(false);
+    requestAnimationFrame(() => {
+      setCurrentIndex(targetIndex);
+    });
+  }, [currentIndex, products.length, isDragging, isTransitioning, cardWidth, viewportWidth, getRealIndex]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
@@ -316,14 +287,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging, dragStart, cardWidth, gap, dragStartIndex, products.length]);
 
   const handleEnd = useCallback(() => {
-    // VŽDY resetujeme isDragging, i když nejsme v dragu nebo jsou chybějící hodnoty
-    if (!isDragging) {
-      setIsDragging(false);
-      setDragOffset(0);
-      return;
-    }
-
-    if (cardWidth === 0 || viewportWidth === 0) {
+    if (!isDragging || cardWidth === 0 || viewportWidth === 0) {
       setIsDragging(false);
       setDragOffset(0);
       return;
@@ -360,8 +324,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     
     // Nastavíme cíl a zapneme plynulou transition
     goToIndex(targetIndex, true);
-    
-    // VŽDY resetujeme isDragging na false
     setIsDragging(false);
     
     // Reset dragOffset po dokončení animace
@@ -391,10 +353,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [handleStart]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    // Striktní kontrola: Pokud nedržím tlačítko (isDragging === false), OKAMŽITĚ SKONČI
     if (!isDragging) return;
-    
-    e.preventDefault();
     handleMove(e.clientX);
   }, [isDragging, handleMove]);
 
@@ -402,31 +361,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     handleEnd();
   }, [handleEnd]);
 
-  // Speciální handler pro mouse leave - vždy resetuje dragging a spustí snap
-  const handleMouseLeave = useCallback(() => {
-    if (isDragging) {
-      // Pokud jsme v dragu, spustíme end (což spustí snap)
-      handleEnd();
-    } else {
-      // Pokud nejsme v dragu, jen ujistíme se, že isDragging je false
-      setIsDragging(false);
-      setDragOffset(0);
-    }
-  }, [isDragging, handleEnd]);
-
   // Global mouse events pro drag mimo komponentu
   useEffect(() => {
     if (!isDragging) return;
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      // Striktní kontrola: Pokud nedržím tlačítko, OKAMŽITĚ SKONČI
-      if (!isDragging) return;
       handleMove(e.clientX);
     };
 
     const handleGlobalMouseUp = () => {
-      // Striktní kontrola: Pokud nedržím tlačítko, OKAMŽITĚ SKONČI
-      if (!isDragging) return;
       handleEnd();
     };
 
@@ -596,7 +539,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
+        onMouseLeave={handleMouseUp}
       >
         {/* Carousel Track */}
         <div
