@@ -149,15 +149,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   // INFINITE LOOP RESET
   // ============================================================================
-  // Helper funkce pro výpočet realIndex z visualIndex
-  // Převádí index v klonovaném poli na index originálního produktu
-  const getRealIndex = useCallback((visualIndex: number): number => {
-    const totalItems = products.length;
-    const CLONES_COUNT = CLONE_COUNT * totalItems; // Počet klonů na začátku
-    // Použijeme robustní modulo pro záporná čísla
-    return ((visualIndex - CLONES_COUNT) % totalItems + totalItems) % totalItems;
-  }, [products.length]);
-
   // Zlatý vzorec pro normalizaci indexu - ošetření záporných čísel v JavaScriptu
   // JavaScript má chybu u modulo záporných čísel (-1 % 5 = -1, správně má být 4)
   const getRealIndex = useCallback((visualIndex: number, clonesHead: number, totalOriginals: number): number => {
@@ -264,7 +255,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }
 
     // Vypočítáme realIndex z aktuálního currentIndex
-    const realIndex = getRealIndex(currentIndex);
+    const totalOriginals = products.length;
+    const clonesHead = CLONE_COUNT * totalOriginals;
+    const realIndex = getRealIndex(currentIndex, clonesHead, totalOriginals);
     
     // Vypočítáme cílový index v originální sadě
     const targetIndex = startOfOriginals + realIndex;
@@ -687,8 +680,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 </div>
               </Link>
             </div>
-            );
-          })}
+          ))}
         </div>
       </div>
 
