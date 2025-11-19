@@ -269,12 +269,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
               // Určení šířky a stylů pro produkty
               const isPartialSideProduct = (config.isMobile || config.sideCount === 0.5 || config.sideCount === 0.25) && isSideProduct;
+              const isFullSideProduct = config.sideCount === 1 && isSideProduct;
               
               // Pro boční produkty s částečnou viditelností: wrapper má šířku viditelné části
               // Produkt uvnitř má plnou šířku a je posunutý tak, aby byla viditelná správná část
+              // Pro plně viditelné produkty: wrapper má plnou šířku, žádný offset
               let wrapperWidth = config.cardWidth;
               let productOffset = 0;
-              let wrapperStyle: React.CSSProperties = {};
               
               if (isPartialSideProduct) {
                 if (config.sideCount === 0.25) {
@@ -282,11 +283,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   wrapperWidth = config.cardWidth * 0.25;
                   if (relativePosition === -1) {
                     // Boční vlevo: zobrazíme pravou 1/4 produktu
-                    // Produkt je posunutý vlevo o 75% své šířky, takže viditelná je pravá 1/4
                     productOffset = -config.cardWidth * 0.75;
                   } else if (relativePosition === 1 || relativePosition === config.mainCount) {
                     // Boční vpravo: zobrazíme levou 1/4 produktu
-                    // Produkt není posunutý, takže viditelná je levá 1/4
                     productOffset = 0;
                   }
                 } else if (config.sideCount === 0.5) {
@@ -294,42 +293,69 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   wrapperWidth = config.cardWidth * 0.5;
                   if (relativePosition === -1) {
                     // Boční vlevo: zobrazíme pravou polovinu produktu
-                    // Produkt je posunutý vlevo o 50% své šířky, takže viditelná je pravá 1/2
                     productOffset = -config.cardWidth * 0.5;
                   } else if (relativePosition === config.mainCount) {
                     // Boční vpravo: zobrazíme levou polovinu produktu
-                    // Produkt není posunutý, takže viditelná je levá 1/2
                     productOffset = 0;
                   }
                 }
               }
 
+              // Pro plně viditelné produkty (hlavní i boční na velkých monitorech) - žádný wrapper
+              if (isMainProduct || isFullSideProduct) {
+                return (
+                  <div
+                    key={`${product.id}-${index}`}
+                    className="flex-shrink-0"
+                    style={{
+                      width: `${config.cardWidth}px`,
+                      opacity: isMainProduct 
+                        ? 1 
+                        : 0.5,
+                      transform: isMainProduct 
+                        ? 'scale(1)' 
+                        : 'scale(0.85)',
+                      transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
+                      visibility: isVisible ? 'visible' : 'hidden',
+                    }}
+                  >
+                    <Link 
+                      to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
+                      className="group cursor-pointer block"
+                    >
+                      <div className="transition-transform duration-300 ease-in-out hover:scale-105">
+                        <ProductCard
+                          id={product.id}
+                          title={product.title}
+                          price={product.price}
+                          image={product.image}
+                          description={product.description}
+                          inventoryQuantity={product.inventoryQuantity}
+                        />
+                      </div>
+                    </Link>
+                  </div>
+                );
+              }
+
+              // Pro částečně viditelné produkty - s wrapperem
               return (
                 <div
                   key={`${product.id}-${index}`}
                   className="flex-shrink-0"
                   style={{
                     width: `${wrapperWidth}px`,
-                    overflow: isPartialSideProduct ? 'hidden' : 'visible',
-                    opacity: isMainProduct 
-                      ? 1 
-                      : isSideProduct 
-                        ? (config.sideCount === 1 ? 0.5 : 0.4) // Plně viditelné: 0.5, částečně viditelné: 0.4
-                        : 0,
-                    transform: isMainProduct 
-                      ? 'scale(1)' 
-                      : isSideProduct 
-                        ? (config.sideCount === 1 ? 'scale(0.85)' : 'scale(0.75)') // Plně viditelné: 0.85, částečně viditelné: 0.75
-                        : 'scale(0.6)',
+                    overflow: 'hidden',
+                    opacity: 0.4,
+                    transform: 'scale(0.75)',
                     transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
                     visibility: isVisible ? 'visible' : 'hidden',
-                    ...wrapperStyle,
                   }}
                 >
                   <div
                     style={{
                       width: `${config.cardWidth}px`,
-                      transform: productOffset !== 0 ? `translateX(${productOffset}px)` : 'none',
+                      transform: `translateX(${productOffset}px)`,
                       transition: isTransitioning ? 'transform 1000ms ease-out' : 'none',
                     }}
                   >
