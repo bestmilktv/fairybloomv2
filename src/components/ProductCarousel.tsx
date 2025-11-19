@@ -167,8 +167,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       const mainGap = config.gap;
       // Offset = šířka bočního vlevo + gap + (currentIndex - 1) * (cardWidth + gap)
       const offset = sideWidth + sideGap + (currentIndex - 1) * (config.cardWidth + mainGap);
-      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky hlavního produktu
-      return `translateX(calc(-${offset}px + 50% - ${config.cardWidth / 2}px))`;
+      // Centrujeme: posuneme o polovinu šířky viewportu mínus polovinu šířky hlavního produktu
+      return `translateX(calc(-${offset}px + 50vw - ${config.cardWidth / 2}px))`;
     } else if (config.sideCount === 0.5) {
       // Tablet/Menší notebooky: centrujeme celou viditelnou část
       // Struktura: boční vlevo (0.5*cardWidth) + gap + hlavní produkty + gap + boční vpravo (0.5*cardWidth)
@@ -178,36 +178,35 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       
       // Offset = šířka bočního vlevo + gap + (currentIndex - 1) * (cardWidth + gap)
       const offset = sideWidth + config.gap + (currentIndex - 1) * (config.cardWidth + config.gap);
-      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky viditelné části
-      return `translateX(calc(-${offset}px + 50% - ${totalVisibleWidth / 2}px))`;
+      // Centrujeme: posuneme o polovinu šířky viewportu mínus polovinu šířky viditelné části
+      return `translateX(calc(-${offset}px + 50vw - ${totalVisibleWidth / 2}px))`;
     } else {
       // Large Desktop: centrujeme celou viditelnou část
-      // Struktura: 1 boční vlevo + 3 hlavní + 1 boční vpravo
+      // Struktura: 1 boční vlevo (plně viditelný) + 3 hlavní + 1 boční vpravo (plně viditelný)
+      // currentIndex začíná na 1, takže pro currentIndex = 1:
+      // - index 0 = boční vlevo (relativePosition = -1, plně viditelný)
+      // - index 1, 2, 3 = hlavní produkty (relativePosition = 0, 1, 2)
+      // - index 4 = boční vpravo (relativePosition = 3, plně viditelný)
       const totalWidth = config.cardWidth + config.gap;
       const mainProductsWidth = config.mainCount * config.cardWidth + (config.mainCount - 1) * config.gap;
       const totalVisibleWidth = config.cardWidth + config.gap + mainProductsWidth + config.gap + config.cardWidth;
       
-      // Offset = (currentIndex - 1) * totalWidth zobrazí 1 boční vlevo + hlavní produkty
+      // Offset = (currentIndex - 1) * totalWidth
+      // Pro currentIndex = 1: offset = 0, zobrazí se index 0 (boční vlevo) + hlavní produkty
+      // Pro currentIndex = 2: offset = totalWidth, zobrazí se index 1 (první hlavní) + další
       const offset = (currentIndex - 1) * totalWidth;
-      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky viditelné části
-      return `translateX(calc(-${offset}px + 50% - ${totalVisibleWidth / 2}px))`;
+      // Centrujeme: posuneme o polovinu šířky viewportu mínus polovinu šířky viditelné části
+      // Použijeme 50vw místo 50% pro spolehlivější centrování
+      return `translateX(calc(-${offset}px + 50vw - ${totalVisibleWidth / 2}px))`;
     }
   };
 
-  // Calculate container width dynamically
-  // Large Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů (plně viditelných)
-  // Menší notebooky/Tablet: 3-2 hlavní + 0.5 boční vlevo + 0.5 boční vpravo (částečně viditelné)
-  // Mobil: 1 hlavní + 0.25 boční vlevo + 0.25 boční vpravo
-  // Pro částečně viditelné produkty: wrapper má šířku sideCount * cardWidth
-  const containerWidth = config.isMobile 
-    ? '100%' // Full width na mobilu
-    : config.sideCount === 1
-      ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů: (3 + 1*2) * (320 + 32) - 32 = 1728px
-      : (config.sideCount * config.cardWidth) + // Boční vlevo
-        config.gap +
-        (config.mainCount * (config.cardWidth + config.gap)) - config.gap + // Hlavní produkty
-        config.gap +
-        (config.sideCount * config.cardWidth); // Boční vpravo
+  // Calculate viewport width - musí být dostatečně široký pro zobrazení všech viditelných produktů
+  // Pro velké monitory: viewport musí být široký, aby zobrazil boční produkty plně
+  // Pro menší obrazovky: viewport je 100% šířky
+  const viewportWidth = config.isMobile 
+    ? '100%'
+    : '100%'; // Viewport je vždy 100% šířky, transformace zajistí správné centrování
 
   return (
     <div 
@@ -222,14 +221,21 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       <div 
         className="relative w-full"
       >
-        {/* Carousel Viewport - overflow hidden pro skrytí neviditelných produktů */}
-        <div className="overflow-hidden w-full">
+        {/* Carousel Viewport - overflow hidden pro skrytí neviditelných produktů, ale dostatečně široký */}
+        <div 
+          className="overflow-hidden relative"
+          style={{
+            width: viewportWidth,
+            margin: '0 auto', // Centrování viewportu
+          }}
+        >
           <div 
             className="flex"
             style={{
               gap: `${config.gap}px`,
               transform: calculateTransform(),
               transition: isTransitioning ? 'transform 1000ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+              willChange: 'transform',
             }}
           >
             {extendedProducts.map((product, index) => {
@@ -301,7 +307,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 }
               }
 
-              // Pro plně viditelné produkty (hlavní i boční na velkých monitorech) - žádný wrapper
+              // Pro plně viditelné produkty (hlavní i boční na velkých monitorech) - žádný wrapper, žádný overflow
               if (isMainProduct || isFullSideProduct) {
                 return (
                   <div
@@ -309,6 +315,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                     className="flex-shrink-0"
                     style={{
                       width: `${config.cardWidth}px`,
+                      overflow: 'visible', // Explicitně visible pro plně viditelné produkty
                       opacity: isMainProduct 
                         ? 1 
                         : 0.5,
@@ -321,7 +328,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   >
                     <Link 
                       to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
-                      className="group cursor-pointer block"
+                      className="group cursor-pointer block w-full"
                     >
                       <div className="transition-transform duration-300 ease-in-out hover:scale-105">
                         <ProductCard
