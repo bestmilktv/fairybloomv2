@@ -64,6 +64,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   
+  // Ref pro sledování, zda právě probíhá reset smyčky (aby se přerušil infinite loop)
+  const isResettingRef = useRef(false);
+  
   const [currentIndex, setCurrentIndex] = useState(CLONE_COUNT * products.length);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -126,6 +129,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Reset pozice když jsme v klonované oblasti - bezviditelný skok na originály
   // DOM-based teleportation: identifikujeme produkty podle ID a skáčeme na jejich reálné souřadnice
   const handleTransitionEnd = useCallback(() => {
+    // Ignoruj pokud právě probíhá reset (aby se přerušil infinite loop)
+    if (isResettingRef.current) return;
+    
+    // Ignoruj pokud není transition nebo jsme v dragu
+    if (!isTransitioning || isDragging) return;
+    
     if (!trackRef.current || !wrapperRef.current) return;
 
     // Definice konstant
@@ -193,7 +202,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       if (targetIndex !== -1) {
         // 7. TELEPORTUJ PŘESNĚ TAM
-        // Vypni transition
+        // 1. Zablokuj useEffect - aby se přerušil infinite loop
+        isResettingRef.current = true;
+
+        // 2. Vypni transition a pohni DOMem (Teleport)
         setIsTransitioning(false);
         trackRef.current.style.transition = 'none';
 
@@ -206,16 +218,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
         trackRef.current.style.transform = `translateX(${newTranslateX}px)`;
 
-        // Force Reflow & Update State
+        // Force Reflow
         trackRef.current.getBoundingClientRect();
-        setCurrentIndex(targetIndex); // Nastav index originálu
+
+        // 3. Aktualizuj state (to spustí render, ale my ho v useEffectu zachytíme)
+        setCurrentIndex(targetIndex);
         setIsTransitioning(false);
 
-        // Obnov transition
+        // 4. Obnov transition a odblokuj useEffect (až v dalším frame)
         requestAnimationFrame(() => {
           if (trackRef.current) {
             trackRef.current.style.transition = 'transform 0.5s ease-out';
           }
+          // Odblokuj useEffect až po obnovení transition
+          isResettingRef.current = false;
         });
       } else {
         // Pokud jsme nenašli originál, loguj chybu a resetuj na bezpečnou pozici
@@ -236,7 +252,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
+  // IGNORUJEME update pokud právě probíhá reset smyčky (aby se přerušil infinite loop)
   useEffect(() => {
+    // Pokud právě probíhá reset, ignoruj tento update
+    if (isResettingRef.current) return;
+    
     if (isTransitioning || isDragging || cardWidth === 0 || viewportWidth === 0) return;
 
     const totalProducts = products.length;
