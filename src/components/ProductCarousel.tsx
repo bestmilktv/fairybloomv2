@@ -51,11 +51,46 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Klony na konci = začátek originálů (pro swipe doprava)
   // Počet klonů: alespoň 2 sady produktů na každou stranu (2 * products.length)
   const CLONE_COUNT = 2 * products.length;
-  const clonedProducts = useMemo(() => [
-    ...Array(CLONE_COUNT).fill(null).flatMap(() => products), // Klony konce (na začátku)
-    ...products, // Originální produkty
-    ...Array(CLONE_COUNT).fill(null).flatMap(() => products), // Klony začátku (na konci)
-  ], [products]);
+  
+  // Přidáme uniqueKey do každého produktu pro React Reconciliation
+  interface ProductWithKey extends Product {
+    uniqueKey: string;
+  }
+  
+  const clonedProducts = useMemo(() => {
+    const totalOriginals = products.length;
+    const itemsToRender: ProductWithKey[] = [];
+    
+    // Klony na začátku (clone-start)
+    for (let cloneSetIndex = 0; cloneSetIndex < CLONE_COUNT; cloneSetIndex++) {
+      products.forEach((product, productIndex) => {
+        itemsToRender.push({
+          ...product,
+          uniqueKey: `clone-start-${cloneSetIndex}-${product.id}-${productIndex}`
+        });
+      });
+    }
+    
+    // Originální produkty
+    products.forEach((product, productIndex) => {
+      itemsToRender.push({
+        ...product,
+        uniqueKey: `original-${product.id}-${productIndex}`
+      });
+    });
+    
+    // Klony na konci (clone-end)
+    for (let cloneSetIndex = 0; cloneSetIndex < CLONE_COUNT; cloneSetIndex++) {
+      products.forEach((product, productIndex) => {
+        itemsToRender.push({
+          ...product,
+          uniqueKey: `clone-end-${cloneSetIndex}-${product.id}-${productIndex}`
+        });
+      });
+    }
+    
+    return itemsToRender;
+  }, [products]);
 
   // ============================================================================
   // REFS A STATE
@@ -629,34 +664,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           }}
           onTransitionEnd={handleTransitionEnd}
         >
-          {clonedProducts.map((product, index) => {
-            // Vytvoř unikátní klíč pro každý element (včetně klonů)
-            // Klony na začátku: clone-start-{product.id}-{cloneIndex}
-            // Originály: original-{product.id}
-            // Klony na konci: clone-end-{product.id}-{cloneIndex}
-            const totalOriginals = products.length;
-            const clonesHead = CLONE_COUNT * totalOriginals;
-            const clonesTail = clonesHead + totalOriginals;
-            
-            let uniqueKey: string;
-            if (index < clonesHead) {
-              // Klony na začátku
-              const cloneSetIndex = Math.floor(index / totalOriginals);
-              const productIndexInSet = index % totalOriginals;
-              uniqueKey = `clone-start-${cloneSetIndex}-${product.id}-${productIndexInSet}`;
-            } else if (index >= clonesTail) {
-              // Klony na konci
-              const cloneSetIndex = Math.floor((index - clonesTail) / totalOriginals);
-              const productIndexInSet = (index - clonesTail) % totalOriginals;
-              uniqueKey = `clone-end-${cloneSetIndex}-${product.id}-${productIndexInSet}`;
-            } else {
-              // Originály
-              uniqueKey = `original-${product.id}-${index - clonesHead}`;
-            }
-
-            return (
+          {clonedProducts.map((product, index) => (
             <div
-              key={uniqueKey}
+              key={product.uniqueKey}
               className="flex-shrink-0"
               style={getCardStyle(index)}
             >
