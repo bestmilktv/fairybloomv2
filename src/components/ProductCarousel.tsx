@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import { createProductPath } from '@/lib/slugify';
@@ -17,91 +17,13 @@ interface ProductCarouselProps {
   products: Product[];
 }
 
-// Responzivní konfigurace podle velikosti obrazovky
-const getCarouselConfig = (width: number) => {
-  if (width < 768) {
-    // Mobile: 1 hlavní + 0.25 boční na každé straně (1/4 viditelný)
-    return {
-      mainCount: 1,
-      sideCount: 0.25, // 1/4 viditelný boční produkt
-      cardWidth: width * 0.85, // 85% šířky obrazovky pro hlavní produkt
-      gap: 16,
-      step: 1,
-      isMobile: true,
-    };
-  } else if (width < 1024) {
-    // Tablet: 2 hlavní + 0.5 boční na každé straně (částečně viditelný)
-    return {
-      mainCount: 2,
-      sideCount: 0.5, // Částečně viditelný boční produkt
-      cardWidth: Math.min(300, (width - 64) / 3), // 3 = 2 main + 0.5 side na každé straně
-      gap: 24,
-      step: 2,
-      isMobile: false,
-      isTablet: true,
-    };
-  } else if (width < 1536) {
-    // Menší notebooky: 3 hlavní + 0.5 boční na každé straně (částečně viditelný) nebo menší karty
-    return {
-      mainCount: 3,
-      sideCount: 0.5, // Částečně viditelný boční produkt
-      cardWidth: Math.min(300, (width - 96) / 4), // 4 = 3 main + 0.5 side na každé straně
-      gap: 32,
-      step: 3,
-      isMobile: false,
-      isTablet: false,
-    };
-  } else {
-    // Large Desktop/TV: 3 hlavní + 1 boční na každé straně (plně viditelný)
-    return {
-      mainCount: 3,
-      sideCount: 1,
-      cardWidth: 320,
-      gap: 32,
-      step: 3,
-      isMobile: false,
-      isTablet: false,
-    };
-  }
-};
-
 const ProductCarousel = ({ products }: ProductCarouselProps) => {
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1920);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-
-  // Responzivní detekce velikosti okna
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial call
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const config = getCarouselConfig(windowWidth);
-  
-  // Počáteční currentIndex podle velikosti obrazovky
-  // Všechny breakpointy: začíná na 1 (ukazuje na první hlavní produkt, index 0 je boční vlevo)
-  // Na mobilu: index 0 = boční vlevo, index 1 = hlavní, index 2 = boční vpravo
-  const initialIndex = 1;
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  
-  // Reset currentIndex když se změní velikost obrazovky
-  useEffect(() => {
-    setCurrentIndex(1);
-  }, [windowWidth]);
-
-  // Carousel se zobrazí jen když je více než 3 produkty
-  // Pokud je 3 nebo méně, zobrazí se grid
+  // Grid fallback pro ≤3 produkty
   if (products.length <= 3) {
-    const gridCols = windowWidth < 768 ? 1 : windowWidth < 1024 ? 2 : 3;
     return (
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${gridCols} gap-8`}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {products.map((product, index) => (
-          <div key={product.id} className={`fade-in-up-delayed`} style={{ animationDelay: `${index * 0.1}s` }}>
+          <div key={product.id} className="fade-in-up-delayed" style={{ animationDelay: `${index * 0.1}s` }}>
             <Link 
               to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
               className="group cursor-pointer fade-in-up block"
@@ -121,278 +43,357 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     );
   }
 
-  // Create infinite products array
-  const createInfiniteProducts = () => {
-    const repeatedProducts = [];
-    for (let i = 0; i < 10; i++) {
-      repeatedProducts.push(...products);
-    }
-    return repeatedProducts;
-  };
-  
-  const extendedProducts = createInfiniteProducts();
+  // Infinite loop: klonujeme produkty na začátek a konec
+  // Klonujeme dostatečný počet pro plynulý infinite loop
+  // Struktura: [klony] + [originály] + [klony]
+  // Např. pro 5 produktů: [1,2,3,4,5, 1,2,3,4,5, 1,2,3,4,5] + [1,2,3,4,5] + [1,2,3,4,5, 1,2,3,4,5, 1,2,3,4,5]
+  // Začínáme na začátku originálů (index = CLONE_COUNT * products.length)
+  const CLONE_COUNT = 3;
+  const clonedProducts = [
+    ...Array(CLONE_COUNT).fill(null).flatMap(() => products),
+    ...products,
+    ...Array(CLONE_COUNT).fill(null).flatMap(() => products),
+  ];
 
-  const nextSlide = () => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    
-    setCurrentIndex((prev) => prev + config.step);
-    
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 1000);
-  };
+  const trackRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(CLONE_COUNT * products.length);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [cardWidth, setCardWidth] = useState(0);
+  const [gap, setGap] = useState(0);
 
-  const prevSlide = () => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    
-    // Minimální hodnota: 1 pro všechny breakpointy (index 0 je boční vlevo)
-    setCurrentIndex((prev) => Math.max(1, prev - config.step));
-    
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 1000);
-  };
+  // Měření šířky karty a gapu pomocí ResizeObserver
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-  // Calculate transform with responzivní values
-  // Vždy centrujeme viditelnou část carouselu uprostřed obrazovky
-  const calculateTransform = () => {
-    if (config.isMobile) {
-      // Na mobilu: centrujeme hlavní produkt uprostřed obrazovky
-      // currentIndex začíná na 1 (ukazuje na první hlavní produkt, index 0 je boční vlevo)
-      // Struktura: index 0 (boční vlevo, šířka 0.25*cardWidth) + gap + index 1 (hlavní, šířka cardWidth) + gap + index 2 (boční vpravo, šířka 0.25*cardWidth)
-      const sideWidth = config.cardWidth * config.sideCount;
-      const sideGap = config.gap;
-      const mainGap = config.gap;
-      // Offset = šířka bočního vlevo + gap + (currentIndex - 1) * (cardWidth + gap)
-      const offset = sideWidth + sideGap + (currentIndex - 1) * (config.cardWidth + mainGap);
-      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky hlavního produktu
-      return `translateX(calc(-${offset}px + 50% - ${config.cardWidth / 2}px))`;
-    } else if (config.sideCount === 0.5) {
-      // Tablet/Menší notebooky: centrujeme celou viditelnou část
-      // Struktura: boční vlevo (0.5*cardWidth) + gap + hlavní produkty + gap + boční vpravo (0.5*cardWidth)
-      const sideWidth = config.cardWidth * config.sideCount;
-      const mainProductsWidth = config.mainCount * config.cardWidth + (config.mainCount - 1) * config.gap;
-      const totalVisibleWidth = sideWidth + config.gap + mainProductsWidth + config.gap + sideWidth;
+    const updateDimensions = () => {
+      if (!containerRef.current) return;
       
-      // Offset = šířka bočního vlevo + gap + (currentIndex - 1) * (cardWidth + gap)
-      const offset = sideWidth + config.gap + (currentIndex - 1) * (config.cardWidth + config.gap);
-      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky viditelné části
-      return `translateX(calc(-${offset}px + 50% - ${totalVisibleWidth / 2}px))`;
+      const containerWidth = containerRef.current.offsetWidth;
+      
+      // Desktop: 5 karet (3 hlavní + 2 boční) s gapy
+      // Mobil: 1 hlavní karta
+      if (containerWidth >= 768) {
+        // Desktop: každá karta má ~18% šířky kontejneru (5 karet + 4 gapy = ~100%)
+        // Gap je ~2% šířky kontejneru
+        const calculatedGap = Math.max(16, containerWidth * 0.02); // Minimálně 16px
+        const calculatedCardWidth = (containerWidth - (4 * calculatedGap)) / 5;
+        setCardWidth(calculatedCardWidth);
+        setGap(calculatedGap);
+      } else {
+        // Mobil: 1 karta s malým peek (90% šířky, 5% gap na každé straně)
+        const calculatedCardWidth = containerWidth * 0.9;
+        const calculatedGap = Math.max(8, containerWidth * 0.05); // Minimálně 8px
+        setCardWidth(calculatedCardWidth);
+        setGap(calculatedGap);
+      }
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Infinite loop reset: když jsme na klonu, skočíme na originál bez transition
+  // 
+  // LOGIKA RESETU:
+  // 1. Když uživatel dojde na konec klonů vpravo (index >= endOfOriginals + totalProducts),
+  //    okamžitě (bez transition) skočíme na začátek originálů (startOfOriginals).
+  //    Protože jsou klony identické s originály, uživatel nevidí žádný skok.
+  //
+  // 2. Když uživatel dojde na začátek klonů vlevo (index < startOfOriginals - totalProducts),
+  //    okamžitě skočíme na konec originálů (endOfOriginals).
+  //
+  // 3. Používáme requestAnimationFrame, aby se reset provedl v dalším render cyklu,
+  //    což zajišťuje, že transition je vypnutá a reset je bezviditelný.
+  //
+  // 4. Reset se provádí pouze když není aktivní transition ani drag,
+  //    aby nedošlo k konfliktu s uživatelským vstupem.
+  useEffect(() => {
+    if (isTransitioning || isDragging || cardWidth === 0) return;
+
+    const totalProducts = products.length;
+    const startOfOriginals = CLONE_COUNT * totalProducts;
+    const endOfOriginals = startOfOriginals + totalProducts - 1;
+
+    // Pokud jsme na konci klonů vpravo, skočíme na začátek originálů
+    if (currentIndex >= endOfOriginals + totalProducts) {
+      // Vypneme transition pro bezviditelný skok
+      setIsTransitioning(false);
+      // Použijeme requestAnimationFrame pro okamžitý reset bez viditelného skoku
+      requestAnimationFrame(() => {
+        setCurrentIndex(startOfOriginals);
+      });
+    }
+    // Pokud jsme na začátku klonů vlevo, skočíme na konec originálů
+    else if (currentIndex < startOfOriginals - totalProducts) {
+      setIsTransitioning(false);
+      requestAnimationFrame(() => {
+        setCurrentIndex(endOfOriginals);
+      });
+    }
+  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth]);
+
+  // Navigace
+  const goToIndex = useCallback((newIndex: number, withTransition = true) => {
+    // Povolíme navigaci i během transition, pokud je to drag
+    if (isTransitioning && !isDragging) return;
+    
+    setIsTransitioning(withTransition);
+    setCurrentIndex(newIndex);
+    
+    if (withTransition) {
+      // Timeout musí být delší než transition duration (500ms)
+      setTimeout(() => setIsTransitioning(false), 600);
+    }
+  }, [isTransitioning, isDragging]);
+
+  const nextSlide = useCallback(() => {
+    goToIndex(currentIndex + 1);
+  }, [currentIndex, goToIndex]);
+
+  const prevSlide = useCallback(() => {
+    goToIndex(currentIndex - 1);
+  }, [currentIndex, goToIndex]);
+
+  // Swipe/Drag handling
+  const handleStart = useCallback((clientX: number) => {
+    setIsDragging(true);
+    setDragStart(clientX);
+    setDragOffset(0);
+    setIsTransitioning(false);
+  }, []);
+
+  const handleMove = useCallback((clientX: number) => {
+    if (!isDragging) return;
+    const offset = clientX - dragStart;
+    setDragOffset(offset);
+  }, [isDragging, dragStart]);
+
+  const handleEnd = useCallback(() => {
+    if (!isDragging) return;
+    
+    // Pokud je cardWidth 0, nemůžeme určit threshold, takže jen resetujeme
+    if (cardWidth === 0) {
+      setIsDragging(false);
+      setDragOffset(0);
+      return;
+    }
+    
+    const threshold = cardWidth * 0.3; // 30% šířky karty pro přepnutí
+    
+    if (Math.abs(dragOffset) > threshold) {
+      if (dragOffset < 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
     } else {
-      // Large Desktop: centrujeme celou viditelnou část
-      // Struktura: 1 boční vlevo + 3 hlavní + 1 boční vpravo
-      const totalWidth = config.cardWidth + config.gap;
-      const mainProductsWidth = config.mainCount * config.cardWidth + (config.mainCount - 1) * config.gap;
-      const totalVisibleWidth = config.cardWidth + config.gap + mainProductsWidth + config.gap + config.cardWidth;
-      
-      // Offset = (currentIndex - 1) * totalWidth zobrazí 1 boční vlevo + hlavní produkty
-      const offset = (currentIndex - 1) * totalWidth;
-      // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky viditelné části
-      return `translateX(calc(-${offset}px + 50% - ${totalVisibleWidth / 2}px))`;
+      // Pokud nedosáhl threshold, resetujeme pozici bez přepnutí
+      // dragOffset se resetuje v renderu přes calculateTransform
+    }
+    
+    setIsDragging(false);
+    // Reset dragOffset s malým zpožděním, aby transition proběhla
+    setTimeout(() => setDragOffset(0), 50);
+  }, [isDragging, dragOffset, cardWidth, nextSlide, prevSlide]);
+
+  // Touch events
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    handleStart(e.touches[0].clientX);
+  }, [handleStart]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    // Prevent default scrolling při swipe
+    e.preventDefault();
+    handleMove(e.touches[0].clientX);
+  }, [handleMove]);
+
+  const handleTouchEnd = useCallback(() => {
+    handleEnd();
+  }, [handleEnd]);
+
+  // Mouse events
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    handleStart(e.clientX);
+  }, [handleStart]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+    handleMove(e.clientX);
+  }, [isDragging, handleMove]);
+
+  const handleMouseUp = useCallback(() => {
+    handleEnd();
+  }, [handleEnd]);
+
+  // Global mouse events pro drag mimo komponentu
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX);
+    };
+
+    const handleGlobalMouseUp = () => {
+      handleEnd();
+    };
+
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDragging, handleMove, handleEnd]);
+
+  // Výpočet transform pozice
+  // Používáme jednoduchý výpočet: currentIndex * cardWidth pro posun
+  // Centrujeme pomocí 50% kontejneru mínus polovina šířky viditelné části
+  const calculateTransform = () => {
+    if (cardWidth === 0 || !containerRef.current) return 'translateX(0)';
+    
+    const containerWidth = containerRef.current.offsetWidth;
+    const isMobile = containerWidth < 768;
+    
+    if (isMobile) {
+      // Mobil: centrujeme hlavní produkt (index 0 z viditelných)
+      // Viditelná část: 1 karta uprostřed
+      const baseOffset = currentIndex * (cardWidth + gap);
+      const centerOffset = (containerWidth / 2) - (cardWidth / 2);
+      const finalOffset = -baseOffset + centerOffset + dragOffset;
+      return `translateX(${finalOffset}px)`;
+    } else {
+      // Desktop: centrujeme 3 hlavní produkty uprostřed
+      // Viditelná část: 1 boční vlevo + 3 hlavní + 1 boční vpravo = 5 karet
+      // Centrujeme prostřední hlavní produkt (index 2 z 5)
+      const baseOffset = currentIndex * (cardWidth + gap);
+      const visibleWidth = 5 * cardWidth + 4 * gap; // 5 karet + 4 gapy
+      const centerOffset = (containerWidth / 2) - (visibleWidth / 2);
+      // Upravíme offset tak, aby prostřední hlavní produkt (index 2) byl uprostřed
+      const centerCardOffset = 2 * (cardWidth + gap); // Offset pro 3. kartu (index 2)
+      const finalOffset = -baseOffset + centerOffset + centerCardOffset + dragOffset;
+      return `translateX(${finalOffset}px)`;
     }
   };
 
-  // Calculate container width dynamically
-  // Large Desktop: 3 hlavní + 1 boční na každé straně = 5 produktů (plně viditelných)
-  // Menší notebooky/Tablet: 3-2 hlavní + 0.5 boční vlevo + 0.5 boční vpravo (částečně viditelné)
-  // Mobil: 1 hlavní + 0.25 boční vlevo + 0.25 boční vpravo
-  // Pro částečně viditelné produkty: wrapper má šířku sideCount * cardWidth
-  const containerWidth = config.isMobile 
-    ? '100%' // Full width na mobilu
-    : config.sideCount === 1
-      ? (config.mainCount + config.sideCount * 2) * (config.cardWidth + config.gap) - config.gap // 5 produktů: (3 + 1*2) * (320 + 32) - 32 = 1728px
-      : (config.sideCount * config.cardWidth) + // Boční vlevo
-        config.gap +
-        (config.mainCount * (config.cardWidth + config.gap)) - config.gap + // Hlavní produkty
-        config.gap +
-        (config.sideCount * config.cardWidth); // Boční vpravo
+  // Určení pozice karty relativně k centru
+  // Desktop: zobrazujeme 5 karet (-2, -1, 0, 1, 2), kde 0 je prostřední hlavní
+  // Mobil: zobrazujeme 3 karty (-1, 0, 1), kde 0 je hlavní
+  const getCardPosition = (index: number) => {
+    return index - currentIndex;
+  };
+
+  const getCardStyle = (index: number) => {
+    if (cardWidth === 0 || !containerRef.current) {
+      return {
+        width: '0px',
+        opacity: 0,
+        transform: 'scale(0)',
+        visibility: 'hidden' as const,
+      };
+    }
+
+    const position = getCardPosition(index);
+    const isMobile = containerRef.current.offsetWidth < 768;
+    
+    if (isMobile) {
+      // Mobil: hlavní je na pozici 0, peek na -1 a 1
+      const isMain = position === 0;
+      const isVisible = Math.abs(position) <= 1;
+      
+      return {
+        width: `${cardWidth}px`,
+        opacity: isMain ? 1 : 0.3,
+        transform: isMain ? 'scale(1)' : 'scale(0.9)',
+        visibility: isVisible ? 'visible' as const : 'hidden' as const,
+        transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
+      };
+    } else {
+      // Desktop: hlavní jsou na pozicích -1, 0, 1; boční na -2 a 2
+      // Celkem viditelných: 5 karet (-2 až 2)
+      const isMain = Math.abs(position) <= 1;
+      const isSide = Math.abs(position) === 2;
+      const isVisible = Math.abs(position) <= 2;
+      
+      return {
+        width: `${cardWidth}px`,
+        opacity: isMain ? 1 : 0.5,
+        transform: isMain ? 'scale(1)' : 'scale(0.85)',
+        visibility: isVisible ? 'visible' as const : 'hidden' as const,
+        transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
+      };
+    }
+  };
 
   return (
     <div 
-      className={`relative w-full flex justify-center ${config.isMobile ? 'px-0' : 'px-4 md:px-6'}`}
-      style={config.isMobile ? { 
-        marginLeft: 'calc(-1.5rem)', // Kompenzuje px-6 z ProductSection
-        marginRight: 'calc(-1.5rem)',
-        width: 'calc(100% + 3rem)' // 100% + kompenzace paddingů
-      } : {}}
+      ref={containerRef}
+      className="relative w-full overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      style={{ touchAction: 'pan-x' }}
     >
-      {/* Carousel Container - vždy 100% šířky pro správné centrování */}
-      <div 
-        className="relative w-full"
+      {/* Carousel Track */}
+      <div
+        ref={trackRef}
+        className="flex"
+        style={{
+          gap: `${gap}px`,
+          transform: calculateTransform(),
+          transition: isTransitioning && !isDragging ? 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+          willChange: isDragging ? 'transform' : 'auto',
+        }}
       >
-        {/* Carousel Viewport - overflow hidden pro skrytí neviditelných produktů */}
-        <div className="overflow-hidden w-full">
-          <div 
-            className="flex"
-            style={{
-              gap: `${config.gap}px`,
-              transform: calculateTransform(),
-              transition: isTransitioning ? 'transform 1000ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
-            }}
+        {clonedProducts.map((product, index) => (
+          <div
+            key={`${product.id}-${index}`}
+            className="flex-shrink-0"
+            style={getCardStyle(index)}
           >
-            {extendedProducts.map((product, index) => {
-              const relativePosition = index - currentIndex;
-              
-              // Určení viditelnosti a typu produktu podle breakpointu
-              let isMainProduct = false;
-              let isSideProduct = false;
-              let isVisible = false;
-
-              if (config.isMobile) {
-                // Mobil: currentIndex začíná na 1 (ukazuje na první hlavní produkt)
-                // V layoutu: index 0 = boční vlevo, index 1 = hlavní, index 2 = boční vpravo
-                // relativePosition = index - currentIndex
-                // Pro currentIndex = 1: relativePosition -1 = boční vlevo, 0 = hlavní, 1 = boční vpravo
-                isMainProduct = relativePosition === 0;
-                isSideProduct = relativePosition === -1 || relativePosition === 1;
-                isVisible = relativePosition >= -1 && relativePosition <= 1;
-              } else {
-                // Desktop/Tablet: určení podle sideCount
-                if (config.sideCount === 1) {
-                  // Large Desktop: relativePosition -1 až 3 (1 boční vlevo, 3 hlavní, 1 boční vpravo)
-                  // mainCount = 3, takže hlavní jsou na pozicích 0, 1, 2
-                  // Boční vlevo je na pozici -1, boční vpravo je na pozici 3
-                  isMainProduct = relativePosition >= 0 && relativePosition < config.mainCount;
-                  isSideProduct = relativePosition === -1 || relativePosition === config.mainCount;
-                  isVisible = relativePosition >= -1 && relativePosition <= config.mainCount; // -1 až 3
-                } else {
-                  // Tablet/Menší notebooky: relativePosition -1 až mainCount (0.5 boční vlevo, 2-3 hlavní, 0.5 boční vpravo)
-                  // Tablet: mainCount = 2, takže hlavní jsou na pozicích 0, 1, boční vpravo na pozici 2
-                  // Menší notebooky: mainCount = 3, takže hlavní jsou na pozicích 0, 1, 2, boční vpravo na pozici 3
-                  isMainProduct = relativePosition >= 0 && relativePosition < config.mainCount;
-                  isSideProduct = relativePosition === -1 || relativePosition === config.mainCount;
-                  isVisible = relativePosition >= -1 && relativePosition <= config.mainCount; // -1 až mainCount
-                }
-              }
-
-              // Určení šířky a stylů pro produkty
-              const isPartialSideProduct = (config.isMobile || config.sideCount === 0.5 || config.sideCount === 0.25) && isSideProduct;
-              const isFullSideProduct = config.sideCount === 1 && isSideProduct;
-              
-              // Pro boční produkty s částečnou viditelností: wrapper má šířku viditelné části
-              // Produkt uvnitř má plnou šířku a je posunutý tak, aby byla viditelná správná část
-              // Pro plně viditelné produkty: wrapper má plnou šířku, žádný offset
-              let wrapperWidth = config.cardWidth;
-              let productOffset = 0;
-              
-              if (isPartialSideProduct) {
-                if (config.sideCount === 0.25) {
-                  // Telefon: 1/4 viditelné
-                  wrapperWidth = config.cardWidth * 0.25;
-                  if (relativePosition === -1) {
-                    // Boční vlevo: zobrazíme pravou 1/4 produktu
-                    productOffset = -config.cardWidth * 0.75;
-                  } else if (relativePosition === 1 || relativePosition === config.mainCount) {
-                    // Boční vpravo: zobrazíme levou 1/4 produktu
-                    productOffset = 0;
-                  }
-                } else if (config.sideCount === 0.5) {
-                  // Tablet/Menší notebook: 1/2 viditelné
-                  wrapperWidth = config.cardWidth * 0.5;
-                  if (relativePosition === -1) {
-                    // Boční vlevo: zobrazíme pravou polovinu produktu
-                    productOffset = -config.cardWidth * 0.5;
-                  } else if (relativePosition === config.mainCount) {
-                    // Boční vpravo: zobrazíme levou polovinu produktu
-                    productOffset = 0;
-                  }
-                }
-              }
-
-              // Pro plně viditelné produkty (hlavní i boční na velkých monitorech) - žádný wrapper
-              if (isMainProduct || isFullSideProduct) {
-                return (
-                  <div
-                    key={`${product.id}-${index}`}
-                    className="flex-shrink-0"
-                    style={{
-                      width: `${config.cardWidth}px`,
-                      opacity: isMainProduct 
-                        ? 1 
-                        : 0.5,
-                      transform: isMainProduct 
-                        ? 'scale(1)' 
-                        : 'scale(0.85)',
-                      transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
-                      visibility: isVisible ? 'visible' : 'hidden',
-                    }}
-                  >
-                    <Link 
-                      to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
-                      className="group cursor-pointer block"
-                    >
-                      <div className="transition-transform duration-300 ease-in-out hover:scale-105">
-                        <ProductCard
-                          id={product.id}
-                          title={product.title}
-                          price={product.price}
-                          image={product.image}
-                          description={product.description}
-                          inventoryQuantity={product.inventoryQuantity}
-                        />
-                      </div>
-                    </Link>
-                  </div>
-                );
-              }
-
-              // Pro částečně viditelné produkty - s wrapperem
-              return (
-                <div
-                  key={`${product.id}-${index}`}
-                  className="flex-shrink-0"
-                  style={{
-                    width: `${wrapperWidth}px`,
-                    overflow: 'hidden',
-                    opacity: 0.4,
-                    transform: 'scale(0.75)',
-                    transition: isTransitioning ? 'transform 1000ms ease-out, opacity 1000ms ease-out' : 'none',
-                    visibility: isVisible ? 'visible' : 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${config.cardWidth}px`,
-                      transform: `translateX(${productOffset}px)`,
-                      transition: isTransitioning ? 'transform 1000ms ease-out' : 'none',
-                    }}
-                  >
-                    <Link 
-                      to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
-                      className="group cursor-pointer block"
-                    >
-                      <div className="transition-transform duration-300 ease-in-out hover:scale-105">
-                        <ProductCard
-                          id={product.id}
-                          title={product.title}
-                          price={product.price}
-                          image={product.image}
-                          description={product.description}
-                          inventoryQuantity={product.inventoryQuantity}
-                        />
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+            <Link 
+              to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
+              className="group cursor-pointer block h-full"
+              draggable={false}
+            >
+              <div className="transition-transform duration-300 ease-in-out hover:scale-105 h-full">
+                <ProductCard
+                  id={product.id}
+                  title={product.title}
+                  price={product.price}
+                  image={product.image}
+                  description={product.description}
+                  inventoryQuantity={product.inventoryQuantity}
+                />
+              </div>
+            </Link>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Navigation Arrows - responzivní pozice (umístěné ve vnějším kontejneru pro viditelnost) */}
+      {/* Navigation Arrows */}
       <button
         onClick={prevSlide}
-        className={`absolute top-1/2 -translate-y-1/2 z-30
+        className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 lg:-left-12 z-30
                    w-10 h-10 md:w-12 md:h-12 rounded-full
                    bg-background/90 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
                    hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                    transition-all duration-300 ease-in-out
-                   group
-                   ${config.isMobile ? 'left-2' : config.sideCount === 0.5 ? 'left-4' : '-left-8'}`}
+                   group"
         aria-label="Předchozí produkty"
       >
         <svg 
@@ -407,14 +408,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       <button
         onClick={nextSlide}
-        className={`absolute top-1/2 -translate-y-1/2 z-30
+        className="absolute top-1/2 -translate-y-1/2 right-2 md:right-4 lg:-right-12 z-30
                    w-10 h-10 md:w-12 md:h-12 rounded-full
                    bg-background/90 backdrop-blur-sm border border-border/50
                    flex items-center justify-center
                    hover:bg-background hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20
                    transition-all duration-300 ease-in-out
-                   group
-                   ${config.isMobile ? 'right-2' : config.sideCount === 0.5 ? 'right-4' : '-right-8'}`}
+                   group"
         aria-label="Další produkty"
       >
         <svg 
