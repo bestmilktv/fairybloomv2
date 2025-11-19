@@ -61,6 +61,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
+  const [dragStartTime, setDragStartTime] = useState(0);
+  const [dragStartIndex, setDragStartIndex] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
   const [gap, setGap] = useState(0);
@@ -166,9 +168,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const handleStart = useCallback((clientX: number) => {
     setIsDragging(true);
     setDragStart(clientX);
+    setDragStartTime(Date.now());
+    setDragStartIndex(currentIndex);
     setDragOffset(0);
     setIsTransitioning(false);
-  }, []);
+  }, [currentIndex]);
 
   const handleMove = useCallback((clientX: number) => {
     if (!isDragging) return;
@@ -177,32 +181,47 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging, dragStart]);
 
   const handleEnd = useCallback(() => {
-    if (!isDragging) return;
-    
-    // Pokud je cardWidth 0, nemůžeme určit threshold, takže jen resetujeme
-    if (cardWidth === 0) {
+    if (!isDragging || cardWidth === 0) {
       setIsDragging(false);
       setDragOffset(0);
       return;
     }
     
-    const threshold = cardWidth * 0.3; // 30% šířky karty pro přepnutí
+    const dragDuration = Date.now() - dragStartTime;
+    const dragDistance = Math.abs(dragOffset);
+    const dragVelocity = dragDistance / Math.max(dragDuration, 1); // px/ms
     
-    if (Math.abs(dragOffset) > threshold) {
-      if (dragOffset < 0) {
-        nextSlide();
-      } else {
-        prevSlide();
-      }
+    // Threshold pro přepnutí: buď 30% šířky karty, nebo rychlý swipe (velocity > 0.5 px/ms)
+    const distanceThreshold = cardWidth * 0.3;
+    const velocityThreshold = 0.5;
+    
+    // Vypočítáme, kolik karet bychom měli posunout na základě vzdálenosti
+    // dragOffset > 0 znamená tažení doprava → chceme vidět produkty vpravo → zvýšit index
+    // dragOffset < 0 znamená tažení doleva → chceme vidět produkty vlevo → snížit index
+    const cardStep = cardWidth + gap;
+    const cardsMoved = Math.round(dragOffset / cardStep);
+    
+    // Pokud je swipe dostatečně rychlý nebo daleký, posuneme se
+    // Nebo pokud jsme posunuli alespoň o jednu kartu
+    const shouldSnap = dragDistance > distanceThreshold || dragVelocity > velocityThreshold || Math.abs(cardsMoved) >= 1;
+    
+    if (shouldSnap && cardsMoved !== 0) {
+      // Posuneme se o vypočítaný počet karet
+      // cardsMoved > 0 při tažení doprava → zvýšíme index (více produktů vpravo)
+      // cardsMoved < 0 při tažení doleva → snížíme index (více produktů vlevo)
+      const newIndex = dragStartIndex + cardsMoved;
+      goToIndex(newIndex, true);
     } else {
-      // Pokud nedosáhl threshold, resetujeme pozici bez přepnutí
-      // dragOffset se resetuje v renderu přes calculateTransform
+      // Vrátíme se na původní pozici s plynulou animací
+      goToIndex(dragStartIndex, true);
     }
     
     setIsDragging(false);
-    // Reset dragOffset s malým zpožděním, aby transition proběhla
-    setTimeout(() => setDragOffset(0), 50);
-  }, [isDragging, dragOffset, cardWidth, nextSlide, prevSlide]);
+    // Reset dragOffset až po dokončení transition
+    setTimeout(() => {
+      setDragOffset(0);
+    }, 600); // Čekáme na dokončení transition (500ms + rezerva)
+  }, [isDragging, dragOffset, dragStartIndex, cardWidth, gap, dragStartTime, goToIndex]);
 
   // Touch events
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -356,6 +375,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           transform: calculateTransform(),
           transition: isTransitioning && !isDragging ? 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
           willChange: isDragging ? 'transform' : 'auto',
+          cursor: isDragging ? 'grabbing' : 'grab',
         }}
       >
         {clonedProducts.map((product, index) => (
