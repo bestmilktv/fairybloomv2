@@ -102,12 +102,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       // Desktop: 5 karet (3 hlavní + 2 boční) s gapy
       // Mobil: 1 hlavní karta
       if (containerWidth >= 768) {
-        // Desktop: každá karta má ~18% šířky kontejneru (5 karet + 4 gapy = ~100%)
-        // Gap je ~2% šířky kontejneru
-        const calculatedGap = Math.max(16, containerWidth * 0.02); // Minimálně 16px
-        const calculatedCardWidth = (containerWidth - (4 * calculatedGap)) / 5;
-        setCardWidth(calculatedCardWidth);
-        setGap(calculatedGap);
+      // Desktop: 5 karet (3 hlavní + 2 boční) s gapy
+      // Každá karta má stejnou šířku
+      // Gap je ~2% šířky kontejneru, minimálně 16px
+      const calculatedGap = Math.max(16, containerWidth * 0.02);
+      // Šířka karty = (containerWidth - 4 gapy) / 5
+      const calculatedCardWidth = (containerWidth - (4 * calculatedGap)) / 5;
+      setCardWidth(calculatedCardWidth);
+      setGap(calculatedGap);
       } else {
         // Mobil: 1 karta s malým peek (90% šířky, 5% gap na každé straně)
         const calculatedCardWidth = containerWidth * 0.9;
@@ -365,23 +367,25 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Během dragu používáme dragStartIndex, jinak currentIndex
     // Tím zajistíme, že carousel se pohybuje přesně 1:1 s prstem/myší
     const baseIndex = isDragging ? dragStartIndex : currentIndex;
-    const baseOffset = baseIndex * cardStep;
     
-    // Centrovací offset
-    let centerOffset: number;
+    // Výpočet finálního offsetu
+    // Chceme, aby karta na pozici 0 (relativně k baseIndex) byla uprostřed kontejneru
+    let finalOffset: number;
+    
     if (isMobile) {
-      // Mobil: centrujeme hlavní produkt (1 karta)
-      centerOffset = (containerWidth / 2) - (cardWidth / 2);
+      // Mobil: centrujeme hlavní produkt (pozice 0)
+      // Karta na pozici baseIndex v tracku má být uprostřed
+      // finalOffset = -baseIndex * cardStep + (containerWidth / 2) - (cardWidth / 2) + dragOffset
+      finalOffset = -baseIndex * cardStep + (containerWidth / 2) - (cardWidth / 2) + dragOffset;
     } else {
       // Desktop: centrujeme prostřední hlavní produkt (pozice 0) z 5 karet
       // Struktura: pozice -2 (boční vlevo), -1, 0, 1 (hlavní), 2 (boční vpravo)
-      // Prostřední hlavní produkt (pozice 0) musí být uprostřed kontejneru
-      // Offset pro pozici 0: 2 * cardStep (protože před ním jsou pozice -2 a -1)
-      centerOffset = (containerWidth / 2) - (2 * cardStep);
+      // Karta na pozici 0 (relativně k baseIndex) má být uprostřed kontejneru
+      // Pozice 0 je 2 kroky od začátku viditelné části (pozice -2, -1, 0)
+      // Karta na pozici baseIndex v tracku má být na pozici: (containerWidth / 2) - (cardWidth / 2) - (2 * cardStep)
+      // finalOffset = -baseIndex * cardStep + (containerWidth / 2) - (cardWidth / 2) - (2 * cardStep) + dragOffset
+      finalOffset = -baseIndex * cardStep + (containerWidth / 2) - (cardWidth / 2) - (2 * cardStep) + dragOffset;
     }
-    
-    // Finální offset: posuneme track doleva o baseOffset, pak centrujeme, pak přidáme dragOffset
-    const finalOffset = -baseOffset + centerOffset + dragOffset;
     
     return `translateX(${finalOffset}px)`;
   };
@@ -419,7 +423,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       // Pozice -2: boční vlevo → opacity 0.5, scale 0.85
       // Pozice -1, 0, 1: hlavní produkty → opacity 1, scale 1
       // Pozice 2: boční vpravo → opacity 0.5, scale 0.85
-      // Pozice mimo -2 až 2: skryté
+      // Pozice mimo -2 až 2: viditelné s nižší opacity (pro swipe efekt)
       
       if (position === -2) {
         // Boční produkt vlevo
@@ -446,11 +450,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
         };
       } else {
-        // Mimo viditelnou oblast - skryté
+        // Mimo hlavní strukturu - viditelné s nižší opacity pro swipe efekt
+        const distance = Math.abs(position) - 2;
         return {
           width: `${cardWidth}px`,
-          opacity: 0,
-          transform: 'scale(0.85)',
+          opacity: Math.max(0, 0.3 - distance * 0.1),
+          transform: `scale(${Math.max(0.7, 0.85 - distance * 0.05)})`,
           transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
         };
       }
