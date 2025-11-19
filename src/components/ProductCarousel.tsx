@@ -115,8 +115,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // INFINITE LOOP RESET
   // ============================================================================
   // Reset pozice když jsme v klonované oblasti - bezviditelný skok na originály
+  // Teprve po dokončení animace (transition end) resetujeme infinite loop
   const handleTransitionEnd = useCallback(() => {
-    if (isDragging || cardWidth === 0) return;
+    // Zkontrolujeme, že animace skutečně skončila a nejsme v dragu
+    if (isDragging || isTransitioning || cardWidth === 0) return;
 
     const totalProducts = products.length;
     const startOfOriginals = CLONE_COUNT * totalProducts;
@@ -124,6 +126,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     // Pokud jsme na konci klonů vpravo, skočíme na začátek originálů
     if (currentIndex >= endOfOriginals + totalProducts) {
+      // Vypneme transition pro okamžitý reset (bez animace)
       setIsTransitioning(false);
       requestAnimationFrame(() => {
         setCurrentIndex(startOfOriginals);
@@ -131,14 +134,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }
     // Pokud jsme na začátku klonů vlevo, skočíme na konec originálů
     else if (currentIndex < startOfOriginals - totalProducts) {
+      // Vypneme transition pro okamžitý reset (bez animace)
       setIsTransitioning(false);
       requestAnimationFrame(() => {
         setCurrentIndex(endOfOriginals);
       });
     }
-  }, [currentIndex, products.length, isDragging, cardWidth]);
+  }, [currentIndex, products.length, isDragging, isTransitioning, cardWidth]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
+  // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
   useEffect(() => {
     if (isTransitioning || isDragging || cardWidth === 0) return;
 
@@ -168,8 +173,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsTransitioning(withTransition);
     setCurrentIndex(newIndex);
     
+    // isTransitioning se resetuje v handleTransitionEnd() když CSS transition skutečně skončí
+    // setTimeout je zde jako fallback pro případy, kdy se handleTransitionEnd nevolá
     if (withTransition) {
-      setTimeout(() => setIsTransitioning(false), 600);
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 600);
     }
   }, [isTransitioning, isDragging]);
 
@@ -246,14 +255,22 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging, dragStart, cardWidth, gap, dragStartIndex, products.length]);
 
   const handleEnd = useCallback(() => {
-    if (!isDragging || cardWidth === 0 || !viewportRef.current) {
+    if (!isDragging || cardWidth === 0 || viewportWidth === 0) {
       setIsDragging(false);
       setDragOffset(0);
       return;
     }
     
-    const viewportWidth = viewportRef.current.offsetWidth;
-    const desktop = viewportWidth >= 1024;
+    const totalCardWidth = cardWidth + gap;
+    const centerOffset = (viewportWidth - cardWidth) / 2;
+    
+    // Vypočítáme aktuální translateX pozici v momentě puštění
+    const currentTranslateX = -(dragStartIndex * totalCardWidth) + centerOffset + dragOffset;
+    
+    // Z toho vypočítáme visualIndex - na kterém indexu se vizuálně nacházíme
+    const visualIndex = Math.round(-currentTranslateX / totalCardWidth);
+    
+    // Zohledníme rychlost/směr swipu
     const dragDuration = Date.now() - dragStartTime;
     const dragDistance = Math.abs(dragOffset);
     const dragVelocity = dragDistance / Math.max(dragDuration, 1); // px/ms
@@ -262,29 +279,26 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const distanceThreshold = cardWidth * 0.3;
     const velocityThreshold = 0.5;
     
-    // Vypočítáme, kolik karet bychom měli posunout
-    const cardStep = cardWidth + gap;
-    const cardsMoved = dragOffset / cardStep;
-    
-    // Rozhodneme, zda se máme snapnout nebo vrátit
-    const shouldReturn = Math.abs(cardsMoved) < 0.3 && dragVelocity < velocityThreshold;
-    
     let targetIndex: number;
     
-    if (shouldReturn) {
-      targetIndex = dragStartIndex;
+    // Pokud je rychlost vysoká a vzdálenost dostatečná, posuneme o 1 kartu ve směru swipu
+    if (dragVelocity > velocityThreshold && dragDistance > distanceThreshold) {
+      const direction = dragOffset > 0 ? -1 : 1; // Pozitivní dragOffset = táhneme doprava = posun doleva
+      targetIndex = visualIndex + direction;
     } else {
-      const rawIndex = dragStartIndex + cardsMoved;
-      targetIndex = Math.round(rawIndex);
+      // Jinak použijeme visualIndex pro přesný snap
+      targetIndex = visualIndex;
     }
     
+    // Nastavíme cíl a zapneme plynulou transition
     goToIndex(targetIndex, true);
     setIsDragging(false);
     
+    // Reset dragOffset po dokončení animace
     setTimeout(() => {
       setDragOffset(0);
     }, 600);
-  }, [isDragging, dragOffset, dragStartIndex, cardWidth, gap, dragStartTime, goToIndex]);
+  }, [isDragging, dragOffset, dragStartIndex, cardWidth, gap, dragStartTime, goToIndex, viewportWidth]);
 
   // Touch events
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
