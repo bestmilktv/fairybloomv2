@@ -307,46 +307,34 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   // VÝPOČET TRANSFORM POZICE
   // ============================================================================
-  // Během dragu používáme dragStartIndex, jinak currentIndex
-  // translateX = -baseIndex * cardStep + centerOffset + dragOffset
+  // currentIndex reprezentuje PROSTŘEDNÍ ze tří hlavních karet (desktop) nebo hlavní kartu (mobil)
+  // Algoritmus: totalCardWidth = cardWidth + gap, centerOffset = (viewportWidth - cardWidth) / 2
+  // x = -(currentIndex * totalCardWidth) + centerOffset
   const calculateTransform = () => {
     if (cardWidth === 0 || !viewportRef.current) return 'translateX(0)';
     
     const viewportWidth = viewportRef.current.offsetWidth;
-    const cardStep = cardWidth + gap;
+    const totalCardWidth = cardWidth + gap;
     
     // Během dragu používáme dragStartIndex pro plynulý pohyb 1:1
     const baseIndex = isDragging ? dragStartIndex : currentIndex;
     
-    // Centrovací offset
-    // Chceme, aby karta na pozici 0 (relativně k baseIndex) byla uprostřed viewportu
-    let centerOffset: number;
-    if (isDesktop) {
-      // Desktop: centrujeme prostřední hlavní produkt (pozice 0) z 5 karet
-      // Struktura: pozice -2 (boční vlevo), -1, 0, 1 (hlavní), 2 (boční vpravo)
-      // Pozice 0 je 2 kroky od začátku viditelné části (pozice -2, -1, 0)
-      // Uprostřed viewportu = viewportWidth / 2
-      // Karta na pozici 0 má být uprostřed, takže:
-      // centerOffset = (viewportWidth / 2) - (cardWidth / 2) - (2 * cardStep)
-      centerOffset = (viewportWidth / 2) - (cardWidth / 2) - (2 * cardStep);
-    } else {
-      // Mobil: centrujeme hlavní produkt (pozice 0)
-      // Karta na pozici 0 má být uprostřed viewportu
-      centerOffset = (viewportWidth / 2) - (cardWidth / 2);
-    }
+    // Centrovací offset: karta má být uprostřed viewportu
+    // centerOffset = (viewportWidth - cardWidth) / 2
+    const centerOffset = (viewportWidth - cardWidth) / 2;
     
-    // Finální offset
-    // baseIndex * cardStep je pozice karty v tracku
-    // Chceme, aby karta na pozici 0 (relativně k baseIndex) byla na pozici centerOffset
-    // finalOffset = -baseIndex * cardStep + centerOffset + dragOffset
-    const finalOffset = -baseIndex * cardStep + centerOffset + dragOffset;
+    // Finální pozice: x = -(currentIndex * totalCardWidth) + centerOffset + dragOffset
+    const x = -(baseIndex * totalCardWidth) + centerOffset + dragOffset;
     
-    return `translateX(${finalOffset}px)`;
+    return `translateX(${x}px)`;
   };
 
   // ============================================================================
   // URČENÍ STYLU KARTY
   // ============================================================================
+  // Layout: [Small] [Large] [Large] [Large] [Small]
+  // currentIndex reprezentuje PROSTŘEDNÍ ze tří hlavních karet (desktop) nebo hlavní kartu (mobil)
+  // position = index - baseIndex, kde baseIndex je currentIndex (nebo dragStartIndex při dragu)
   const getCardStyle = (index: number) => {
     if (cardWidth === 0) {
       return {
@@ -361,9 +349,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const position = index - baseIndex;
     
     if (isDesktop) {
-      // Desktop: struktura 3 hlavní + 2 boční produkty
+      // Desktop: layout [Small] [Large] [Large] [Large] [Small]
+      // position -2: Small (levý boční) - Scale 0.85, Opacity 0.5
+      // position -1: Large (levý hlavní) - Scale 1, Opacity 1
+      // position 0: Large (prostřední hlavní) - Scale 1, Opacity 1
+      // position 1: Large (pravý hlavní) - Scale 1, Opacity 1
+      // position 2: Small (pravý boční) - Scale 0.85, Opacity 0.5
       if (position === -2) {
-        // Boční produkt vlevo
+        // Boční produkt vlevo (Small)
         return {
           width: `${cardWidth}px`,
           opacity: 0.5,
@@ -371,7 +364,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
         };
       } else if (position >= -1 && position <= 1) {
-        // Hlavní produkty (3 uprostřed)
+        // Hlavní produkty (3 uprostřed - Large)
         return {
           width: `${cardWidth}px`,
           opacity: 1,
@@ -379,7 +372,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           transition: isTransitioning && !isDragging ? 'opacity 500ms ease-out, transform 500ms ease-out' : 'none',
         };
       } else if (position === 2) {
-        // Boční produkt vpravo
+        // Boční produkt vpravo (Small)
         return {
           width: `${cardWidth}px`,
           opacity: 0.5,
@@ -397,7 +390,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         };
       }
     } else {
-      // Mobil: hlavní je na pozici 0
+      // Mobil: hlavní je na pozici 0 (currentIndex reprezentuje hlavní kartu)
       const isMain = position === 0;
       const distance = Math.abs(position);
       
@@ -418,9 +411,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       ref={wrapperRef}
       className="relative w-full"
       style={{
-        // Desktop: overflow-x visible pro boční produkty, mobil: hidden
-        overflowX: isDesktop ? 'visible' : 'hidden',
-        overflowY: 'hidden',
+        width: '100%',
+        overflow: 'hidden',
+        position: 'relative',
       }}
     >
       {/* Carousel Viewport - skryje části mimo viditelnou oblast */}
@@ -444,6 +437,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           ref={trackRef}
           className="flex flex-row flex-nowrap"
           style={{
+            display: 'flex',
+            width: 'max-content',
             gap: `${gap}px`,
             transform: calculateTransform(),
             transition: isTransitioning && !isDragging ? 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
