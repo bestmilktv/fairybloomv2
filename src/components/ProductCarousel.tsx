@@ -84,15 +84,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const config = getCarouselConfig(windowWidth);
   
   // Počáteční currentIndex podle velikosti obrazovky
-  // Desktop/Tablet: začíná na 1 (ukazuje na první hlavní produkt, index 0 je boční vlevo)
-  // Mobil: začíná na 0 (ukazuje na hlavní produkt)
-  const initialIndex = windowWidth < 768 ? 0 : 1;
+  // Všechny breakpointy: začíná na 1 (ukazuje na první hlavní produkt, index 0 je boční vlevo)
+  // Na mobilu: index 0 = boční vlevo, index 1 = hlavní, index 2 = boční vpravo
+  const initialIndex = 1;
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   
   // Reset currentIndex když se změní velikost obrazovky
   useEffect(() => {
-    const newIndex = windowWidth < 768 ? 0 : 1;
-    setCurrentIndex(newIndex);
+    setCurrentIndex(1);
   }, [windowWidth]);
 
   // Carousel se zobrazí jen když je více než 3 produkty
@@ -148,9 +147,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     
-    // Minimální hodnota: 0 pro mobil, 1 pro desktop/tablet
-    const minIndex = config.isMobile ? 0 : 1;
-    setCurrentIndex((prev) => Math.max(minIndex, prev - config.step));
+    // Minimální hodnota: 1 pro všechny breakpointy (index 0 je boční vlevo)
+    setCurrentIndex((prev) => Math.max(1, prev - config.step));
     
     setTimeout(() => {
       setIsTransitioning(false);
@@ -163,11 +161,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     
     if (config.isMobile) {
       // Na mobilu: centrujeme hlavní produkt uprostřed obrazovky
-      // currentIndex ukazuje na hlavní produkt (začíná na 0)
-      // Všechny produkty mají plnou šířku, boční jsou zobrazeny pomocí clip-path
+      // currentIndex začíná na 1 (ukazuje na první hlavní produkt, index 0 je boční vlevo)
       // Struktura: index 0 (boční vlevo) + gap + index 1 (hlavní) + gap + index 2 (boční vpravo)
-      const offset = currentIndex * totalWidth;
+      const offset = (currentIndex - 1) * totalWidth;
       // Centrujeme: posuneme o polovinu šířky kontejneru mínus polovinu šířky hlavního produktu
+      // Hlavní produkt je na pozici currentIndex v layoutu
       return `translateX(calc(-${offset}px + 50% - ${config.cardWidth / 2}px))`;
     } else if (config.sideCount === 0.5) {
       // Tablet/Menší notebooky: currentIndex začíná na 1 (ukazuje na první hlavní produkt)
@@ -235,7 +233,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               let isVisible = false;
 
               if (config.isMobile) {
-                // Mobil: relativePosition -1 až 1 (0.25 boční vlevo, 1 hlavní, 0.25 boční vpravo)
+                // Mobil: currentIndex začíná na 1 (ukazuje na první hlavní produkt)
+                // V layoutu: index 0 = boční vlevo, index 1 = hlavní, index 2 = boční vpravo
+                // relativePosition = index - currentIndex
+                // Pro currentIndex = 1: relativePosition -1 = boční vlevo, 0 = hlavní, 1 = boční vpravo
                 isMainProduct = relativePosition === 0;
                 isSideProduct = relativePosition === -1 || relativePosition === 1;
                 isVisible = relativePosition >= -1 && relativePosition <= 1;
@@ -269,34 +270,39 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               // Boční vlevo: zobrazíme pravou část produktu (tu část, která je blíž k hlavním)
               // Boční vpravo: zobrazíme levou část produktu (tu část, která je blíž k hlavním)
               let sideClipStyle = {};
+              let sideMargin = {};
               if (isPartialSideProduct) {
                 if (config.sideCount === 0.25) {
                   // Telefon: 1/4 viditelné
-                  sideClipStyle = { 
-                    clipPath: relativePosition === -1 ? 'inset(0 0 0 75%)' : 'inset(0 75% 0 0)' 
-                  }; // Boční vlevo: pravá 1/4, boční vpravo: levá 1/4
+                  // Boční vlevo: zobrazíme pravou 1/4 produktu (blíž k hlavnímu)
+                  // Boční vpravo: zobrazíme levou 1/4 produktu (blíž k hlavnímu)
+                  if (relativePosition === -1) {
+                    // Boční vlevo: clip-path zobrazí pravou 1/4
+                    // Negativní margin-right posune produkt vlevo, takže viditelná část (pravá 1/4) je blíž k hlavnímu
+                    sideClipStyle = { clipPath: 'inset(0 0 0 75%)' };
+                    sideMargin = { marginRight: `-${config.cardWidth * 0.75}px` };
+                  } else if (relativePosition === 1) {
+                    // Boční vpravo (na mobilu je mainCount = 1, takže relativePosition 1 = boční vpravo)
+                    // clip-path zobrazí levou 1/4
+                    // Negativní margin-left posune produkt vpravo, takže viditelná část (levá 1/4) je blíž k hlavnímu
+                    sideClipStyle = { clipPath: 'inset(0 75% 0 0)' };
+                    sideMargin = { marginLeft: `-${config.cardWidth * 0.75}px` };
+                  }
                 } else if (config.sideCount === 0.5) {
                   // Tablet/Menší notebook: 1/2 viditelné
-                  sideClipStyle = { 
-                    clipPath: relativePosition === -1 ? 'inset(0 0 0 50%)' : 'inset(0 50% 0 0)' 
-                  }; // Boční vlevo: pravá polovina, boční vpravo: levá polovina
-                }
-              }
-
-              // Margin pro boční produkty - posune viditelnou část tak, aby mezery byly konzistentní
-              // Boční vlevo: margin-right negativní, aby se viditelná část posunula vlevo
-              // Boční vpravo: margin-left negativní, aby se viditelná část posunula vpravo
-              // Tím se zmenší mezera mezi viditelnou částí bočního produktu a hlavními produkty
-              let sideMargin = {};
-              if (isPartialSideProduct) {
-                if (relativePosition === -1) {
-                  // Boční vlevo: margin-right negativní o (1 - sideCount) * šířka, aby viditelná část byla blíž k hlavním
-                  const marginValue = config.cardWidth * (1 - config.sideCount);
-                  sideMargin = { marginRight: `-${marginValue}px` };
-                } else if (relativePosition === config.mainCount) {
-                  // Boční vpravo: margin-left negativní o (1 - sideCount) * šířka, aby viditelná část byla blíž k hlavním
-                  const marginValue = config.cardWidth * (1 - config.sideCount);
-                  sideMargin = { marginLeft: `-${marginValue}px` };
+                  // Boční vlevo: zobrazíme pravou polovinu produktu (blíž k hlavnímu)
+                  // Boční vpravo: zobrazíme levou polovinu produktu (blíž k hlavnímu)
+                  if (relativePosition === -1) {
+                    // Boční vlevo: clip-path zobrazí pravou polovinu
+                    // Negativní margin-right posune produkt vlevo, takže viditelná část (pravá 1/2) je blíž k hlavnímu
+                    sideClipStyle = { clipPath: 'inset(0 0 0 50%)' };
+                    sideMargin = { marginRight: `-${config.cardWidth * 0.5}px` };
+                  } else if (relativePosition === config.mainCount) {
+                    // Boční vpravo: clip-path zobrazí levou polovinu
+                    // Negativní margin-left posune produkt vpravo, takže viditelná část (levá 1/2) je blíž k hlavnímu
+                    sideClipStyle = { clipPath: 'inset(0 50% 0 0)' };
+                    sideMargin = { marginLeft: `-${config.cardWidth * 0.5}px` };
+                  }
                 }
               }
 
