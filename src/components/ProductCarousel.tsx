@@ -262,29 +262,30 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // dragOffset > 0 znamená tažení doprava → chceme vidět produkty vpravo → zvýšit index
     // dragOffset < 0 znamená tažení doleva → chceme vidět produkty vlevo → snížit index
     const cardStep = cardWidth + gap;
-    const cardsMoved = dragOffset / cardStep; // Nezaokrouhlujeme ještě
+    const cardsMoved = dragOffset / cardStep;
     
-    // Pokud je swipe dostatečně rychlý nebo daleký, posuneme se
-    const shouldSnap = dragDistance > distanceThreshold || dragVelocity > velocityThreshold;
+    // Rozhodneme, zda se máme snapnout nebo vrátit na původní pozici
+    // Pokud swipe nebyl dostatečný (malá vzdálenost a malá rychlost), vrátíme se
+    const shouldReturn = Math.abs(cardsMoved) < 0.3 && dragVelocity < velocityThreshold;
     
     let targetIndex: number;
     
-    if (shouldSnap) {
-      // Vypočítáme target index na základě cardsMoved
+    if (shouldReturn) {
+      // Vrátíme se na původní pozici
+      targetIndex = dragStartIndex;
+    } else {
+      // Snapneme na nejbližší celý produkt
+      // Vypočítáme target index na základě cardsMoved a zaokrouhlíme
       const rawIndex = dragStartIndex + cardsMoved;
       
       if (isMobile) {
         // Mobil: snap na každý produkt (zaokrouhlíme na nejbližší celé číslo)
         targetIndex = Math.round(rawIndex);
       } else {
-        // Desktop: snap na násobky (každý 3. produkt pro 3 hlavní)
-        // Zaokrouhlíme na nejbližší násobek 1 (každý produkt, protože máme 5 viditelných)
-        // Ale můžeme také snapnout na násobky 3, pokud chceme posunout o 3 produkty najednou
+        // Desktop: snap na každý produkt (zaokrouhlíme na nejbližší celé číslo)
+        // V budoucnu můžeme změnit na snap na násobky 3, pokud chceme posunout o 3 produkty najednou
         targetIndex = Math.round(rawIndex);
       }
-    } else {
-      // Vrátíme se na původní pozici
-      targetIndex = dragStartIndex;
     }
     
     // Zajistíme, že targetIndex je v rozsahu originálů (infinite loop reset se postará o klony)
@@ -349,7 +350,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging, handleMove, handleEnd]);
 
   // Výpočet transform pozice - zjednodušený výpočet
-  // translateX = -currentIndex * cardStep + centerOffset + dragOffset
+  // Během dragu používáme dragStartIndex, jinak currentIndex
+  // translateX = -baseIndex * cardStep + centerOffset + dragOffset
   // cardStep = cardWidth + gap
   // centerOffset = (containerWidth / 2) - (cardWidth / 2) pro mobil
   // centerOffset = (containerWidth / 2) - (2.5 * cardWidth + 2 * gap) pro desktop (centrujeme prostřední z 5 karet)
@@ -360,8 +362,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const isMobile = containerWidth < 768;
     const cardStep = cardWidth + gap;
     
-    // Základní offset na základě currentIndex
-    const baseOffset = currentIndex * cardStep;
+    // Během dragu používáme dragStartIndex, jinak currentIndex
+    // Tím zajistíme, že carousel se pohybuje přesně 1:1 s prstem/myší
+    const baseIndex = isDragging ? dragStartIndex : currentIndex;
+    const baseOffset = baseIndex * cardStep;
     
     // Centrovací offset
     let centerOffset: number;
@@ -440,6 +444,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         style={{
           gap: `${gap}px`,
           transform: calculateTransform(),
+          // Během dragu: žádná transition (carousel se pohybuje 1:1 s prstem/myší)
+          // Po uvolnění: plynulá transition na finální pozici
           transition: isTransitioning && !isDragging ? 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
           willChange: isDragging ? 'transform' : 'auto',
           cursor: isDragging ? 'grabbing' : 'grab',
