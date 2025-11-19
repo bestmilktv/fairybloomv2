@@ -51,46 +51,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Klony na konci = začátek originálů (pro swipe doprava)
   // Počet klonů: alespoň 2 sady produktů na každou stranu (2 * products.length)
   const CLONE_COUNT = 2 * products.length;
-  
-  // Přidáme uniqueKey do každého produktu pro React Reconciliation
-  interface ProductWithKey extends Product {
-    uniqueKey: string;
-  }
-  
-  const clonedProducts = useMemo(() => {
-    const totalOriginals = products.length;
-    const itemsToRender: ProductWithKey[] = [];
-    
-    // Klony na začátku (clone-start)
-    for (let cloneSetIndex = 0; cloneSetIndex < CLONE_COUNT; cloneSetIndex++) {
-      products.forEach((product, productIndex) => {
-        itemsToRender.push({
-          ...product,
-          uniqueKey: `clone-start-${cloneSetIndex}-${product.id}-${productIndex}`
-        });
-      });
-    }
-    
-    // Originální produkty
-    products.forEach((product, productIndex) => {
-      itemsToRender.push({
-        ...product,
-        uniqueKey: `original-${product.id}-${productIndex}`
-      });
-    });
-    
-    // Klony na konci (clone-end)
-    for (let cloneSetIndex = 0; cloneSetIndex < CLONE_COUNT; cloneSetIndex++) {
-      products.forEach((product, productIndex) => {
-        itemsToRender.push({
-          ...product,
-          uniqueKey: `clone-end-${cloneSetIndex}-${product.id}-${productIndex}`
-        });
-      });
-    }
-    
-    return itemsToRender;
-  }, [products]);
+  const clonedProducts = useMemo(() => [
+    ...Array(CLONE_COUNT).fill(null).flatMap(() => products), // Klony konce (na začátku)
+    ...products, // Originální produkty
+    ...Array(CLONE_COUNT).fill(null).flatMap(() => products), // Klony začátku (na konci)
+  ], [products]);
 
   // ============================================================================
   // REFS A STATE
@@ -149,96 +114,125 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   // INFINITE LOOP RESET
   // ============================================================================
-  // Zlatý vzorec pro normalizaci indexu - ošetření záporných čísel v JavaScriptu
-  // JavaScript má chybu u modulo záporných čísel (-1 % 5 = -1, správně má být 4)
-  const getRealIndex = useCallback((visualIndex: number, clonesHead: number, totalOriginals: number): number => {
-    // Odečteme klony na začátku
-    let relativeIndex = visualIndex - clonesHead;
-    // Ošetříme záporná čísla a uděláme modulo - Zlatý vzorec
-    return ((relativeIndex % totalOriginals) + totalOriginals) % totalOriginals;
-  }, []);
+  // Helper funkce pro výpočet realIndex z visualIndex
+  // Převádí index v klonovaném poli na index originálního produktu
+  const getRealIndex = useCallback((visualIndex: number): number => {
+    const totalItems = products.length;
+    const CLONES_COUNT = CLONE_COUNT * totalItems; // Počet klonů na začátku
+    // Použijeme robustní modulo pro záporná čísla
+    return ((visualIndex - CLONES_COUNT) % totalItems + totalItems) % totalItems;
+  }, [products.length]);
 
   // Reset pozice když jsme v klonované oblasti - bezviditelný skok na originály
-  // Teprve po dokončení animace (transition end) resetujeme infinite loop
-  const handleTransitionEnd = useCallback((e: React.TransitionEvent<HTMLDivElement>) => {
-    // 1. Ignoruj eventy, které probublaly z dětí (tlačítek, obrázků uvnitř)
-    if (e.target !== trackRef.current) return;
-
-    // 2. Pokud zrovna neprobíhá námi řízená tranzice, ignoruj to.
-    // (Tohle zabrání tomu, aby se reset spustil sám ze sebe)
-    if (!isTransitioning) return;
-
-    if (!trackRef.current) return;
+  // DOM-based teleportation: identifikujeme produkty podle ID a skáčeme na jejich reálné souřadnice
+  const handleTransitionEnd = useCallback(() => {
+    if (!trackRef.current || !wrapperRef.current) return;
 
     // Definice konstant
-    const totalOriginals = products.length; // Počet unikátních produktů z databáze
-    const clonesHead = CLONE_COUNT * totalOriginals; // Počet klonů na začátku
+    const realCount = products.length; // Počet originálních produktů (bez klonů)
+    const CLONES_HEAD = CLONE_COUNT * realCount; // Počet klonů na začátku
 
-    // 1. Zjisti přesnou šířku jedné položky
-    const firstChild = trackRef.current.children[0] as HTMLElement;
-    if (!firstChild) return;
-    const itemWidth = firstChild.getBoundingClientRect().width + gap;
-
-    // 2. Zjisti aktuální pozici (negativní hodnota)
+    // 1. Zjisti aktuální pozici (negativní hodnota)
     const transformString = trackRef.current.style.transform || '';
     const currentX = parseFloat(transformString.replace('translateX(', '').replace('px)', '').replace(')', '')) || 0;
 
+    // 2. Změř přesnou šířku jedné položky (včetně gap) - změř to čerstvě!
+    const firstChild = trackRef.current.children[0] as HTMLElement;
+    if (!firstChild) return;
+    
+    // Změřme vzdálenost mezi prvním a druhým elementem pro přesné itemWidth
+    let itemWidth: number;
+    if (trackRef.current.children.length > 1) {
+      const firstRect = firstChild.getBoundingClientRect();
+      const secondChild = trackRef.current.children[1] as HTMLElement;
+      const secondRect = secondChild.getBoundingClientRect();
+      itemWidth = secondRect.left - firstRect.left; // Přesná vzdálenost včetně gap
+    } else {
+      itemWidth = firstChild.getBoundingClientRect().width + gap;
+    }
+
     // 3. Vypočítej vizuální index (zaokrouhleno, aby se eliminovaly sub-pixel chyby)
-    // currentVisualIndex = index v poli DOM elementů (včetně klonů)
-    const currentVisualIndex = Math.round(-currentX / itemWidth);
+    const visualIndex = Math.round(-currentX / itemWidth);
 
-    // 4. Zlatý vzorec pro normalizaci - zjisti, na kterém originálním produktu se vizuálně nacházíme
-    const realIndex = getRealIndex(currentVisualIndex, clonesHead, totalOriginals);
+    // 4. Získej ID produktu na této pozici
+    const currentElement = trackRef.current.children[visualIndex] as HTMLElement;
+    if (!currentElement) return; // Safety check
+    
+    const currentProductId = currentElement.getAttribute('data-product-id');
+    if (!currentProductId) return; // Safety check
 
-    // 5. HARD RESET: Pokud jsme mimo "bezpečnou zónu" (v klonech), přeskoč na střed
-    const isClone = currentVisualIndex < clonesHead || currentVisualIndex >= (clonesHead + totalOriginals);
+    // 5. Zjisti, jestli jsme v "Clone Zone" (moc vlevo nebo moc vpravo)
+    const isClone = visualIndex < CLONES_HEAD || visualIndex >= (CLONES_HEAD + realCount);
 
     // Debugging
-    console.log('handleTransitionEnd Debug:', {
+    console.log('handleTransitionEnd DOM-based Debug:', {
       currentTranslateX: currentX,
-      slideWidth: itemWidth,
-      calculatedVisualIndex: currentVisualIndex,
-      currentVisualIndex,
-      realIndex,
-      clonesHead,
-      totalOriginals,
+      itemWidth,
+      visualIndex,
+      currentProductId,
+      CLONES_HEAD,
+      realCount,
       isClone,
       currentIndex
     });
 
     if (isClone) {
-      // a) Vypočítej realIndex pomocí zlatého vzorce (už máme)
-      // b) Najdi "bezpečný index" uprostřed
-      const safeIndex = clonesHead + realIndex;
+      // 6. NAJDI ORIGINÁL: Najdi DOM element v "Safe Zone" (uprostřed), který má stejné ID
+      // Safe Zone začíná na indexu CLONES_HEAD a má délku realCount
+      let targetIndex = -1;
 
-      // c) Vypni Transition
-      trackRef.current.style.transition = 'none';
-
-      // d) Posuň (teleport)
-      const centerOffset = (viewportWidth - cardWidth) / 2;
-      const newPosition = -(safeIndex * itemWidth) + centerOffset;
-      trackRef.current.style.transform = `translateX(${newPosition}px)`;
-
-      // e) Update State - použij safeIndex pro state
-      setCurrentIndex(safeIndex);
-
-      // f) Force Reflow (Kritické) - zavolej offsetHeight aby prohlížeč změnu akceptoval hned
-      void trackRef.current.offsetHeight;
-
-      // g) Zapni Transition (Next Tick)
-      setTimeout(() => {
-        if (trackRef.current) {
-          trackRef.current.style.transition = 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)';
+      // Proiteruj jen originální část pole children
+      for (let i = 0; i < realCount; i++) {
+        const checkIndex = CLONES_HEAD + i;
+        const el = trackRef.current.children[checkIndex] as HTMLElement;
+        if (el && el.getAttribute('data-product-id') === currentProductId) {
+          targetIndex = checkIndex;
+          break;
         }
-      }, 50);
+      }
 
-      setIsTransitioning(false);
+      if (targetIndex !== -1) {
+        // 7. TELEPORTUJ PŘESNĚ TAM
+        // Vypni transition
+        setIsTransitioning(false);
+        trackRef.current.style.transition = 'none';
+
+        // Vypočítej novou pozici na základě CÍLOVÉHO INDEXU (ne relativně)
+        // Použij stejný vzorec pro centering jako při renderu:
+        const viewportWidth = wrapperRef.current.offsetWidth; // Změř wrapper
+        const centerOffset = (viewportWidth - cardWidth) / 2; // Stejný vzorec jako v calculateTransform
+
+        const newTranslateX = -(targetIndex * itemWidth) + centerOffset;
+
+        trackRef.current.style.transform = `translateX(${newTranslateX}px)`;
+
+        // Force Reflow & Update State
+        trackRef.current.getBoundingClientRect();
+        setCurrentIndex(targetIndex); // Nastav index originálu
+        setIsTransitioning(false);
+
+        // Obnov transition
+        requestAnimationFrame(() => {
+          if (trackRef.current) {
+            trackRef.current.style.transition = 'transform 0.5s ease-out';
+          }
+        });
+      } else {
+        // Pokud jsme nenašli originál, loguj chybu a resetuj na bezpečnou pozici
+        console.error('handleTransitionEnd: Originál produktu nenalezen', {
+          currentProductId,
+          visualIndex,
+          CLONES_HEAD,
+          realCount
+        });
+        setIsTransitioning(false);
+      }
     } else {
-      // Jsme v bezpečné zóně, jen aktualizuj state
-      setCurrentIndex(currentVisualIndex);
+      // Nejsme v klonu, jen srovnej state
+      setCurrentIndex(visualIndex);
       setIsTransitioning(false);
     }
-  }, [cardWidth, viewportWidth, gap, products.length, currentIndex, isTransitioning, getRealIndex]);
+  }, [cardWidth, viewportWidth, gap, products.length, currentIndex]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
@@ -255,9 +249,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }
 
     // Vypočítáme realIndex z aktuálního currentIndex
-    const totalOriginals = products.length;
-    const clonesHead = CLONE_COUNT * totalOriginals;
-    const realIndex = getRealIndex(currentIndex, clonesHead, totalOriginals);
+    const realIndex = getRealIndex(currentIndex);
     
     // Vypočítáme cílový index v originální sadě
     const targetIndex = startOfOriginals + realIndex;
@@ -659,7 +651,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         >
           {clonedProducts.map((product, index) => (
             <div
-              key={product.uniqueKey}
+              key={`${product.id}-${index}`}
+              data-product-id={product.id}
               className="flex-shrink-0"
               style={getCardStyle(index)}
             >
