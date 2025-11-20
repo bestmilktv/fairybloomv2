@@ -254,27 +254,32 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Použijeme uložené viditelné produkty, pokud existují
     const visibleProducts = visibleProductsRef.current;
     if (visibleProducts) {
-      // Najdeme index prostředního produktu v originální sadě
-      const centerProductId = isDesktop && visibleProducts.productIds.length >= 3 
-        ? visibleProducts.productIds[1]
-        : visibleProducts.productIds[0];
+      // KLÍČOVÉ: Použijeme stejnou logiku jako handleEnd - findMatchingIndexInOriginals
+      // Tato funkce najde index v originálech, který zobrazí PŘESNĚ stejné produkty
+      const matchingIndex = findMatchingIndexInOriginals(
+        visibleProducts.productIds, 
+        visibleProducts.centerIndex, 
+        isDesktop
+      );
       
-      let normalizedIndex = -1;
-      for (let i = 0; i < products.length; i++) {
-        if (products[i].id === centerProductId) {
-          normalizedIndex = i;
-          break;
-        }
+      let safeTargetIndex: number;
+      if (matchingIndex !== -1) {
+        // Našli jsme přesnou shodu
+        safeTargetIndex = matchingIndex;
+      } else {
+        // Fallback: použijeme matematický výpočet
+        let normalizedIndex = (visibleProducts.centerIndex - CLONES_AT_START) % realLength;
+        if (normalizedIndex < 0) normalizedIndex += realLength;
+        safeTargetIndex = startOfOriginals + normalizedIndex;
+        
+        // Debugging - mělo by to být vzácné
+        console.warn('useEffect reset: Nenašli jsme přesnou shodu produktů, použili jsme fallback:', {
+          visibleProducts,
+          safeTargetIndex
+        });
       }
       
-      if (normalizedIndex === -1) {
-        let fallbackNormalizedIndex = (visibleProducts.centerIndex - CLONES_AT_START) % realLength;
-        if (fallbackNormalizedIndex < 0) fallbackNormalizedIndex += realLength;
-        normalizedIndex = fallbackNormalizedIndex;
-      }
-      
-      const safeTargetIndex = startOfOriginals + normalizedIndex;
-      
+      // Zkontrolujeme, zda už nejsme na správném indexu (aby se předešlo nekonečné smyčce)
       if (currentIndex !== safeTargetIndex) {
         setIsTransitioning(false);
         requestAnimationFrame(() => {
@@ -302,7 +307,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     requestAnimationFrame(() => {
       setCurrentIndex(targetIndex);
     });
-  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth, viewportWidth, getRealIndex, CLONES_AT_START, realLength, products, isDesktop]);
+  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth, viewportWidth, getRealIndex, CLONES_AT_START, realLength, products, isDesktop, findMatchingIndexInOriginals]);
 
   // ============================================================================
   // NAVIGACE
