@@ -63,6 +63,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const lastTargetIndexRef = useRef<number | null>(null); // Uloží targetIndex z handleEnd pro použití v handleTransitionEnd
   
   const [currentIndex, setCurrentIndex] = useState(CLONE_COUNT * products.length);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -136,63 +137,55 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Zkontrolujeme, že animace skutečně skončila a nejsme v dragu
     if (isDragging || isTransitioning || cardWidth === 0 || viewportWidth === 0 || !trackRef.current) return;
 
-    // 1. Zjisti přesnou šířku jedné položky z DOM
-    const firstChild = trackRef.current.children[0] as HTMLElement;
-    if (!firstChild) return;
-    const itemWidth = firstChild.getBoundingClientRect().width + gap;
-
-    // 2. Zjisti aktuální pozici (negativní hodnota) z DOM
-    const transform = trackRef.current.style.transform;
-    let currentX = 0;
-    if (transform && transform.includes('translateX')) {
-      const match = transform.match(/translateX\(([^)]+)px\)/);
-      if (match) {
-        currentX = parseFloat(match[1]);
-      }
-    } else {
-      // Fallback: vypočítáme z currentIndex
-      const centerOffset = (viewportWidth - cardWidth) / 2;
-      currentX = -(currentIndex * itemWidth) + centerOffset;
-    }
-
-    // 3. Vypočítej vizuální index (zaokrouhleno, aby se eliminovaly sub-pixel chyby)
-    const centerOffset = (viewportWidth - cardWidth) / 2;
-    const rawIndex = Math.round(-(currentX - centerOffset) / itemWidth);
-
-    // 4. Normalizuj index na délku originálního pole (modulo)
+    // Použijeme targetIndex z handleEnd místo přepočítávání z DOM (aby se předešlo chybám zaokrouhlování)
+    const targetIndex = lastTargetIndexRef.current;
+    
+    // Pokud nemáme uložený targetIndex, použijeme currentIndex (fallback)
+    const rawIndex = targetIndex !== null ? targetIndex : currentIndex;
+    
+    // Vypočítáme normalizedIndex z rawIndex
     let normalizedIndex = (rawIndex - CLONES_AT_START) % realLength;
     // Ošetření záporných čísel v JS (např. -1 % 5 = -1, ale chceme 4)
     if (normalizedIndex < 0) normalizedIndex += realLength;
 
     // Debugging
     console.log('handleTransitionEnd:', {
-      currentTranslateX: currentX,
-      slideWidth: itemWidth,
-      calculatedVisualIndex: rawIndex,
+      targetIndexFromRef: targetIndex,
+      currentIndex,
+      rawIndex,
       normalizedIndex,
       CLONES_AT_START,
       realLength
     });
 
-    // 5. HARD RESET: Pokud jsme mimo "bezpečnou zónu" (v klonech), přeskoč na střed
+    // HARD RESET: Pokud jsme mimo "bezpečnou zónu" (v klonech), přeskoč na střed
     const isClone = rawIndex < CLONES_AT_START || rawIndex >= (CLONES_AT_START + realLength);
 
     if (isClone) {
-      const targetIndex = CLONES_AT_START + normalizedIndex;
+      const safeTargetIndex = CLONES_AT_START + normalizedIndex;
       
       // Zkontroluj, zda už nejsme na správném indexu (aby se předešlo nekonečné smyčce)
-      if (currentIndex === targetIndex) {
+      if (currentIndex === safeTargetIndex) {
         setIsTransitioning(false);
+        lastTargetIndexRef.current = null; // Vyčistíme ref
         return;
       }
       
       // Vypni animaci
       setIsTransitioning(false);
       if (trackRef.current) {
+        // Získáme přesnou šířku z DOM pro výpočet pozice
+        const firstChild = trackRef.current.children[0] as HTMLElement;
+        if (!firstChild) {
+          lastTargetIndexRef.current = null;
+          return;
+        }
+        const itemWidth = firstChild.getBoundingClientRect().width + gap;
+        const centerOffset = (viewportWidth - cardWidth) / 2;
+        
         trackRef.current.style.transition = 'none';
 
         // Vypočítej novou pozici v bezpečné zóně (uprostřed)
-        // Chceme být na pozici: CLONES_AT_START + normalizedIndex
         const newPosition = -((CLONES_AT_START + normalizedIndex) * itemWidth) + centerOffset;
 
         trackRef.current.style.transform = `translateX(${newPosition}px)`;
@@ -209,20 +202,23 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       }
       
       // Aktualizuj state pouze pokud se skutečně změnil
-      setCurrentIndex(targetIndex);
+      setCurrentIndex(safeTargetIndex);
+      lastTargetIndexRef.current = null; // Vyčistíme ref po použití
     } else {
       // Jsme v bezpečné zóně
       // Zkontroluj, zda už nejsme na správném indexu (aby se předešlo nekonečné smyčce)
       if (currentIndex === rawIndex) {
         setIsTransitioning(false);
+        lastTargetIndexRef.current = null; // Vyčistíme ref
         return;
       }
       
       // Aktualizuj state pouze pokud se skutečně změnil
       setCurrentIndex(rawIndex);
       setIsTransitioning(false);
+      lastTargetIndexRef.current = null; // Vyčistíme ref po použití
     }
-  }, [isDragging, isTransitioning, cardWidth, viewportWidth, gap, CLONES_AT_START, realLength]);
+  }, [isDragging, isTransitioning, cardWidth, viewportWidth, gap, CLONES_AT_START, realLength, currentIndex]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
@@ -238,7 +234,24 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       return;
     }
 
-    // Vypočítáme realIndex z aktuálního currentIndex
+    // Použijeme uložený targetIndex z ref, pokud existuje
+    if (lastTargetIndexRef.current !== null) {
+      const targetIndex = lastTargetIndexRef.current;
+      let normalizedIndex = (targetIndex - CLONES_AT_START) % realLength;
+      if (normalizedIndex < 0) normalizedIndex += realLength;
+      const safeTargetIndex = startOfOriginals + normalizedIndex;
+      
+      if (currentIndex !== safeTargetIndex) {
+        setIsTransitioning(false);
+        requestAnimationFrame(() => {
+          setCurrentIndex(safeTargetIndex);
+        });
+      }
+      lastTargetIndexRef.current = null; // Vyčistíme ref
+      return;
+    }
+
+    // Fallback: vypočítáme realIndex z aktuálního currentIndex
     const realIndex = getRealIndex(currentIndex);
     
     // Vypočítáme cílový index v originální sadě
@@ -254,7 +267,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     requestAnimationFrame(() => {
       setCurrentIndex(targetIndex);
     });
-  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth, viewportWidth, getRealIndex]);
+  }, [currentIndex, products.length, isTransitioning, isDragging, cardWidth, viewportWidth, getRealIndex, CLONES_AT_START, realLength]);
 
   // ============================================================================
   // NAVIGACE
@@ -404,6 +417,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       // Jinak použijeme rawIndex pro přesný snap
       targetIndex = rawIndex;
     }
+    
+    // Uložíme targetIndex do ref pro použití v handleTransitionEnd
+    lastTargetIndexRef.current = targetIndex;
     
     // Nastavíme cíl a zapneme plynulou transition
     goToIndex(targetIndex, true);
