@@ -230,46 +230,40 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const children = track.children;
     if (children.length === 0) return;
 
-    // Najdeme aktuální vizuální element - ten, který je nejblíže středu viewportu
-    const viewportCenter = viewportWidth / 2;
-    const totalCardWidth = cardWidth + gap;
-    const centerOffset = (viewportWidth - cardWidth) / 2;
-    
-    // Získáme aktuální translateX z DOM
-    const transform = track.style.transform;
-    let currentTranslateX = 0;
-    if (transform && transform.includes('translateX')) {
-      const match = transform.match(/translateX\(([^)]+)px\)/);
-      if (match) {
-        currentTranslateX = parseFloat(match[1]);
-      }
-    } else {
-      // Fallback: vypočítáme z currentIndex
-      currentTranslateX = -(currentIndex * totalCardWidth) + centerOffset;
-    }
+    // 1. Najdeme střed viewportu z parent elementu (přesnější než viewportWidth)
+    const parentElement = track.parentElement;
+    if (!parentElement) return;
+    const parentRect = parentElement.getBoundingClientRect();
+    const viewportCenter = parentRect.left + (parentElement.offsetWidth / 2);
 
-    // Najdeme child, který je nejblíže středu
-    let closestChildIndex = 0;
+    // 2. Proiterujeme všechny děti (slides) v tracku a změříme jejich vzdálenost od středu
+    let currentElement: HTMLElement | null = null;
     let minDistance = Infinity;
     
     for (let i = 0; i < children.length; i++) {
       const child = children[i] as HTMLElement;
       const childRect = child.getBoundingClientRect();
-      const childCenter = childRect.left + childRect.width / 2;
+      const childCenter = childRect.left + (childRect.width / 2);
       const distance = Math.abs(viewportCenter - childCenter);
       
+      // Vybereme element s nejmenší vzdáleností
       if (distance < minDistance) {
         minDistance = distance;
-        closestChildIndex = i;
+        currentElement = child;
       }
     }
 
-    const currentChild = children[closestChildIndex] as HTMLElement;
-    if (!currentChild) return;
+    // Pokud jsme nenašli žádný element, ukončíme
+    if (!currentElement) {
+      setIsTransitioning(false);
+      visibleProductsRef.current = null;
+      lastTargetIndexRef.current = null;
+      return;
+    }
 
-    // Zkontrolujeme identitu - čteme data-type
-    const childType = currentChild.dataset.type;
-    const productId = currentChild.dataset.productId;
+    // 3. Zkontrolujeme identitu aktuálního elementu - čteme data-type
+    const childType = currentElement.dataset.type;
+    const productId = currentElement.dataset.productId;
 
     if (!productId) return;
 
@@ -281,26 +275,32 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       return;
     }
 
-    // Pokud je klon, PROVEDEME TELEPORTACI
+    // 4. Pokud je klon, PROVEDEME TELEPORTACI
     if (childType === 'clone') {
+      // Přečteme ID klonu
       // Najdeme originální DOM element se stejným productId
+      let originalElement: HTMLElement | null = null;
       let originalIndex = -1;
+      
       for (let i = 0; i < children.length; i++) {
         const child = children[i] as HTMLElement;
         if (child.dataset.type === 'original' && child.dataset.productId === productId) {
+          originalElement = child;
           originalIndex = parseInt(child.dataset.index || '-1', 10);
           break;
         }
       }
 
-      if (originalIndex === -1) {
+      if (originalIndex === -1 || !originalElement) {
         // Fallback: použijeme matematický výpočet
         let normalizedIndex = (currentIndex - CLONES_AT_START) % realLength;
         if (normalizedIndex < 0) normalizedIndex += realLength;
         originalIndex = CLONES_AT_START + normalizedIndex;
       }
 
-      // Vypočítáme přesnou pozici
+      // Vypočítáme přesnou pozici pro teleportaci (použijeme stejný výpočet jako doteď)
+      const totalCardWidth = cardWidth + gap;
+      const centerOffset = (viewportWidth - cardWidth) / 2;
       const newTranslateX = -(originalIndex * totalCardWidth) + centerOffset;
 
       // Aplikujeme teleportaci
