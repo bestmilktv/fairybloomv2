@@ -154,7 +154,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // LOGIKA DRAG & DROP
   // ============================================================================
   const startDrag = (clientX: number) => {
-    if (isTransitioning) return; // Blokace během animace
+    // Pokud probíhá tichý reset, nedovolíme drag, aby se nerozhodila matematika
+    if (isResettingRef.current) return;
     
     // Vyčistíme případný timeout z minula
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
@@ -164,6 +165,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     dragStartX.current = clientX;
     dragOffsetRef.current = 0;
     setDragOffset(0);
+    setIsTransitioning(false);
     
     if (trackRef.current) {
         trackRef.current.style.transition = 'none';
@@ -197,22 +199,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
     }
 
-    // SAFETY TIMEOUT: Pokud se neozve transitionEnd (např. swipnutí na stejné místo),
-    // musíme isTransitioning vypnout ručně, jinak se carousel zasekne.
+    // SAFETY TIMEOUT
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = setTimeout(() => {
-        if (isResettingRef.current) return; // Pokud probíhá reset, necháme to být
+        if (isResettingRef.current) return;
         setIsTransitioning(false);
     }, ANIMATION_DURATION + 50);
   };
 
   // ============================================================================
-  // INFINITE LOOP RESET
+  // INFINITE LOOP RESET (SEAMLESS FIX)
   // ============================================================================
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDragging) return;
 
-    // Vyčistíme safety timeout, protože event dorazil
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
 
     const track = trackRef.current;
@@ -222,6 +222,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         return;
     }
 
+    // DOM Detection
     const parentCenter = parent.getBoundingClientRect().left + (parent.offsetWidth / 2);
     let closestElement: HTMLElement | null = null;
     let minDist = Infinity;
@@ -256,27 +257,39 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             const centerOffset = (viewportWidth - cardWidth) / 2;
             const newX = -(originalIndex * totalCardWidth) + centerOffset;
 
+            // 1. Zmrazit React Updates
             isResettingRef.current = true;
+            
+            // 2. Okamžitý teleport bez animace
             track.style.transition = 'none';
             track.style.transform = `translateX(${newX}px)`;
-            void track.offsetHeight; // Force Reflow
+            
+            // 3. Force Layout (Reflow) - kritické pro aplikaci změny
+            void track.offsetHeight; 
 
+            // 4. Update State (React si myslí, že se nic nestalo, protože ID sedí)
             setCurrentIndex(originalIndex);
             
-            // Důležité: Resetujeme flagy
+            // 5. Double RAF & Timeout pro neviditelný reset
+            // Čekáme 2 framy, aby prohlížeč stoprocentně vykreslil novou pozici bez animace
             requestAnimationFrame(() => {
-                track.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
-                isResettingRef.current = false;
-                setIsTransitioning(false); // Uvolníme zámek
+                requestAnimationFrame(() => {
+                    // Teprve teď vrátíme transition zpět
+                    track.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
+                    
+                    // Malá prodleva před uvolněním zámku
+                    setTimeout(() => {
+                        isResettingRef.current = false;
+                        setIsTransitioning(false);
+                    }, 50);
+                });
             });
             return;
         }
     }
 
-    // Pokud jsme už na originálu nebo se nic neděje, musíme VŽDY odemknout
+    // Pokud jsme na originálu
     setIsTransitioning(false);
-    
-    // Srovnání indexu pro jistotu
     const index = parseInt(closestElement.dataset.index || '0');
     if (index !== currentIndex) {
         setCurrentIndex(index);
