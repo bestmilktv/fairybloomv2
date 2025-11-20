@@ -129,7 +129,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   // Reset pozice když jsme v klonované oblasti - bezviditelný skok na originály
   // Teprve po dokončení animace (transition end) resetujeme infinite loop
-  const handleTransitionEnd = useCallback(() => {
+  const handleTransitionEnd = useCallback((e: React.TransitionEvent) => {
+    // Zkontrolujeme, že se jedná o transition na track elementu, ne na kartách
+    if (e.target !== trackRef.current) return;
+    
     // Zkontrolujeme, že animace skutečně skončila a nejsme v dragu
     if (isDragging || isTransitioning || cardWidth === 0 || viewportWidth === 0 || !trackRef.current) return;
 
@@ -175,6 +178,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const isClone = rawIndex < CLONES_AT_START || rawIndex >= (CLONES_AT_START + realLength);
 
     if (isClone) {
+      const targetIndex = CLONES_AT_START + normalizedIndex;
+      
+      // Zkontroluj, zda už nejsme na správném indexu (aby se předešlo nekonečné smyčce)
+      if (currentIndex === targetIndex) {
+        setIsTransitioning(false);
+        return;
+      }
+      
       // Vypni animaci
       setIsTransitioning(false);
       if (trackRef.current) {
@@ -197,10 +208,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         });
       }
       
-      // Aktualizuj state
-      setCurrentIndex(CLONES_AT_START + normalizedIndex);
+      // Aktualizuj state pouze pokud se skutečně změnil
+      setCurrentIndex(targetIndex);
     } else {
-      // Jsme v bezpečné zóně, jen aktualizuj state
+      // Jsme v bezpečné zóně
+      // Zkontroluj, zda už nejsme na správném indexu (aby se předešlo nekonečné smyčce)
+      if (currentIndex === rawIndex) {
+        setIsTransitioning(false);
+        return;
+      }
+      
+      // Aktualizuj state pouze pokud se skutečně změnil
       setCurrentIndex(rawIndex);
       setIsTransitioning(false);
     }
@@ -225,6 +243,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     
     // Vypočítáme cílový index v originální sadě
     const targetIndex = startOfOriginals + realIndex;
+
+    // Zkontroluj, zda už nejsme na správném indexu (aby se předešlo nekonečné smyčce)
+    if (currentIndex === targetIndex) {
+      return;
+    }
 
     // Okamžitě (bez transition) přesuneme na targetIndex
     setIsTransitioning(false);
