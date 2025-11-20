@@ -51,11 +51,36 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Klony na konci = začátek originálů (pro swipe doprava)
   // Počet klonů: alespoň 2 sady produktů na každou stranu (2 * products.length)
   const CLONE_COUNT = 2 * products.length;
-  const clonedProducts = useMemo(() => [
-    ...Array(CLONE_COUNT).fill(null).flatMap(() => products), // Klony konce (na začátku)
-    ...products, // Originální produkty
-    ...Array(CLONE_COUNT).fill(null).flatMap(() => products), // Klony začátku (na konci)
-  ], [products]);
+  const CLONES_AT_START = CLONE_COUNT * products.length; // Počet klonů na začátku pole
+  
+  // Vytvoříme pole s informací o tom, zda je produkt klon nebo originál
+  const allSlides = useMemo(() => {
+    const slides: Array<{ product: Product; isClone: boolean; index: number }> = [];
+    
+    // Klony konce (na začátku)
+    Array(CLONE_COUNT).fill(null).forEach(() => {
+      products.forEach((product) => {
+        slides.push({ product, isClone: true, index: slides.length });
+      });
+    });
+    
+    // Originální produkty
+    products.forEach((product) => {
+      slides.push({ product, isClone: false, index: slides.length });
+    });
+    
+    // Klony začátku (na konci)
+    Array(CLONE_COUNT).fill(null).forEach(() => {
+      products.forEach((product) => {
+        slides.push({ product, isClone: true, index: slides.length });
+      });
+    });
+    
+    return slides;
+  }, [products, CLONE_COUNT]);
+  
+  // Pro zpětnou kompatibilitu - clonedProducts bez isClone info
+  const clonedProducts = useMemo(() => allSlides.map(slide => slide.product), [allSlides]);
 
   // ============================================================================
   // REFS A STATE
@@ -65,6 +90,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const lastTargetIndexRef = useRef<number | null>(null); // Uloží targetIndex z handleEnd pro použití v handleTransitionEnd
   const visibleProductsRef = useRef<{ centerIndex: number, productIds: string[] } | null>(null); // Uloží informace o viditelných produktech
+  const isResettingRef = useRef<boolean>(false); // Blokuje useEffects během teleportace
   
   const [currentIndex, setCurrentIndex] = useState(CLONE_COUNT * products.length);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -117,7 +143,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // INFINITE LOOP RESET
   // ============================================================================
   // Konstanty pro infinite loop reset
-  const CLONES_AT_START = CLONE_COUNT * products.length; // Počet klonů na začátku pole
   const realLength = products.length; // Počet originálních produktů
   
   // Helper funkce pro výpočet realIndex z visualIndex
@@ -195,51 +220,127 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return -1; // Nenašli jsme shodu
   }, [clonedProducts, CLONES_AT_START, realLength, findProductIndexInOriginals]);
 
-  // Cleanup po dokončení animace
-  // Protože handleEnd už normalizuje targetIndex na originály, zde pouze kontrolujeme a čistíme
+  // ID-Based Teleportation: Najdeme aktuální vizuální element a teleportujeme na originál
   const handleTransitionEnd = useCallback((e: React.TransitionEvent) => {
-    // Zkontrolujeme, že se jedná o transition na track elementu, ne na kartách
+    // Guard Clauses
     if (e.target !== trackRef.current) return;
-    
-    // Zkontrolujeme, že animace skutečně skončila a nejsme v dragu
     if (isDragging || isTransitioning || cardWidth === 0 || viewportWidth === 0 || !trackRef.current) return;
 
-    // Zkontrolujeme, že jsme v originálech (což bychom měli být, protože handleEnd už normalizuje)
-    const isInOriginals = currentIndex >= CLONES_AT_START && currentIndex < (CLONES_AT_START + realLength);
-    
-    // Debugging
-    console.log('handleTransitionEnd:', {
-      currentIndex,
-      isInOriginals,
-      CLONES_AT_START,
-      realLength
-    });
+    const track = trackRef.current;
+    const children = track.children;
+    if (children.length === 0) return;
 
-    // Pokud nejsme v originálech (což by nemělo nastat), použijeme fallback
-    if (!isInOriginals) {
-      let normalizedIndex = (currentIndex - CLONES_AT_START) % realLength;
-      if (normalizedIndex < 0) normalizedIndex += realLength;
-      const safeTargetIndex = CLONES_AT_START + normalizedIndex;
-      
-      if (currentIndex !== safeTargetIndex) {
-        setIsTransitioning(false);
-        setCurrentIndex(safeTargetIndex);
-      } else {
-        setIsTransitioning(false);
+    // Najdeme aktuální vizuální element - ten, který je nejblíže středu viewportu
+    const viewportCenter = viewportWidth / 2;
+    const totalCardWidth = cardWidth + gap;
+    const centerOffset = (viewportWidth - cardWidth) / 2;
+    
+    // Získáme aktuální translateX z DOM
+    const transform = track.style.transform;
+    let currentTranslateX = 0;
+    if (transform && transform.includes('translateX')) {
+      const match = transform.match(/translateX\(([^)]+)px\)/);
+      if (match) {
+        currentTranslateX = parseFloat(match[1]);
       }
     } else {
-      // Jsme v originálech, což je správně - pouze vyčistíme refy
-      setIsTransitioning(false);
+      // Fallback: vypočítáme z currentIndex
+      currentTranslateX = -(currentIndex * totalCardWidth) + centerOffset;
     }
+
+    // Najdeme child, který je nejblíže středu
+    let closestChildIndex = 0;
+    let minDistance = Infinity;
     
-    // Vyčistíme refy po použití
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i] as HTMLElement;
+      const childRect = child.getBoundingClientRect();
+      const childCenter = childRect.left + childRect.width / 2;
+      const distance = Math.abs(viewportCenter - childCenter);
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestChildIndex = i;
+      }
+    }
+
+    const currentChild = children[closestChildIndex] as HTMLElement;
+    if (!currentChild) return;
+
+    // Zkontrolujeme identitu - čteme data-type
+    const childType = currentChild.dataset.type;
+    const productId = currentChild.dataset.productId;
+
+    if (!productId) return;
+
+    // Pokud je originál, nic neděláme - jsme v bezpečí
+    if (childType === 'original') {
+      setIsTransitioning(false);
+      visibleProductsRef.current = null;
+      lastTargetIndexRef.current = null;
+      return;
+    }
+
+    // Pokud je klon, PROVEDEME TELEPORTACI
+    if (childType === 'clone') {
+      // Najdeme originální DOM element se stejným productId
+      let originalIndex = -1;
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i] as HTMLElement;
+        if (child.dataset.type === 'original' && child.dataset.productId === productId) {
+          originalIndex = parseInt(child.dataset.index || '-1', 10);
+          break;
+        }
+      }
+
+      if (originalIndex === -1) {
+        // Fallback: použijeme matematický výpočet
+        let normalizedIndex = (currentIndex - CLONES_AT_START) % realLength;
+        if (normalizedIndex < 0) normalizedIndex += realLength;
+        originalIndex = CLONES_AT_START + normalizedIndex;
+      }
+
+      // Vypočítáme přesnou pozici
+      const newTranslateX = -(originalIndex * totalCardWidth) + centerOffset;
+
+      // Aplikujeme teleportaci
+      isResettingRef.current = true; // Blokujeme useEffects
+      
+      track.style.transition = 'none';
+      track.style.transform = `translateX(${newTranslateX}px)`;
+      
+      // Vynutíme reflow
+      void track.getBoundingClientRect();
+      
+      setCurrentIndex(originalIndex);
+      setIsTransitioning(false);
+
+      // Obnovíme transition po teleportaci
+      requestAnimationFrame(() => {
+        if (trackRef.current) {
+          isResettingRef.current = false;
+          trackRef.current.style.transition = 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)';
+        }
+      });
+
+      // Vyčistíme refy
+      visibleProductsRef.current = null;
+      lastTargetIndexRef.current = null;
+      return;
+    }
+
+    // Fallback pro neznámý typ
+    setIsTransitioning(false);
     visibleProductsRef.current = null;
     lastTargetIndexRef.current = null;
-  }, [isDragging, isTransitioning, cardWidth, viewportWidth, CLONES_AT_START, realLength, currentIndex]);
+  }, [isDragging, isTransitioning, cardWidth, viewportWidth, gap, currentIndex, CLONES_AT_START, realLength]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
   useEffect(() => {
+    // Zastavíme infinite loop - pokud probíhá teleportace, nic neděláme
+    if (isResettingRef.current) return;
+    
     if (isTransitioning || isDragging || cardWidth === 0 || viewportWidth === 0) return;
 
     const totalProducts = products.length;
@@ -725,30 +826,38 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           }}
           onTransitionEnd={handleTransitionEnd}
         >
-          {clonedProducts.map((product, index) => (
-            <div
-              key={`${product.id}-${index}`}
-              className="flex-shrink-0"
-              style={getCardStyle(index)}
-            >
-              <Link 
-                to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
-                className="group cursor-pointer block h-full"
-                draggable={false}
+          {allSlides.map((item, index) => {
+            // Vytvoříme skutečně unikátní klíč
+            const uniqueKey = `${item.isClone ? 'clone' : 'orig'}-${item.product.id}-${index}`;
+            
+            return (
+              <div
+                key={uniqueKey}
+                data-product-id={item.product.id}
+                data-type={item.isClone ? 'clone' : 'original'}
+                data-index={index}
+                className="flex-shrink-0"
+                style={getCardStyle(index)}
               >
-                <div className="transition-transform duration-300 ease-in-out hover:scale-105 h-full">
-                  <ProductCard
-                    id={product.id}
-                    title={product.title}
-                    price={product.price}
-                    image={product.image}
-                    description={product.description}
-                    inventoryQuantity={product.inventoryQuantity}
-                  />
-                </div>
-              </Link>
-            </div>
-          ))}
+                <Link 
+                  to={item.product.handle ? createProductPath(item.product.handle) : `/product-shopify/${item.product.handle}`} 
+                  className="group cursor-pointer block h-full"
+                  draggable={false}
+                >
+                  <div className="transition-transform duration-300 ease-in-out hover:scale-105 h-full">
+                    <ProductCard
+                      id={item.product.id}
+                      title={item.product.title}
+                      price={item.product.price}
+                      image={item.product.image}
+                      description={item.product.description}
+                      inventoryQuantity={item.product.inventoryQuantity}
+                    />
+                  </div>
+                </Link>
+              </div>
+            );
+          })}
         </div>
       </div>
 
