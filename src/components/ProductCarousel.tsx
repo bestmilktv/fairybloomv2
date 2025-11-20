@@ -19,7 +19,7 @@ interface ProductCarouselProps {
 
 const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
-  // FALLBACK PRO MÁLO PRODUKTŮ (zde animace chceme)
+  // FALLBACK PRO MÁLO PRODUKTŮ (zde animace CHCEME)
   // ============================================================================
   if (products.length <= 3) {
     return (
@@ -82,7 +82,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   
-  // Refs
   const dragStartX = useRef(0);
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef(0);
@@ -98,7 +97,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [isDesktop, setIsDesktop] = useState(false);
 
   // ============================================================================
-  // RESPONZIVITA & MATEMATIKA
+  // RESPONZIVITA
   // ============================================================================
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -128,7 +127,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [cardWidth, viewportWidth]);
 
   // ============================================================================
-  // GLOBAL LISTENERS (DRAG)
+  // GLOBAL DRAG LISTENERS
   // ============================================================================
   useEffect(() => {
     const handleGlobalMove = (e: MouseEvent | TouchEvent) => {
@@ -159,7 +158,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging]);
 
   // ============================================================================
-  // LOGIKA DRAG & DROP
+  // LOGIKA POHYBU
   // ============================================================================
   const startDrag = (clientX: number) => {
     if (isResettingRef.current) return;
@@ -210,7 +209,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // ============================================================================
-  // INFINITE LOOP RESET (NO ANIMATION BUG FIX)
+  // SEAMLESS RESET (S POTLAČENÍM ANIMACÍ)
   // ============================================================================
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDragging) return;
@@ -223,6 +222,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         return;
     }
 
+    // Detekce elementu uprostřed
     const parentCenter = parent.getBoundingClientRect().left + (parent.offsetWidth / 2);
     let closestElement: HTMLElement | null = null;
     let minDist = Infinity;
@@ -244,6 +244,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const type = closestElement.dataset.type;
     const productId = closestElement.dataset.productId;
 
+    // TELEPORT
     if (type === 'clone' && productId) {
         const originalElement = Array.from(track.children).find(
             child => (child as HTMLElement).dataset.type === 'original' && 
@@ -255,18 +256,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             const newX = getPositionForIndex(originalIndex);
 
             isResettingRef.current = true;
-            
-            // 1. Kill transition
             track.style.transition = 'none';
-            // 2. Teleport
             track.style.transform = `translate3d(${newX}px, 0, 0)`;
-            // 3. Flush
             void track.offsetHeight; 
 
-            // 4. Update State
             setCurrentIndex(originalIndex);
             
-            // 5. Restore transition (Double RAF)
             requestAnimationFrame(() => {
                  requestAnimationFrame(() => {
                     track.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
@@ -286,7 +281,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // ============================================================================
-  // RENDER STYLES (BLOCK ANIMATIONS)
+  // STYLES
   // ============================================================================
   const getTransform = () => {
     const basePos = getPositionForIndex(currentIndex);
@@ -327,10 +322,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         transform: `scale(${scale}) translate3d(0,0,0)`,
         opacity: opacity,
         transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms ease-out, opacity ${ANIMATION_DURATION}ms ease-out`,
-        // !!! ZDE ZAKAZUJEME GLITCH ANIMACI PŘI RESETU !!!
-        animation: 'none',
-        animationDuration: '0s',
-        animationDelay: '0s'
+        backfaceVisibility: 'hidden' as const,
+        WebkitBackfaceVisibility: 'hidden' as const,
     };
   };
 
@@ -339,6 +332,24 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   return (
     <div ref={wrapperRef} className="relative w-full overflow-hidden select-none touch-none group">
+      {/* INJECT STYLES: Tento styl natvrdo zakáže fade-in animace uvnitř carouselu.
+          Řeší to problém "refreshnutí s animací".
+      */}
+      <style>{`
+        .carousel-no-animation * {
+          animation: none !important;
+          transition-property: transform, opacity !important; /* Povolit jen námi řízené transitions */
+        }
+        /* Zakázat specificky fade-in animace pokud mají jiné názvy */
+        .carousel-no-animation .fade-in-up,
+        .carousel-no-animation .fade-in,
+        .carousel-no-animation [class*="fade-"] {
+          animation: none !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      `}</style>
+
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX); }}
@@ -346,7 +357,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       >
         <div
             ref={trackRef}
-            className="flex flex-row"
+            className="flex flex-row carousel-no-animation" // Aplikace třídy pro zákaz animací
             style={{
                 gap: `${GAP}px`,
                 width: 'max-content',
@@ -366,7 +377,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                         data-type={item.isClone ? 'clone' : 'original'}
                         data-index={i}
                         className="flex-shrink-0"
-                        // Zde aplikujeme styl, který zakazuje animace
                         style={getCardStyle(i)}
                     >
                         <div className="h-full pointer-events-none"> 
@@ -376,7 +386,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                     className="block h-full"
                                     draggable={false}
                                 >
-                                     {/* ProductCard se zde vykreslí čistě, bez fade-in efektů */}
+                                     {/* Zde se vykreslí karta. Díky třídě .carousel-no-animation
+                                        na rodiči budou všechny její vnitřní fade-in efekty potlačeny.
+                                     */}
                                      <ProductCard
                                         id={item.product.id}
                                         title={item.product.title}
