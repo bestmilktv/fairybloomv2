@@ -366,34 +366,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       return;
     }
     
-    // Získáme aktuální translateX z DOM
-    const transform = trackRef.current.style.transform;
-    let currentX = 0;
-    if (transform && transform.includes('translateX')) {
-      const match = transform.match(/translateX\(([^)]+)px\)/);
-      if (match) {
-        currentX = parseFloat(match[1]);
-      }
-    } else {
-      // Fallback: vypočítáme z aktuálního stavu
-      const totalCardWidth = cardWidth + gap;
-      const centerOffset = (viewportWidth - cardWidth) / 2;
-      currentX = -(dragStartIndex * totalCardWidth) + centerOffset + dragOffset;
-    }
+    const totalCardWidth = cardWidth + gap;
     
-    // Vypočítáme šířku jedné položky
-    const itemWidth = cardWidth + gap;
-    
-    // Vypočítáme absolutní rawIndex v poli (bez centerOffset)
-    // currentX už obsahuje centerOffset, takže ho musíme odečíst
-    const centerOffset = (viewportWidth - cardWidth) / 2;
-    const rawIndex = Math.round(-(currentX - centerOffset) / itemWidth);
+    // Vypočítáme rawIndex přímo z dragStartIndex a dragOffset (přesnější než z DOM)
+    // dragOffset je v pixelech, převedeme na počet karet
+    const cardsMoved = dragOffset / totalCardWidth;
+    const rawIndex = Math.round(dragStartIndex + cardsMoved);
     
     // Debugging
     console.log('handleEnd:', {
-      currentX,
-      itemWidth,
-      centerOffset,
+      dragStartIndex,
+      dragOffset,
+      cardsMoved,
       rawIndex,
       calculatedVisualIndex: rawIndex
     });
