@@ -129,6 +129,28 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return normalizedIndex;
   }, [CLONES_AT_START, realLength]);
 
+  // Helper funkce pro nalezení indexu produktu v originální sadě podle product.id
+  const findProductIndexInOriginals = useCallback((productId: string): number => {
+    for (let i = 0; i < products.length; i++) {
+      if (products[i].id === productId) {
+        return i;
+      }
+    }
+    return -1; // Produkt nenalezen
+  }, [products]);
+
+  // Helper funkce pro nalezení indexu v clonedProducts, který zobrazí daný produkt na dané pozici
+  // centerProductId = id produktu, který má být uprostřed
+  // Vrací index v clonedProducts, který zobrazí tento produkt uprostřed
+  const findIndexForCenterProduct = useCallback((centerProductId: string): number => {
+    // Najdeme index produktu v originální sadě
+    const originalIndex = findProductIndexInOriginals(centerProductId);
+    if (originalIndex === -1) return CLONES_AT_START; // Fallback
+    
+    // Vrátíme index v originální sadě (uprostřed)
+    return CLONES_AT_START + originalIndex;
+  }, [findProductIndexInOriginals, CLONES_AT_START]);
+
   // Cleanup po dokončení animace
   // Protože handleEnd už normalizuje targetIndex na originály, zde pouze kontrolujeme a čistíme
   const handleTransitionEnd = useCallback((e: React.TransitionEvent) => {
@@ -362,34 +384,40 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       targetIndex = rawIndex;
     }
     
-    // KLÍČOVÉ: Okamžitě normalizujeme targetIndex na originály (pokud je v klonech)
-    // Tím zajistíme, že produkty zůstanou stejné
-    const isClone = targetIndex < CLONES_AT_START || targetIndex >= (CLONES_AT_START + realLength);
-    let normalizedTargetIndex = targetIndex;
-    
-    if (isClone) {
-      // Vypočítáme normalizedIndex z targetIndex
-      let normalizedIndex = (targetIndex - CLONES_AT_START) % realLength;
-      if (normalizedIndex < 0) normalizedIndex += realLength;
-      
-      // Nastavíme targetIndex na originály
-      normalizedTargetIndex = CLONES_AT_START + normalizedIndex;
-    }
-    
-    // Vypočítáme, které produkty jsou viditelné z normalizovaného targetIndex
-    // Desktop: 3 hlavní karty [normalizedTargetIndex-1, normalizedTargetIndex, normalizedTargetIndex+1]
-    // Mobil: 1 hlavní karta [normalizedTargetIndex]
+    // KLÍČOVÉ: Nejdřív zjistíme, které produkty jsou viditelné na targetIndex (i když je v klonech)
+    // Desktop: 3 hlavní karty [targetIndex-1, targetIndex, targetIndex+1]
+    // Mobil: 1 hlavní karta [targetIndex]
     const visibleIndices: number[] = [];
     if (isDesktop) {
-      visibleIndices.push(normalizedTargetIndex - 1, normalizedTargetIndex, normalizedTargetIndex + 1);
+      visibleIndices.push(targetIndex - 1, targetIndex, targetIndex + 1);
     } else {
-      visibleIndices.push(normalizedTargetIndex);
+      visibleIndices.push(targetIndex);
     }
     
-    // Získáme productIds z těchto indexů
+    // Získáme productIds z těchto indexů (z clonedProducts, i když jsou to klony)
     const productIds = visibleIndices
       .filter(idx => idx >= 0 && idx < clonedProducts.length)
       .map(idx => clonedProducts[idx].id);
+    
+    // Najdeme prostřední produkt (nebo hlavní produkt na mobilu)
+    const centerProductId = isDesktop && productIds.length >= 3 
+      ? productIds[1]  // Desktop: prostřední ze 3
+      : productIds[0];  // Mobil: první (a jediný)
+    
+    // Najdeme index tohoto produktu v originální sadě
+    const centerProductOriginalIndex = findProductIndexInOriginals(centerProductId);
+    
+    // Pokud jsme produkt nenašli, použijeme fallback výpočet
+    let normalizedTargetIndex: number;
+    if (centerProductOriginalIndex === -1) {
+      // Fallback: použijeme matematický výpočet
+      let normalizedIndex = (targetIndex - CLONES_AT_START) % realLength;
+      if (normalizedIndex < 0) normalizedIndex += realLength;
+      normalizedTargetIndex = CLONES_AT_START + normalizedIndex;
+    } else {
+      // Použijeme index z originální sady - to zajistí, že se zobrazí stejné produkty
+      normalizedTargetIndex = CLONES_AT_START + centerProductOriginalIndex;
+    }
     
     // Uložíme informace o viditelných produktech
     visibleProductsRef.current = {
@@ -407,13 +435,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       cardsMoved,
       rawIndex,
       originalTargetIndex: targetIndex,
-      isClone,
+      centerProductId,
+      centerProductOriginalIndex,
       normalizedTargetIndex,
       visibleIndices,
       productIds
     });
     
-    // Nastavíme cíl a zapneme plynulou transition - už v originálech!
+    // Nastavíme cíl a zapneme plynulou transition - už v originálech se stejnými produkty!
     goToIndex(normalizedTargetIndex, true);
     setIsDragging(false);
     
@@ -421,7 +450,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setTimeout(() => {
       setDragOffset(0);
     }, 600);
-  }, [isDragging, dragOffset, dragStartIndex, cardWidth, gap, dragStartTime, goToIndex, viewportWidth, isDesktop, clonedProducts, CLONES_AT_START, realLength]);
+  }, [isDragging, dragOffset, dragStartIndex, cardWidth, gap, dragStartTime, goToIndex, viewportWidth, isDesktop, clonedProducts, CLONES_AT_START, realLength, findProductIndexInOriginals]);
 
   // Touch events
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
