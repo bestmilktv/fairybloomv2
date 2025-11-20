@@ -129,8 +129,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return normalizedIndex;
   }, [CLONES_AT_START, realLength]);
 
-  // Reset pozice když jsme v klonované oblasti - bezviditelný skok na originály
-  // Teprve po dokončení animace (transition end) resetujeme infinite loop
+  // Cleanup po dokončení animace
+  // Protože handleEnd už normalizuje targetIndex na originály, zde pouze kontrolujeme a čistíme
   const handleTransitionEnd = useCallback((e: React.TransitionEvent) => {
     // Zkontrolujeme, že se jedná o transition na track elementu, ne na kartách
     if (e.target !== trackRef.current) return;
@@ -138,124 +138,38 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Zkontrolujeme, že animace skutečně skončila a nejsme v dragu
     if (isDragging || isTransitioning || cardWidth === 0 || viewportWidth === 0 || !trackRef.current) return;
 
-    // KLÍČOVÉ: Použijeme uložené viditelné produkty z handleEnd
-    const visibleProducts = visibleProductsRef.current;
-    const targetIndex = lastTargetIndexRef.current;
+    // Zkontrolujeme, že jsme v originálech (což bychom měli být, protože handleEnd už normalizuje)
+    const isInOriginals = currentIndex >= CLONES_AT_START && currentIndex < (CLONES_AT_START + realLength);
     
-    // Pokud nemáme uložené informace, použijeme fallback
-    if (!visibleProducts || targetIndex === null) {
-      const rawIndex = currentIndex;
-      let normalizedIndex = (rawIndex - CLONES_AT_START) % realLength;
-      if (normalizedIndex < 0) normalizedIndex += realLength;
-      
-      const isClone = rawIndex < CLONES_AT_START || rawIndex >= (CLONES_AT_START + realLength);
-      if (isClone) {
-        const safeTargetIndex = CLONES_AT_START + normalizedIndex;
-        if (currentIndex !== safeTargetIndex) {
-          setIsTransitioning(false);
-          setCurrentIndex(safeTargetIndex);
-        } else {
-          setIsTransitioning(false);
-        }
-      } else {
-        setIsTransitioning(false);
-      }
-      visibleProductsRef.current = null;
-      lastTargetIndexRef.current = null;
-      return;
-    }
-    
-    // Najdeme indexy těchto produktů v originální sadě
-    // Použijeme centerIndex (prostřední produkt) pro výpočet normalizedIndex
-    // Projdeme originální produkty a najdeme, na kterém indexu je prostřední viditelný produkt
-    let normalizedIndex = -1;
-    
-    // Najdeme prostřední produkt (pokud je desktop, je to druhý z 3, pokud mobil, je to první)
-    const centerProductId = isDesktop && visibleProducts.productIds.length >= 3 
-      ? visibleProducts.productIds[1]  // Desktop: prostřední ze 3
-      : visibleProducts.productIds[0];  // Mobil: první (a jediný)
-    
-    for (let i = 0; i < products.length; i++) {
-      if (products[i].id === centerProductId) {
-        normalizedIndex = i;
-        break;
-      }
-    }
-    
-    // Pokud jsme nenašli produkt, použijeme fallback výpočet z centerIndex
-    if (normalizedIndex === -1) {
-      let fallbackNormalizedIndex = (visibleProducts.centerIndex - CLONES_AT_START) % realLength;
-      if (fallbackNormalizedIndex < 0) fallbackNormalizedIndex += realLength;
-      normalizedIndex = fallbackNormalizedIndex;
-    }
-    
-    // HARD RESET: Pokud jsme mimo "bezpečnou zónu" (v klonech), přeskoč na střed
-    const isClone = targetIndex < CLONES_AT_START || targetIndex >= (CLONES_AT_START + realLength);
-    const safeTargetIndex = CLONES_AT_START + normalizedIndex;
-
     // Debugging
     console.log('handleTransitionEnd:', {
-      targetIndex,
       currentIndex,
-      visibleProducts,
-      normalizedIndex,
-      safeTargetIndex,
-      isClone,
+      isInOriginals,
       CLONES_AT_START,
       realLength
     });
 
-    if (isClone || currentIndex !== safeTargetIndex) {
-      // Zkontroluj, zda už nejsme na správném indexu (aby se předešlo nekonečné smyčce)
-      if (currentIndex === safeTargetIndex) {
+    // Pokud nejsme v originálech (což by nemělo nastat), použijeme fallback
+    if (!isInOriginals) {
+      let normalizedIndex = (currentIndex - CLONES_AT_START) % realLength;
+      if (normalizedIndex < 0) normalizedIndex += realLength;
+      const safeTargetIndex = CLONES_AT_START + normalizedIndex;
+      
+      if (currentIndex !== safeTargetIndex) {
         setIsTransitioning(false);
-        visibleProductsRef.current = null;
-        lastTargetIndexRef.current = null;
-        return;
+        setCurrentIndex(safeTargetIndex);
+      } else {
+        setIsTransitioning(false);
       }
-      
-      // Vypni animaci
-      setIsTransitioning(false);
-      if (trackRef.current) {
-        // Získáme přesnou šířku z DOM pro výpočet pozice
-        const firstChild = trackRef.current.children[0] as HTMLElement;
-        if (!firstChild) {
-          visibleProductsRef.current = null;
-          lastTargetIndexRef.current = null;
-          return;
-        }
-        const itemWidth = firstChild.getBoundingClientRect().width + gap;
-        const centerOffset = (viewportWidth - cardWidth) / 2;
-        
-        trackRef.current.style.transition = 'none';
-
-        // Vypočítej novou pozici v bezpečné zóně (uprostřed)
-        const newPosition = -((CLONES_AT_START + normalizedIndex) * itemWidth) + centerOffset;
-
-        trackRef.current.style.transform = `translateX(${newPosition}px)`;
-        
-        // Vynutit reflow (flush CSS changes)
-        void trackRef.current.offsetWidth;
-
-        // Zapni animaci zpět (na příští tick)
-        requestAnimationFrame(() => {
-          if (trackRef.current) {
-            trackRef.current.style.transition = 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)';
-          }
-        });
-      }
-      
-      // Aktualizuj state pouze pokud se skutečně změnil
-      setCurrentIndex(safeTargetIndex);
     } else {
-      // Jsme v bezpečné zóně a už jsme na správném indexu
+      // Jsme v originálech, což je správně - pouze vyčistíme refy
       setIsTransitioning(false);
     }
     
     // Vyčistíme refy po použití
     visibleProductsRef.current = null;
     lastTargetIndexRef.current = null;
-  }, [isDragging, isTransitioning, cardWidth, viewportWidth, gap, CLONES_AT_START, realLength, currentIndex, products, isDesktop]);
+  }, [isDragging, isTransitioning, cardWidth, viewportWidth, CLONES_AT_START, realLength, currentIndex]);
 
   // Také kontrolujeme při změně indexu (pro případy bez transition)
   // Resetujeme pouze když animace skutečně skončila a nejsme v dragu
@@ -448,14 +362,28 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       targetIndex = rawIndex;
     }
     
-    // KLÍČOVÉ: Vypočítáme, které produkty jsou aktuálně viditelné
-    // Desktop: 3 hlavní karty [targetIndex-1, targetIndex, targetIndex+1]
-    // Mobil: 1 hlavní karta [targetIndex]
+    // KLÍČOVÉ: Okamžitě normalizujeme targetIndex na originály (pokud je v klonech)
+    // Tím zajistíme, že produkty zůstanou stejné
+    const isClone = targetIndex < CLONES_AT_START || targetIndex >= (CLONES_AT_START + realLength);
+    let normalizedTargetIndex = targetIndex;
+    
+    if (isClone) {
+      // Vypočítáme normalizedIndex z targetIndex
+      let normalizedIndex = (targetIndex - CLONES_AT_START) % realLength;
+      if (normalizedIndex < 0) normalizedIndex += realLength;
+      
+      // Nastavíme targetIndex na originály
+      normalizedTargetIndex = CLONES_AT_START + normalizedIndex;
+    }
+    
+    // Vypočítáme, které produkty jsou viditelné z normalizovaného targetIndex
+    // Desktop: 3 hlavní karty [normalizedTargetIndex-1, normalizedTargetIndex, normalizedTargetIndex+1]
+    // Mobil: 1 hlavní karta [normalizedTargetIndex]
     const visibleIndices: number[] = [];
     if (isDesktop) {
-      visibleIndices.push(targetIndex - 1, targetIndex, targetIndex + 1);
+      visibleIndices.push(normalizedTargetIndex - 1, normalizedTargetIndex, normalizedTargetIndex + 1);
     } else {
-      visibleIndices.push(targetIndex);
+      visibleIndices.push(normalizedTargetIndex);
     }
     
     // Získáme productIds z těchto indexů
@@ -465,12 +393,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     
     // Uložíme informace o viditelných produktech
     visibleProductsRef.current = {
-      centerIndex: targetIndex,
+      centerIndex: normalizedTargetIndex,
       productIds: productIds
     };
     
-    // Uložíme také targetIndex do ref pro použití v handleTransitionEnd
-    lastTargetIndexRef.current = targetIndex;
+    // Uložíme také normalizovaný targetIndex do ref
+    lastTargetIndexRef.current = normalizedTargetIndex;
     
     // Debugging
     console.log('handleEnd:', {
@@ -478,21 +406,22 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       dragOffset,
       cardsMoved,
       rawIndex,
-      targetIndex,
+      originalTargetIndex: targetIndex,
+      isClone,
+      normalizedTargetIndex,
       visibleIndices,
-      productIds,
-      calculatedVisualIndex: targetIndex
+      productIds
     });
     
-    // Nastavíme cíl a zapneme plynulou transition
-    goToIndex(targetIndex, true);
+    // Nastavíme cíl a zapneme plynulou transition - už v originálech!
+    goToIndex(normalizedTargetIndex, true);
     setIsDragging(false);
     
     // Reset dragOffset po dokončení animace
     setTimeout(() => {
       setDragOffset(0);
     }, 600);
-  }, [isDragging, dragOffset, dragStartIndex, cardWidth, gap, dragStartTime, goToIndex, viewportWidth, isDesktop, clonedProducts]);
+  }, [isDragging, dragOffset, dragStartIndex, cardWidth, gap, dragStartTime, goToIndex, viewportWidth, isDesktop, clonedProducts, CLONES_AT_START, realLength]);
 
   // Touch events
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
