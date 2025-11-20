@@ -19,7 +19,7 @@ interface ProductCarouselProps {
 
 const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
-  // FALLBACK PRO MÁLO PRODUKTŮ
+  // FALLBACK PRO MÁLO PRODUKTŮ (zde animace chceme)
   // ============================================================================
   if (products.length <= 3) {
     return (
@@ -120,8 +120,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return () => resizeObserver.disconnect();
   }, []);
 
-  // CENTRÁLNÍ VÝPOČET POZICE (Pixel-Perfect Logic)
-  // Tuto funkci používáme VŠUDE, aby se zajistilo, že se React a DOM nikdy nerozejdou.
   const getPositionForIndex = useCallback((index: number) => {
     if (cardWidth === 0) return 0;
     const totalCardWidth = cardWidth + GAP;
@@ -212,7 +210,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // ============================================================================
-  // INFINITE LOOP RESET (SEAMLESS & GPU ACCELERATED)
+  // INFINITE LOOP RESET (NO ANIMATION BUG FIX)
   // ============================================================================
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDragging) return;
@@ -225,7 +223,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         return;
     }
 
-    // DOM Detection
     const parentCenter = parent.getBoundingClientRect().left + (parent.offsetWidth / 2);
     let closestElement: HTMLElement | null = null;
     let minDist = Infinity;
@@ -247,7 +244,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const type = closestElement.dataset.type;
     const productId = closestElement.dataset.productId;
 
-    // === LOGIKA PRO BEZCHYBNÝ TELEPORT ===
     if (type === 'clone' && productId) {
         const originalElement = Array.from(track.children).find(
             child => (child as HTMLElement).dataset.type === 'original' && 
@@ -256,25 +252,21 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
         if (originalElement) {
             const originalIndex = parseInt(originalElement.dataset.index || '0');
-            
-            // Použijeme STEJNOU funkci jako při renderu = 100% shoda pozice
             const newX = getPositionForIndex(originalIndex);
 
             isResettingRef.current = true;
             
             // 1. Kill transition
             track.style.transition = 'none';
-            // 2. Teleport (používáme translate3d pro GPU)
+            // 2. Teleport
             track.style.transform = `translate3d(${newX}px, 0, 0)`;
-            // 3. Flush (vynutit překreslení)
+            // 3. Flush
             void track.offsetHeight; 
 
             // 4. Update State
-            // React update proběhne, ale protože pozice newX je matematicky identická 
-            // s tím, co React vypočítá pro originalIndex, nedojde k žádnému cuknutí.
             setCurrentIndex(originalIndex);
             
-            // 5. Restore transition (až v dalším frame)
+            // 5. Restore transition (Double RAF)
             requestAnimationFrame(() => {
                  requestAnimationFrame(() => {
                     track.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
@@ -294,10 +286,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // ============================================================================
-  // RENDER STYLES
+  // RENDER STYLES (BLOCK ANIMATIONS)
   // ============================================================================
   const getTransform = () => {
-    // Použijeme translate3d pro hardwarovou akceleraci (zabrání blikání)
     const basePos = getPositionForIndex(currentIndex);
     const finalPos = basePos + dragOffset;
     return `translate3d(${finalPos}px, 0, 0)`;
@@ -307,7 +298,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (cardWidth === 0) return {};
     const totalCardWidth = cardWidth + GAP;
     
-    // Použijeme stejnou matematiku pro výpočet vzdálenosti
     const trackPos = getPositionForIndex(currentIndex) + dragOffset;
     const cardCenter = trackPos + (index * totalCardWidth) + (cardWidth / 2);
     const viewportCenter = viewportWidth / 2;
@@ -334,9 +324,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     return {
         width: `${cardWidth}px`,
-        transform: `scale(${scale}) translate3d(0,0,0)`, // Force GPU
+        transform: `scale(${scale}) translate3d(0,0,0)`,
         opacity: opacity,
-        transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms ease-out, opacity ${ANIMATION_DURATION}ms ease-out`
+        transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms ease-out, opacity ${ANIMATION_DURATION}ms ease-out`,
+        // !!! ZDE ZAKAZUJEME GLITCH ANIMACI PŘI RESETU !!!
+        animation: 'none',
+        animationDuration: '0s',
+        animationDelay: '0s'
     };
   };
 
@@ -358,8 +352,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 width: 'max-content',
                 transform: getTransform(),
                 transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
-                willChange: 'transform', // Hint pro prohlížeč
-                backfaceVisibility: 'hidden' // Prevence blikání
+                willChange: 'transform',
+                backfaceVisibility: 'hidden'
             }}
             onTransitionEnd={handleTransitionEnd}
         >
@@ -372,6 +366,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                         data-type={item.isClone ? 'clone' : 'original'}
                         data-index={i}
                         className="flex-shrink-0"
+                        // Zde aplikujeme styl, který zakazuje animace
                         style={getCardStyle(i)}
                     >
                         <div className="h-full pointer-events-none"> 
@@ -381,6 +376,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                     className="block h-full"
                                     draggable={false}
                                 >
+                                     {/* ProductCard se zde vykreslí čistě, bez fade-in efektů */}
                                      <ProductCard
                                         id={item.product.id}
                                         title={item.product.title}
