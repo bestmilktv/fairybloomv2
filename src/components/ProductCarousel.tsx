@@ -396,6 +396,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                         image={item.product.image}
                                         description={item.product.description}
                                         inventoryQuantity={item.product.inventoryQuantity}
+                                        disableAnimations={true}
                                      />
                                 </Link>
                             </div>

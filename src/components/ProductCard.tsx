@@ -8,9 +8,10 @@ interface ProductCardProps {
   image: string;
   description?: string;
   inventoryQuantity?: number | null;
+  disableAnimations?: boolean;
 }
 
-const ProductCard = ({ id, title, price, image, description, inventoryQuantity }: ProductCardProps) => {
+const ProductCard = ({ id, title, price, image, description, inventoryQuantity, disableAnimations = false }: ProductCardProps) => {
   const location = useLocation();
   const isHomepage = location.pathname === '/';
   
@@ -39,20 +40,34 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity }
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
+  // Podmíněné třídy podle disableAnimations
+  const cardClasses = disableAnimations
+    ? "bg-card rounded-2xl overflow-hidden shadow-sm h-full flex flex-col transition-none"
+    : "bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col";
+  
+  const imageClasses = disableAnimations
+    ? "w-full h-full object-cover"
+    : "w-full h-full object-cover transition-transform duration-700 hover:scale-110";
+  
+  const titleClasses = disableAnimations
+    ? "font-serif text-xl font-semibold text-luxury mb-2 line-clamp-2 min-h-[3.5rem]"
+    : "font-serif text-xl font-semibold text-luxury mb-2 hover:text-gold transition-colors duration-300 line-clamp-2 min-h-[3.5rem]";
+
   return (
-    <div className="bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col">
+    <div className={cardClasses}>
       {/* Image */}
       <div className="aspect-square overflow-hidden bg-muted">
         <img
           src={image}
           alt={title}
-          className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+          className={imageClasses}
+          loading={disableAnimations ? "eager" : "lazy"}
         />
       </div>
       
       {/* Content */}
       <div className="p-6 flex flex-col flex-grow">
-        <h3 className="font-serif text-xl font-semibold text-luxury mb-2 hover:text-gold transition-colors duration-300 line-clamp-2 min-h-[3.5rem]">
+        <h3 className={titleClasses}>
           {title}
         </h3>
         
