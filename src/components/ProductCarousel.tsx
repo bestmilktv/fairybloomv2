@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import { createProductPath } from '@/lib/slugify';
@@ -49,10 +49,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // KONFIGURACE
   // ============================================================================
   const GAP = 16;
-  const ANIMATION_DURATION = 500; // ms
+  const ANIMATION_DURATION = 500;
   const CLONE_COUNT = 2 * products.length; 
 
-  // Příprava dat: [Klony, Originály, Klony]
+  // Příprava dat
   const allSlides = useMemo(() => {
     const items = [];
     // A) Klony vlevo
@@ -82,6 +82,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   
+  // Refs
   const dragStartX = useRef(0);
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef(0);
@@ -97,7 +98,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [isDesktop, setIsDesktop] = useState(false);
 
   // ============================================================================
-  // RESPONZIVITA
+  // RESPONZIVITA & MATEMATIKA
   // ============================================================================
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -118,6 +119,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     resizeObserver.observe(wrapperRef.current);
     return () => resizeObserver.disconnect();
   }, []);
+
+  // CENTRÁLNÍ VÝPOČET POZICE (Pixel-Perfect Logic)
+  // Tuto funkci používáme VŠUDE, aby se zajistilo, že se React a DOM nikdy nerozejdou.
+  const getPositionForIndex = useCallback((index: number) => {
+    if (cardWidth === 0) return 0;
+    const totalCardWidth = cardWidth + GAP;
+    const centerOffset = (viewportWidth - cardWidth) / 2;
+    return -(index * totalCardWidth) + centerOffset;
+  }, [cardWidth, viewportWidth]);
 
   // ============================================================================
   // GLOBAL LISTENERS (DRAG)
@@ -154,10 +164,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // LOGIKA DRAG & DROP
   // ============================================================================
   const startDrag = (clientX: number) => {
-    // Pokud probíhá tichý reset, nedovolíme drag, aby se nerozhodila matematika
     if (isResettingRef.current) return;
-    
-    // Vyčistíme případný timeout z minula
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
 
     setIsDragging(true);
@@ -181,7 +188,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const movedCards = -currentOffset / totalCardWidth;
     let indexDiff = Math.round(movedCards);
 
-    // Švihnutí
     if (Math.abs(movedCards) > 0.1 && Math.abs(currentOffset) > 50) {
         if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
         if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
@@ -189,7 +195,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     const newIndex = currentIndex + indexDiff;
     
-    // Aplikace změny
     setIsTransitioning(true);
     setCurrentIndex(newIndex);
     setDragOffset(0);
@@ -199,7 +204,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
     }
 
-    // SAFETY TIMEOUT
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = setTimeout(() => {
         if (isResettingRef.current) return;
@@ -208,11 +212,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // ============================================================================
-  // INFINITE LOOP RESET (SEAMLESS FIX)
+  // INFINITE LOOP RESET (SEAMLESS & GPU ACCELERATED)
   // ============================================================================
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDragging) return;
-
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
 
     const track = trackRef.current;
@@ -244,7 +247,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const type = closestElement.dataset.type;
     const productId = closestElement.dataset.productId;
 
-    // TELEPORTACE Z KLONU NA ORIGINÁL
+    // === LOGIKA PRO BEZCHYBNÝ TELEPORT ===
     if (type === 'clone' && productId) {
         const originalElement = Array.from(track.children).find(
             child => (child as HTMLElement).dataset.type === 'original' && 
@@ -253,42 +256,36 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
         if (originalElement) {
             const originalIndex = parseInt(originalElement.dataset.index || '0');
-            const totalCardWidth = cardWidth + GAP;
-            const centerOffset = (viewportWidth - cardWidth) / 2;
-            const newX = -(originalIndex * totalCardWidth) + centerOffset;
+            
+            // Použijeme STEJNOU funkci jako při renderu = 100% shoda pozice
+            const newX = getPositionForIndex(originalIndex);
 
-            // 1. Zmrazit React Updates
             isResettingRef.current = true;
             
-            // 2. Okamžitý teleport bez animace
+            // 1. Kill transition
             track.style.transition = 'none';
-            track.style.transform = `translateX(${newX}px)`;
-            
-            // 3. Force Layout (Reflow) - kritické pro aplikaci změny
+            // 2. Teleport (používáme translate3d pro GPU)
+            track.style.transform = `translate3d(${newX}px, 0, 0)`;
+            // 3. Flush (vynutit překreslení)
             void track.offsetHeight; 
 
-            // 4. Update State (React si myslí, že se nic nestalo, protože ID sedí)
+            // 4. Update State
+            // React update proběhne, ale protože pozice newX je matematicky identická 
+            // s tím, co React vypočítá pro originalIndex, nedojde k žádnému cuknutí.
             setCurrentIndex(originalIndex);
             
-            // 5. Double RAF & Timeout pro neviditelný reset
-            // Čekáme 2 framy, aby prohlížeč stoprocentně vykreslil novou pozici bez animace
+            // 5. Restore transition (až v dalším frame)
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    // Teprve teď vrátíme transition zpět
+                 requestAnimationFrame(() => {
                     track.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
-                    
-                    // Malá prodleva před uvolněním zámku
-                    setTimeout(() => {
-                        isResettingRef.current = false;
-                        setIsTransitioning(false);
-                    }, 50);
-                });
+                    isResettingRef.current = false;
+                    setIsTransitioning(false);
+                 });
             });
             return;
         }
     }
 
-    // Pokud jsme na originálu
     setIsTransitioning(false);
     const index = parseInt(closestElement.dataset.index || '0');
     if (index !== currentIndex) {
@@ -300,18 +297,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // RENDER STYLES
   // ============================================================================
   const getTransform = () => {
-    if (cardWidth === 0) return 'translateX(0px)';
-    const totalCardWidth = cardWidth + GAP;
-    const centerOffset = (viewportWidth - cardWidth) / 2;
-    const currentPos = -(currentIndex * totalCardWidth) + centerOffset + dragOffset;
-    return `translateX(${currentPos}px)`;
+    // Použijeme translate3d pro hardwarovou akceleraci (zabrání blikání)
+    const basePos = getPositionForIndex(currentIndex);
+    const finalPos = basePos + dragOffset;
+    return `translate3d(${finalPos}px, 0, 0)`;
   };
 
   const getCardStyle = (index: number) => {
     if (cardWidth === 0) return {};
     const totalCardWidth = cardWidth + GAP;
-    const centerOffset = (viewportWidth - cardWidth) / 2;
-    const trackPos = -(currentIndex * totalCardWidth) + centerOffset + dragOffset;
+    
+    // Použijeme stejnou matematiku pro výpočet vzdálenosti
+    const trackPos = getPositionForIndex(currentIndex) + dragOffset;
     const cardCenter = trackPos + (index * totalCardWidth) + (cardWidth / 2);
     const viewportCenter = viewportWidth / 2;
     const dist = Math.abs(viewportCenter - cardCenter);
@@ -337,7 +334,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     return {
         width: `${cardWidth}px`,
-        transform: `scale(${scale})`,
+        transform: `scale(${scale}) translate3d(0,0,0)`, // Force GPU
         opacity: opacity,
         transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms ease-out, opacity ${ANIMATION_DURATION}ms ease-out`
     };
@@ -347,7 +344,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // JSX
   // ============================================================================
   return (
-    <div ref={wrapperRef} className="relative w-full overflow-hidden select-none touch-none">
+    <div ref={wrapperRef} className="relative w-full overflow-hidden select-none touch-none group">
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX); }}
@@ -361,7 +358,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 width: 'max-content',
                 transform: getTransform(),
                 transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
-                willChange: 'transform'
+                willChange: 'transform', // Hint pro prohlížeč
+                backfaceVisibility: 'hidden' // Prevence blikání
             }}
             onTransitionEnd={handleTransitionEnd}
         >
