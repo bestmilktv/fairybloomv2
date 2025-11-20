@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import { createProductPath } from '@/lib/slugify';
@@ -46,32 +46,29 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }
 
   // ============================================================================
-  // KONFIGURACE DAT A KLONOVÁNÍ
+  // KONFIGURACE
   // ============================================================================
   const GAP = 16;
+  const ANIMATION_DURATION = 500; // ms
   const CLONE_COUNT = 2 * products.length; 
 
   // Příprava dat: [Klony, Originály, Klony]
   const allSlides = useMemo(() => {
     const items = [];
-    
-    // A) Klony vlevo (poslední produkty)
+    // A) Klony vlevo
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = (products.length - 1 - (i % products.length));
         items.unshift({ product: products[sourceIndex], isClone: true, originalIndex: sourceIndex });
     }
-
     // B) Originály
     products.forEach((p, i) => {
         items.push({ product: p, isClone: false, originalIndex: i });
     });
-
-    // C) Klony vpravo (první produkty)
+    // C) Klony vpravo
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = i % products.length;
         items.push({ product: products[sourceIndex], isClone: true, originalIndex: sourceIndex });
     }
-
     return items;
   }, [products, CLONE_COUNT]);
 
@@ -82,20 +79,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  
-  // Dragging State
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   
-  // Refs pro "živé" hodnoty (aby se nemusely přehazovat v handlerech)
   const dragStartX = useRef(0);
-  const isDraggingRef = useRef(false); // Ref verze pro event listenery
-  const dragOffsetRef = useRef(0);     // Ref verze pro výpočty
-
-  // Refs pro DOM
+  const isDraggingRef = useRef(false);
+  const dragOffsetRef = useRef(0);
+  
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const isResettingRef = useRef(false);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Rozměry
   const [viewportWidth, setViewportWidth] = useState(0);
@@ -107,44 +101,34 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   useEffect(() => {
     if (!wrapperRef.current) return;
-
     const updateDimensions = () => {
       if (!wrapperRef.current) return;
       const width = wrapperRef.current.offsetWidth;
       setViewportWidth(width);
-      
       const desktop = width >= 1024;
       setIsDesktop(desktop);
-
       if (desktop) {
-        // Desktop: 5 karet (3 hlavní + 2 boční)
         setCardWidth((width - (4 * GAP)) / 5);
       } else {
-        // Mobil: 1 hlavní + peek
         setCardWidth(width - 32);
       }
     };
-
     updateDimensions();
     const resizeObserver = new ResizeObserver(updateDimensions);
     resizeObserver.observe(wrapperRef.current);
-
     return () => resizeObserver.disconnect();
   }, []);
 
   // ============================================================================
-  // GLOBAL EVENT LISTENERS (FIX PRO "SEKAVÝ POHYB")
+  // GLOBAL LISTENERS (DRAG)
   // ============================================================================
-  // Tento efekt zajistí, že když pustíš myš KDEKOLIV na obrazovce, drag skončí.
   useEffect(() => {
     const handleGlobalMove = (e: MouseEvent | TouchEvent) => {
         if (!isDraggingRef.current) return;
-        
         const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
         const diff = clientX - dragStartX.current;
-        
         dragOffsetRef.current = diff;
-        setDragOffset(diff); // Trigger re-render pro vizuál
+        setDragOffset(diff);
     };
 
     const handleGlobalUp = () => {
@@ -158,29 +142,29 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         window.addEventListener('mouseup', handleGlobalUp);
         window.addEventListener('touchend', handleGlobalUp);
     }
-
     return () => {
         window.removeEventListener('mousemove', handleGlobalMove);
         window.removeEventListener('touchmove', handleGlobalMove);
         window.removeEventListener('mouseup', handleGlobalUp);
         window.removeEventListener('touchend', handleGlobalUp);
     };
-  }, [isDragging]); // Reaguje na změnu stavu isDragging
+  }, [isDragging]);
 
   // ============================================================================
   // LOGIKA DRAG & DROP
   // ============================================================================
   const startDrag = (clientX: number) => {
-    if (isTransitioning) return;
+    if (isTransitioning) return; // Blokace během animace
     
+    // Vyčistíme případný timeout z minula
+    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+
     setIsDragging(true);
     isDraggingRef.current = true;
-    
     dragStartX.current = clientX;
     dragOffsetRef.current = 0;
     setDragOffset(0);
     
-    // Vypnout transition pro okamžitou reakci
     if (trackRef.current) {
         trackRef.current.style.transition = 'none';
     }
@@ -192,14 +176,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     const currentOffset = dragOffsetRef.current;
     const totalCardWidth = cardWidth + GAP;
-    
-    // Kolik karet jsme posunuli?
     const movedCards = -currentOffset / totalCardWidth;
     let indexDiff = Math.round(movedCards);
 
-    // Detekce švihnutí (pokud posunul málo, ale rychle, posuneme o 1)
+    // Švihnutí
     if (Math.abs(movedCards) > 0.1 && Math.abs(currentOffset) > 50) {
-        // Jednoduchá logika švihnutí - pokud táhl dostatečně daleko, posuneme
         if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
         if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
     }
@@ -212,22 +193,34 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setDragOffset(0);
     dragOffsetRef.current = 0;
 
-    // Zapnout transition zpět
     if (trackRef.current) {
-        trackRef.current.style.transition = 'transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+        trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
     }
+
+    // SAFETY TIMEOUT: Pokud se neozve transitionEnd (např. swipnutí na stejné místo),
+    // musíme isTransitioning vypnout ručně, jinak se carousel zasekne.
+    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+    transitionTimeoutRef.current = setTimeout(() => {
+        if (isResettingRef.current) return; // Pokud probíhá reset, necháme to být
+        setIsTransitioning(false);
+    }, ANIMATION_DURATION + 50);
   };
 
   // ============================================================================
-  // TELEPORTACE (Infinite Loop Reset)
+  // INFINITE LOOP RESET
   // ============================================================================
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDragging) return;
 
-    // Najdeme element nejblíže středu
+    // Vyčistíme safety timeout, protože event dorazil
+    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+
     const track = trackRef.current;
     const parent = track.parentElement;
-    if (!parent) return;
+    if (!parent) {
+        setIsTransitioning(false);
+        return;
+    }
 
     const parentCenter = parent.getBoundingClientRect().left + (parent.offsetWidth / 2);
     let closestElement: HTMLElement | null = null;
@@ -242,13 +235,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         }
     });
 
-    if (!closestElement) return;
+    if (!closestElement) {
+        setIsTransitioning(false);
+        return;
+    }
 
-    // Reset logika
     const type = closestElement.dataset.type;
     const productId = closestElement.dataset.productId;
 
-    // Pokud jsme na klonu, teleportujeme na originál
+    // TELEPORTACE Z KLONU NA ORIGINÁL
     if (type === 'clone' && productId) {
         const originalElement = Array.from(track.children).find(
             child => (child as HTMLElement).dataset.type === 'original' && 
@@ -257,8 +252,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
         if (originalElement) {
             const originalIndex = parseInt(originalElement.dataset.index || '0');
-            
-            // Výpočet nové pozice
             const totalCardWidth = cardWidth + GAP;
             const centerOffset = (viewportWidth - cardWidth) / 2;
             const newX = -(originalIndex * totalCardWidth) + centerOffset;
@@ -266,30 +259,32 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             isResettingRef.current = true;
             track.style.transition = 'none';
             track.style.transform = `translateX(${newX}px)`;
-            
-            // Force reflow
-            void track.offsetHeight;
+            void track.offsetHeight; // Force Reflow
 
             setCurrentIndex(originalIndex);
-            setIsTransitioning(false);
-
+            
+            // Důležité: Resetujeme flagy
             requestAnimationFrame(() => {
-                track.style.transition = 'transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+                track.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
                 isResettingRef.current = false;
+                setIsTransitioning(false); // Uvolníme zámek
             });
+            return;
         }
-    } else if (type === 'original') {
-        // Jsme na originálu, jen srovnáme index pokud nesedí
-        const index = parseInt(closestElement.dataset.index || '0');
-        if (index !== currentIndex) {
-            setIsTransitioning(false);
-            setCurrentIndex(index);
-        }
+    }
+
+    // Pokud jsme už na originálu nebo se nic neděje, musíme VŽDY odemknout
+    setIsTransitioning(false);
+    
+    // Srovnání indexu pro jistotu
+    const index = parseInt(closestElement.dataset.index || '0');
+    if (index !== currentIndex) {
+        setCurrentIndex(index);
     }
   };
 
   // ============================================================================
-  // RENDER HELPERY
+  // RENDER STYLES
   // ============================================================================
   const getTransform = () => {
     if (cardWidth === 0) return 'translateX(0px)';
@@ -331,7 +326,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         width: `${cardWidth}px`,
         transform: `scale(${scale})`,
         opacity: opacity,
-        transition: isDragging ? 'none' : 'transform 500ms ease-out, opacity 500ms ease-out'
+        transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms ease-out, opacity ${ANIMATION_DURATION}ms ease-out`
     };
   };
 
@@ -352,7 +347,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 gap: `${GAP}px`,
                 width: 'max-content',
                 transform: getTransform(),
-                transition: isDragging ? 'none' : 'transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
                 willChange: 'transform'
             }}
             onTransitionEnd={handleTransitionEnd}
