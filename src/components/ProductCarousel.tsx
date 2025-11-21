@@ -452,7 +452,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // JSX
   // ============================================================================
   return (
-    <div ref={wrapperRef} className="relative w-full overflow-hidden select-none touch-none group">
+    <div ref={wrapperRef} className="relative w-full overflow-hidden select-none group">
       <style>{`
         .carousel-force-no-animate * {
           animation: none !important;
