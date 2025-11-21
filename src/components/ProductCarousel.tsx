@@ -50,7 +50,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const GAP = 16;
   const ANIMATION_DURATION = 1000;
-  const LOCK_DURATION = 400;
+  const LOCK_DURATION = 500;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
   const BUFFER_SETS = products.length < 5 ? 10 : 4;
