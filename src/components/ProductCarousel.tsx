@@ -46,19 +46,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }
 
   // ============================================================================
-  // KONFIGURACE - PREMIUM SMOOTHNESS
+  // KONFIGURACE
   // ============================================================================
   const GAP = 16;
-  
-  // Delší čas pro luxusní dojezd
-  const ANIMATION_DURATION = 800; 
-  
-  // Quintic Ease Out - začne rychle, ale ke konci extrémně jemně dobrzďuje.
-  // To eliminuje ten "skok" a nahradí ho "doplutím".
+  const ANIMATION_DURATION = 800;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  // Buffer klonů
-  const CLONE_COUNT = Math.max(10, products.length * 4);
+  // Buffer klonů - Memory Safe
+  // Min 4 sady, max 10 sad (pro extrémně málo produktů)
+  const BUFFER_SETS = products.length < 5 ? 10 : 4;
+  const CLONE_COUNT = products.length * BUFFER_SETS;
 
   // Příprava dat
   const allSlides = useMemo(() => {
@@ -106,12 +103,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const isResettingRef = useRef(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Rozměry a Layout mód
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
 
   // ============================================================================
-  // RESPONZIVITA
+  // RESPONZIVITA (TADY JE TA NOVÁ LOGIKA 1 / 3 / 5 KARET)
   // ============================================================================
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -119,11 +117,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (!wrapperRef.current) return;
       const width = wrapperRef.current.offsetWidth;
       setViewportWidth(width);
-      const desktop = width >= 1024;
-      setIsDesktop(desktop);
-      if (desktop) {
+      
+      if (width >= 1024) {
+        // DESKTOP: 5 karet
+        setLayoutMode('desktop');
         setCardWidth((width - (4 * GAP)) / 5);
+      } else if (width >= 640) {
+        // TABLET / IPAD: 3 karty
+        setLayoutMode('tablet');
+        setCardWidth((width - (2 * GAP)) / 3);
       } else {
+        // MOBIL: 1 karta
+        setLayoutMode('mobile');
         setCardWidth(width - 32);
       }
     };
@@ -147,8 +152,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (!trackRef.current || cardWidth === 0) return;
 
     const targetIndex = overrideIndex !== undefined ? overrideIndex : currentIndexRef.current;
-    
-    // Pokud je instant (drag), počítáme s offsetem. Pokud je animace (puštění), offset je 0.
     const currentDrag = instant ? dragOffsetRef.current : 0; 
     
     const totalCardWidth = cardWidth + GAP;
@@ -179,7 +182,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         let scale = 1;
         let opacity = 1;
 
-        if (isDesktop) {
+        // LOGIKA ZMENŠOVÁNÍ PODLE ZAŘÍZENÍ
+        if (layoutMode === 'desktop') {
+            // Desktop (5 karet): 3 středové velké, krajní malé
+            // Main Zone = 1.5 šířky karty (střed + půlky sousedů)
             const mainZone = totalCardWidth * 1.5; 
             if (dist > mainZone) {
                 const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
@@ -187,6 +193,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 opacity = 1 - (factor * 0.5);
             }
         } else {
+            // Tablet (3 karty) & Mobil (1 karta)
+            // Zde chceme jen JEDNU hlavní kartu velkou (střed) a sousedy hned menší
+            // Main Zone = 0.5 šířky karty (jen polovina středové karty)
             const mainZone = totalCardWidth * 0.5;
             if (dist > mainZone) {
                  const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
@@ -199,13 +208,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         card.style.transform = `scale(${scale}) translateZ(0)`;
         card.style.opacity = `${opacity}`;
         
-        // Důležité: Karty musí mít stejnou transition křivku jako track, aby to "dýchalo" spolu
         card.style.transition = (isDraggingRef.current || instant) 
             ? 'none' 
             : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
     }
 
-  }, [cardWidth, isDesktop, viewportWidth, getPositionForIndex, allSlides.length]);
+  }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
 
   useLayoutEffect(() => {
     updateVisuals(isResettingRef.current);
@@ -303,7 +311,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const movedCards = -currentOffset / totalCardWidth;
     let indexDiff = Math.round(movedCards);
 
-    // Zvýšil jsem threshold, aby to nepřeskakovalo příliš agresivně
     if (Math.abs(movedCards) > 0.15 && Math.abs(currentOffset) > 50) {
         if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
         if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
@@ -311,18 +318,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     const newIndex = currentIndexRef.current + indexDiff;
     
-    // Nastavíme animaci
     setIsTransitioning(true);
     
-    // Reset offsetu, protože pozici převezme nový index a transition
     dragOffsetRef.current = 0; 
     setDragOffset(0);
 
     setCurrentIndex(newIndex);
     currentIndexRef.current = newIndex;
 
-    // Důležité: Zde voláme updateVisuals s false (není instant), 
-    // což aplikuje CSS transition pro hladký dojezd.
     requestAnimationFrame(() => {
         updateVisuals(false); 
     });
@@ -353,7 +356,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           setIsTransitioning(true);
           currentIndexRef.current += step;
           setCurrentIndex(currentIndexRef.current);
-          updateVisuals(false); // Trigger smooth animation
+          updateVisuals(false); 
           
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
           transitionTimeoutRef.current = setTimeout(() => {
