@@ -93,7 +93,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   
   // Pointer tracking
   const activePointerId = useRef<number | null>(null);
-  const isScrollDetectedRef = useRef(false); // True pokud jsme zjistili, že user scrolluje stránku
+  const isScrollingRef = useRef(false); // True pokud uživatel scrolluje stránku vertikálně
+  const isSwipingRef = useRef(false); // True pokud uživatel swipuje carousel horizontálně
   
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -248,7 +249,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       
       isClickBlockedRef.current = false;
       isDraggingRef.current = false;
-      isScrollDetectedRef.current = false; // Reset detekce scrollu
+      isScrollingRef.current = false; // Reset flagu pro vertikální scroll
+      isSwipingRef.current = false; // Reset flagu pro horizontální swipe
       
       setIsTransitioning(false);
       
@@ -275,40 +277,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const handlePointerMove = (e: React.PointerEvent) => {
       if (activePointerId.current !== e.pointerId) return;
 
-      // Pokud už jsme zjistili, že uživatel scrolluje stránku, carousel ignoruje vše
-      if (isScrollDetectedRef.current) return;
-
       const diffX = e.clientX - dragStartX.current;
       const diffY = e.clientY - dragStartY.current;
 
-      // --- LOGIKA PRO DOTYK ---
-      if (e.pointerType !== 'mouse') {
-          // Pokud ještě nevíme co se děje (nezačal drag ani scroll)
+      // --- LOGIKA PRO MYŠ ---
+      if (e.pointerType === 'mouse') {
+          // Pro myš okamžitě swipuj (stávající logika)
           if (!isDraggingRef.current) {
-              // Deadzone
-              if (Math.abs(diffX) < 6 && Math.abs(diffY) < 6) return;
-
-              // Rozhodnutí: Scroll vs Swipe
-              if (Math.abs(diffY) > Math.abs(diffX)) {
-                  // Je to scroll -> Ignorujeme tento pointer a necháme prohlížeč scrollovat
-                  isScrollDetectedRef.current = true;
-                  return;
-              } else {
-                  // Je to swipe -> Zamkneme pointer pro nás
-                  isDraggingRef.current = true;
-                  setIsDragging(true);
-                  const element = e.target as HTMLElement;
-                  element.setPointerCapture(e.pointerId);
-                  // Blokujeme scroll
-                  if (e.cancelable) e.preventDefault();
-              }
+              isDraggingRef.current = true;
+              setIsDragging(true);
           }
-      }
-
-      // --- LOGIKA DRAGU (pokud je aktivní) ---
-      if (isDraggingRef.current) {
-          // Pro myš preventujeme vždy, pro touch pokud jsme v drag módu
-          if (e.cancelable && e.pointerType !== 'mouse') e.preventDefault();
           
           dragOffsetRef.current = diffX;
           
@@ -317,6 +295,54 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           }
           
           updateVisuals(true);
+          return;
+      }
+
+      // --- LOGIKA PRO DOTYK ---
+      if (e.pointerType === 'touch') {
+          // Pokud uživatel scrolluje stránku, OKAMŽITĚ RETURN
+          if (isScrollingRef.current) return;
+
+          // Pokud už swipujeme, pokračuj ve swipování
+          if (isSwipingRef.current) {
+              if (e.cancelable) e.preventDefault();
+              
+              dragOffsetRef.current = diffX;
+              
+              if (Math.abs(diffX) > 5) {
+                  isClickBlockedRef.current = true;
+              }
+              
+              updateVisuals(true);
+              return;
+          }
+
+          // Pokud nevíme (první pohyb) - rozhodnutí o směru
+          // Deadzone - ignoruj malé pohyby
+          if (Math.abs(diffX) < 6 && Math.abs(diffY) < 6) return;
+
+          // Rozhodnutí: Scroll vs Swipe
+          if (Math.abs(diffY) > Math.abs(diffX)) {
+              // Uživatel táhne vertikálně - scroll stránky
+              isScrollingRef.current = true;
+              // Nech událost projít (žádný preventDefault), ať prohlížeč scrolluje
+              return;
+          } else if (Math.abs(diffX) > 5) {
+              // Uživatel táhne horizontálně - swipe carouselu
+              isSwipingRef.current = true;
+              isDraggingRef.current = true;
+              setIsDragging(true);
+              
+              // Zavolej setPointerCapture a preventDefault
+              const element = e.target as HTMLElement;
+              element.setPointerCapture(e.pointerId);
+              if (e.cancelable) e.preventDefault();
+              
+              // Začni hýbat carouselem
+              dragOffsetRef.current = diffX;
+              isClickBlockedRef.current = true;
+              updateVisuals(true);
+          }
       }
   };
 
@@ -338,7 +364,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       // Reset všeho
       activePointerId.current = null;
       isDraggingRef.current = false;
-      isScrollDetectedRef.current = false;
+      isScrollingRef.current = false;
+      isSwipingRef.current = false;
       // isDragging state v Reactu resetuje stopDrag, nebo zde pokud nebyl drag
       if (!isClickBlockedRef.current) setIsDragging(false);
   };
