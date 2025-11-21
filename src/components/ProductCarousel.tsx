@@ -332,18 +332,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   return (
     <div ref={wrapperRef} className="relative w-full overflow-hidden select-none touch-none group">
-      {/* INJECT STYLES: Tento styl natvrdo zakáže fade-in animace uvnitř carouselu.
-          Řeší to problém "refreshnutí s animací".
+      {/* INJECT STYLES: Tento styl natvrdo zakáže všechny animace uvnitř carouselu.
+          Řeší to problém "refreshnutí s animací" a "flicker" efekt.
       */}
       <style>{`
-        .carousel-no-animation * {
+        .carousel-force-no-animate * {
           animation: none !important;
-          transition-property: transform, opacity !important; /* Povolit jen námi řízené transitions */
+          transition: none !important;
         }
         /* Zakázat specificky fade-in animace pokud mají jiné názvy */
-        .carousel-no-animation .fade-in-up,
-        .carousel-no-animation .fade-in,
-        .carousel-no-animation [class*="fade-"] {
+        .carousel-force-no-animate .fade-in-up,
+        .carousel-force-no-animate .fade-in,
+        .carousel-force-no-animate [class*="fade-"] {
           animation: none !important;
           opacity: 1 !important;
           transform: none !important;
@@ -357,7 +357,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       >
         <div
             ref={trackRef}
-            className="flex flex-row carousel-no-animation" // Aplikace třídy pro zákaz animací
+            className="flex flex-row carousel-force-no-animate" // Aplikace třídy pro zákaz animací
             style={{
                 gap: `${GAP}px`,
                 width: 'max-content',

@@ -53,15 +53,21 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
     ? "font-serif text-xl font-semibold text-luxury mb-2 line-clamp-2 min-h-[3.5rem]"
     : "font-serif text-xl font-semibold text-luxury mb-2 hover:text-gold transition-colors duration-300 line-clamp-2 min-h-[3.5rem]";
 
+  // Podmíněné třídy pro wrapper obrázku - odstraníme bg-muted když disableAnimations
+  const imageWrapperClasses = disableAnimations
+    ? "aspect-square overflow-hidden"
+    : "aspect-square overflow-hidden bg-muted";
+
   return (
     <div className={cardClasses}>
       {/* Image */}
-      <div className="aspect-square overflow-hidden bg-muted">
+      <div className={imageWrapperClasses}>
         <img
           src={image}
           alt={title}
           className={imageClasses}
           loading={disableAnimations ? "eager" : "lazy"}
+          decoding={disableAnimations ? "sync" : "async"}
         />
       </div>
       
