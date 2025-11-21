@@ -301,7 +301,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       // --- LOGIKA PRO DOTYK ---
       if (e.pointerType === 'touch') {
           // Pokud uživatel scrolluje stránku, OKAMŽITĚ RETURN
-          if (isScrollingRef.current) return;
+          if (isScrollingRef.current) {
+              // Ujistíme se, že pointer capture je uvolněný a activePointerId je resetovaný
+              const element = e.target as HTMLElement;
+              try {
+                  if (element.hasPointerCapture && element.hasPointerCapture(e.pointerId)) {
+                      element.releasePointerCapture(e.pointerId);
+                  }
+              } catch(err) { /* ignore */ }
+              activePointerId.current = null;
+              return;
+          }
 
           // Pokud už swipujeme, pokračuj ve swipování
           if (isSwipingRef.current) {
@@ -324,6 +334,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           // Rozhodnutí: Scroll vs Swipe
           if (Math.abs(diffY) > Math.abs(diffX)) {
               // Uživatel táhne vertikálně - scroll stránky
+              // Uvolníme pointer capture (pokud ho máme) a resetujeme activePointerId
+              const element = e.target as HTMLElement;
+              try {
+                  if (element.hasPointerCapture && element.hasPointerCapture(e.pointerId)) {
+                      element.releasePointerCapture(e.pointerId);
+                  }
+              } catch(err) { /* ignore */ }
+              
+              activePointerId.current = null;
               isScrollingRef.current = true;
               // Nech událost projít (žádný preventDefault), ať prohlížeč scrolluje
               return;
