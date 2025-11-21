@@ -378,10 +378,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX); }}
         onTouchStart={(e) => { startDrag(e.touches[0].clientX); }}
-        // TADY PŘIDÁVÁME MASKU (FADE EFEKT)
+        // TADY JE NOVÝ, HEZČÍ FADE
         style={{
-            maskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)'
+            // Používáme vícekrokový gradient pro jemnější, nelineární přechod.
+            // Fade nyní zabírá 15% šířky na každé straně a je mnohem plynulejší.
+            maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)'
         }}
       >
         <div
