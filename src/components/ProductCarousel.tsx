@@ -50,25 +50,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const GAP = 16;
   const ANIMATION_DURATION = 500;
-  
-  // MASIVNÍ POČET KLONŮ = "Praktické nekonečno"
-  // Místo složité logiky prostě vytvoříme dostatečně dlouhou dráhu.
-  // 30 sad na každou stranu je pro běžné použití nedosažitelné.
   const CLONE_COUNT = Math.max(2, products.length) * 30; 
 
   // Příprava dat
   const allSlides = useMemo(() => {
     const items = [];
-    // A) Klony vlevo
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = (products.length - 1 - (i % products.length));
         items.unshift({ product: products[sourceIndex], isClone: true, originalIndex: sourceIndex });
     }
-    // B) Originály
     products.forEach((p, i) => {
         items.push({ product: p, isClone: false, originalIndex: i });
     });
-    // C) Klony vpravo
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = i % products.length;
         items.push({ product: products[sourceIndex], isClone: true, originalIndex: sourceIndex });
@@ -86,11 +79,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   
-  // Refs
   const dragStartX = useRef(0);
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef(0);
   const currentIndexRef = useRef(START_INDEX);
+  
+  // REF PRO OCHRANU KLIKNUTÍ
+  // Pokud uživatel táhne, nastavíme toto na true a zablokujeme otevření odkazu
+  const isClickBlockedRef = useRef(false);
   
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -142,11 +138,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     const targetIndex = overrideIndex !== undefined ? overrideIndex : currentIndexRef.current;
     const currentDrag = dragOffsetRef.current;
-    
     const totalCardWidth = cardWidth + GAP;
     const viewportCenter = viewportWidth / 2;
 
-    // 1. Posun Tracku
     const basePos = getPositionForIndex(targetIndex);
     const finalPos = basePos + currentDrag;
     
@@ -155,8 +149,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         ? 'none' 
         : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
 
-    // 2. Stylování Karet (Scale & Opacity)
-    // Optimalizace: počítáme jen pro viditelné karty +/- buffer
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
     const startIndex = Math.max(0, targetIndex - visibleCount);
     const endIndex = Math.min(allSlides.length - 1, targetIndex + visibleCount);
@@ -188,9 +180,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             }
         }
 
+        card.style.width = `${cardWidth}px`;
         card.style.transform = `scale(${scale}) translateZ(0)`;
         card.style.opacity = `${opacity}`;
-        card.style.width = `${cardWidth}px`;
         
         card.style.transition = (isDraggingRef.current || instant) 
             ? 'none' 
@@ -213,6 +205,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         const diff = clientX - dragStartX.current;
         dragOffsetRef.current = diff;
         setDragOffset(diff);
+        
+        // Pokud se pohneme o více než 5 pixelů, považujeme to za drag a zablokujeme kliknutí
+        if (Math.abs(diff) > 5) {
+            isClickBlockedRef.current = true;
+        }
+        
         updateVisuals(true); 
     };
 
@@ -247,6 +245,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     dragStartX.current = clientX;
     dragOffsetRef.current = 0;
     setDragOffset(0);
+    
+    // Resetujeme blokaci kliknutí - předpokládáme, že to může být klik
+    isClickBlockedRef.current = false;
+    
     setIsTransitioning(false);
     
     if (trackRef.current) {
@@ -286,7 +288,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   };
 
   // ============================================================================
-  // RESET LOGIC (TELEPORT KDYŽ STOJÍ)
+  // RESET LOGIC
   // ============================================================================
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDragging) return;
@@ -294,13 +296,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     setIsTransitioning(false);
 
-    // Check pro reset na střed, pokud jsme moc daleko
-    // Ale díky masivnímu počtu klonů se to stane málokdy
     const current = currentIndexRef.current;
     const productsCount = products.length;
     
-    // Pokud jsme vyjeli z centrální zóny o více než jednu délku sady, resetujeme
-    // Tím udržujeme "nekonečno" bez rizika dojetí na konec
     if (Math.abs(current - START_INDEX) > productsCount * 5) {
         const slideData = allSlides[current];
         if (slideData) {
@@ -321,7 +319,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     isResettingRef.current = false;
-                    // Vrátíme transition
                     if (trackRef.current) {
                          trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
                     }
@@ -331,7 +328,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }
   };
 
-  // Navigace tlačítky
   const moveSlide = (step: number) => {
       if (isTransitioning) return;
       setIsTransitioning(true);
@@ -371,7 +367,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             style={{
                 gap: `${GAP}px`,
                 width: 'max-content',
-                // Transform je řízen přes JS
                 willChange: 'transform',
                 backfaceVisibility: 'hidden'
             }}
@@ -390,24 +385,29 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                             backfaceVisibility: 'hidden'
                         }}
                     >
-                        <div className="h-full pointer-events-none"> 
-                            <div className={isDragging ? "pointer-events-none" : "pointer-events-auto"}>
-                                <Link 
-                                    to={item.product.handle ? createProductPath(item.product.handle) : `/product-shopify/${item.product.handle}`}
-                                    className="block h-full"
-                                    draggable={false}
-                                >
-                                     <ProductCard
-                                        id={item.product.id}
-                                        title={item.product.title}
-                                        price={item.product.price}
-                                        image={item.product.image}
-                                        description={item.product.description}
-                                        inventoryQuantity={item.product.inventoryQuantity}
-                                        disableAnimations={true}
-                                     />
-                                </Link>
-                            </div>
+                        <div className="h-full"> 
+                            <Link 
+                                to={item.product.handle ? createProductPath(item.product.handle) : `/product-shopify/${item.product.handle}`}
+                                className="block h-full"
+                                draggable={false}
+                                onClick={(e) => {
+                                    // OCHRANA PROTI NECHTĚNÉMU KLIKNUTÍ PŘI DRAGU
+                                    if (isClickBlockedRef.current) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }
+                                }}
+                            >
+                                <ProductCard
+                                    id={item.product.id}
+                                    title={item.product.title}
+                                    price={item.product.price}
+                                    image={item.product.image}
+                                    description={item.product.description}
+                                    inventoryQuantity={item.product.inventoryQuantity}
+                                    disableAnimations={true}
+                                />
+                            </Link>
                         </div>
                     </div>
                 );
