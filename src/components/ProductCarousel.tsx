@@ -77,13 +77,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   // STATE & REFS
   // ============================================================================
-  // State pro UI (tlačítka) - NEPOUŽÍVÁ se pro pohyb!
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
   
-  // REFS pro direct DOM manipulation (bypass React render)
-  const currentIndexRef = useRef(START_INDEX); // Interní index pro výpočet pozice
   const dragStartX = useRef(0);
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef(0);
@@ -129,43 +127,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [cardWidth, viewportWidth]);
 
   // ============================================================================
-  // DIRECT DOM MANIPULATION - Update Position (Bypass React Render)
-  // ============================================================================
-  const updatePosition = useCallback(() => {
-    if (!trackRef.current || cardWidth === 0) return;
-    
-    const basePos = getPositionForIndex(currentIndexRef.current);
-    const finalPos = basePos + dragOffsetRef.current;
-    
-    // Přímá manipulace DOM - žádný React re-render!
-    trackRef.current.style.transform = `translate3d(${finalPos}px, 0, 0)`;
-  }, [getPositionForIndex, cardWidth]);
-
-  // ============================================================================
-  // INICIALIZACE A AKTUALIZACE POZICE
-  // ============================================================================
-  // Inicializace pozice při mountu
-  useEffect(() => {
-    if (cardWidth > 0 && viewportWidth > 0) {
-      updatePosition();
-    }
-  }, [cardWidth, viewportWidth, updatePosition]);
-
-  // Aktualizace pozice při změně rozměrů (bez animace)
-  useEffect(() => {
-    if (cardWidth > 0 && viewportWidth > 0 && trackRef.current && !isDragging && !isTransitioning) {
-      // Při změně rozměrů aktualizuj pozici okamžitě (bez animace)
-      trackRef.current.style.transition = 'none';
-      updatePosition();
-      requestAnimationFrame(() => {
-        if (trackRef.current) {
-          trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
-        }
-      });
-    }
-  }, [cardWidth, viewportWidth, updatePosition, isDragging, isTransitioning]);
-
-  // ============================================================================
   // GLOBAL DRAG LISTENERS
   // ============================================================================
   useEffect(() => {
@@ -174,8 +135,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
         const diff = clientX - dragStartX.current;
         dragOffsetRef.current = diff;
-        // Přímá aktualizace pozice - žádný setState!
-        updatePosition();
+        setDragOffset(diff);
     };
 
     const handleGlobalUp = () => {
@@ -195,12 +155,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         window.removeEventListener('mouseup', handleGlobalUp);
         window.removeEventListener('touchend', handleGlobalUp);
     };
-  }, [isDragging, updatePosition]);
+  }, [isDragging]);
 
   // ============================================================================
   // LOGIKA POHYBU
   // ============================================================================
-  const startDrag = useCallback((clientX: number) => {
+  const startDrag = (clientX: number) => {
     if (isResettingRef.current) return;
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
 
@@ -208,14 +168,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     isDraggingRef.current = true;
     dragStartX.current = clientX;
     dragOffsetRef.current = 0;
+    setDragOffset(0);
     setIsTransitioning(false);
     
     if (trackRef.current) {
         trackRef.current.style.transition = 'none';
     }
-  }, []);
+  };
 
-  const stopDrag = useCallback(() => {
+  const stopDrag = () => {
     setIsDragging(false);
     isDraggingRef.current = false;
 
@@ -229,39 +190,29 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
     }
 
-    const newIndex = currentIndexRef.current + indexDiff;
+    const newIndex = currentIndex + indexDiff;
     
-    // Aktualizujeme ref (pro výpočet pozice)
-    currentIndexRef.current = newIndex;
-    
-    // Resetujeme drag offset
+    setIsTransitioning(true);
+    setCurrentIndex(newIndex);
+    setDragOffset(0);
     dragOffsetRef.current = 0;
-    
-    // Zapneme CSS transition pro animaci
+
     if (trackRef.current) {
         trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
     }
-    
-    // Aktualizujeme pozici (s transition)
-    updatePosition();
-    
-    setIsTransitioning(true);
-    
-    // Synchronizujeme React State (pouze pro UI - tlačítka)
-    setCurrentIndex(newIndex);
 
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = setTimeout(() => {
         if (isResettingRef.current) return;
         setIsTransitioning(false);
     }, ANIMATION_DURATION + 50);
-  }, [cardWidth, updatePosition]);
+  };
 
   // ============================================================================
-  // SEAMLESS RESET (S POTLAČENÍM ANIMACÍ) - Direct DOM Manipulation
+  // SEAMLESS RESET (S POTLAČENÍM ANIMACÍ)
   // ============================================================================
-  const handleTransitionEnd = useCallback(() => {
-    if (!trackRef.current || isDragging || isResettingRef.current) return;
+  const handleTransitionEnd = () => {
+    if (!trackRef.current || isDragging) return;
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
 
     const track = trackRef.current;
@@ -271,7 +222,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         return;
     }
 
-    // Detekce elementu uprostřed (Distance-Based Detection)
+    // Detekce elementu uprostřed
     const parentCenter = parent.getBoundingClientRect().left + (parent.offsetWidth / 2);
     let closestElement: HTMLElement | null = null;
     let minDist = Infinity;
@@ -293,7 +244,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const type = closestElement.dataset.type;
     const productId = closestElement.dataset.productId;
 
-    // TELEPORT - Čistě DOM-based, bez React re-renderu!
+    // TELEPORT
     if (type === 'clone' && productId) {
         const originalElement = Array.from(track.children).find(
             child => (child as HTMLElement).dataset.type === 'original' && 
@@ -304,52 +255,45 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             const originalIndex = parseInt(originalElement.dataset.index || '0');
             const newX = getPositionForIndex(originalIndex);
 
-            // 1. Vypni animaci
             isResettingRef.current = true;
             track.style.transition = 'none';
-            
-            // 2. Aktualizuj interní ref (pro budoucí výpočty)
-            currentIndexRef.current = originalIndex;
-            
-            // 3. Přepiš pozici v DOMu - okamžitě (žádný React re-render!)
             track.style.transform = `translate3d(${newX}px, 0, 0)`;
+            void track.offsetHeight; 
+
+            setCurrentIndex(originalIndex);
             
-            // 4. Vynutit reflow (flush CSS changes)
-            void track.offsetHeight;
-            
-            // 5. Vrať animaci (na příští tick)
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
+                 requestAnimationFrame(() => {
                     track.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
                     isResettingRef.current = false;
                     setIsTransitioning(false);
-                    
-                    // 6. Teprve POTOM synchronizuj React State (pouze pro UI)
-                    setCurrentIndex(originalIndex);
-                });
+                 });
             });
             return;
         }
     }
 
-    // Pokud jsme na originálu, jen synchronizuj state
     setIsTransitioning(false);
     const index = parseInt(closestElement.dataset.index || '0');
-    currentIndexRef.current = index;
     if (index !== currentIndex) {
         setCurrentIndex(index);
     }
-  }, [isDragging, getPositionForIndex, currentIndex]);
+  };
 
   // ============================================================================
   // STYLES
   // ============================================================================
+  const getTransform = () => {
+    const basePos = getPositionForIndex(currentIndex);
+    const finalPos = basePos + dragOffset;
+    return `translate3d(${finalPos}px, 0, 0)`;
+  };
+
   const getCardStyle = (index: number) => {
     if (cardWidth === 0) return {};
     const totalCardWidth = cardWidth + GAP;
     
-    // Používáme ref pro výpočet pozice (aktuální stav, ne React state)
-    const trackPos = getPositionForIndex(currentIndexRef.current) + dragOffsetRef.current;
+    const trackPos = getPositionForIndex(currentIndex) + dragOffset;
     const cardCenter = trackPos + (index * totalCardWidth) + (cardWidth / 2);
     const viewportCenter = viewportWidth / 2;
     const dist = Math.abs(viewportCenter - cardCenter);
@@ -425,7 +369,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             style={{
                 gap: `${GAP}px`,
                 width: 'max-content',
-                // Transform je řízen přímo přes updatePosition() - NENÍ v JSX!
+                transform: getTransform(),
+                transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
                 willChange: 'transform',
                 backfaceVisibility: 'hidden'
             }}
@@ -475,42 +420,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       </div>
 
       {/* Navigace */}
-      <button 
-        onClick={() => {
-          if (isTransitioning || isResettingRef.current) return;
-          const newIndex = currentIndexRef.current - 1;
-          currentIndexRef.current = newIndex;
-          
-          if (trackRef.current) {
-            trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
-          }
-          updatePosition();
-          setIsTransitioning(true);
-          setCurrentIndex(newIndex);
-          
-          setTimeout(() => setIsTransitioning(false), ANIMATION_DURATION + 50);
-        }} 
-        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all"
-      >
+      <button onClick={() => !isTransitioning && setCurrentIndex(prev => prev - 1)} className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
-      <button 
-        onClick={() => {
-          if (isTransitioning || isResettingRef.current) return;
-          const newIndex = currentIndexRef.current + 1;
-          currentIndexRef.current = newIndex;
-          
-          if (trackRef.current) {
-            trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
-          }
-          updatePosition();
-          setIsTransitioning(true);
-          setCurrentIndex(newIndex);
-          
-          setTimeout(() => setIsTransitioning(false), ANIMATION_DURATION + 50);
-        }} 
-        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all"
-      >
+      <button onClick={() => !isTransitioning && setCurrentIndex(prev => prev + 1)} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
     </div>
