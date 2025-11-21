@@ -50,18 +50,30 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const GAP = 16;
   const ANIMATION_DURATION = 500;
-  const CLONE_COUNT = Math.max(2, products.length) * 30; 
+
+  // MEMORY SAFE OPTIMIZATION:
+  // Místo 30x (což zabíjelo mobily) použijeme dynamický počet.
+  // Chceme mít buffer cca 20 položek na každou stranu, ne víc.
+  // Pokud máme hodně produktů (např. 20), stačí 2 sady klonů.
+  // Pokud máme málo produktů (např. 4), potřebujeme cca 6 sad.
+  const MIN_BUFFER_ITEMS = 20;
+  const CLONE_MULTIPLIER = Math.ceil(MIN_BUFFER_ITEMS / products.length);
+  // Zastropujeme to na max 6 sad, aby se nepřehltila paměť ani u malého počtu produktů
+  const CLONE_COUNT = Math.min(CLONE_MULTIPLIER, 6) * products.length;
 
   // Příprava dat
   const allSlides = useMemo(() => {
     const items = [];
+    // A) Klony vlevo
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = (products.length - 1 - (i % products.length));
         items.unshift({ product: products[sourceIndex], isClone: true, originalIndex: sourceIndex });
     }
+    // B) Originály
     products.forEach((p, i) => {
         items.push({ product: p, isClone: false, originalIndex: i });
     });
+    // C) Klony vpravo
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = i % products.length;
         items.push({ product: products[sourceIndex], isClone: true, originalIndex: sourceIndex });
@@ -85,7 +97,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const currentIndexRef = useRef(START_INDEX);
   
   // REF PRO OCHRANU KLIKNUTÍ
-  // Pokud uživatel táhne, nastavíme toto na true a zablokujeme otevření odkazu
   const isClickBlockedRef = useRef(false);
   
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -149,6 +160,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         ? 'none' 
         : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
 
+    // Optimalizace: Renderujeme styly jen pro viditelné karty +/- malý buffer
+    // Na mobilech je toto kritické pro výkon
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
     const startIndex = Math.max(0, targetIndex - visibleCount);
     const endIndex = Math.min(allSlides.length - 1, targetIndex + visibleCount);
@@ -206,7 +219,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         dragOffsetRef.current = diff;
         setDragOffset(diff);
         
-        // Pokud se pohneme o více než 5 pixelů, považujeme to za drag a zablokujeme kliknutí
         if (Math.abs(diff) > 5) {
             isClickBlockedRef.current = true;
         }
@@ -245,8 +257,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     dragStartX.current = clientX;
     dragOffsetRef.current = 0;
     setDragOffset(0);
-    
-    // Resetujeme blokaci kliknutí - předpokládáme, že to může být klik
     isClickBlockedRef.current = false;
     
     setIsTransitioning(false);
@@ -299,7 +309,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const current = currentIndexRef.current;
     const productsCount = products.length;
     
-    if (Math.abs(current - START_INDEX) > productsCount * 5) {
+    // Pokud jsme vyjeli z centrální zóny (originálů) o více než jednu sadu, vrátíme se
+    if (Math.abs(current - START_INDEX) > productsCount) {
         const slideData = allSlides[current];
         if (slideData) {
             const targetIndex = START_INDEX + slideData.originalIndex;
@@ -351,7 +362,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         }
         .carousel-force-no-animate img {
           transform: translateZ(0) !important;
-          will-change: transform;
+          /* will-change: transform; -- ODSTRANĚNO PRO MEMORY SAFETY NA MOBILECH */
           backface-visibility: hidden;
         }
       `}</style>
@@ -367,7 +378,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             style={{
                 gap: `${GAP}px`,
                 width: 'max-content',
-                willChange: 'transform',
+                willChange: 'transform', // Ponecháno jen na tracku, to je OK
                 backfaceVisibility: 'hidden'
             }}
             onTransitionEnd={handleTransitionEnd}
@@ -381,7 +392,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                         className="flex-shrink-0"
                         style={{
                             width: `${cardWidth}px`,
-                            willChange: 'transform, opacity',
+                            // willChange: 'transform' -- ODSTRANĚNO Z JEDNOTLIVÝCH KARET
                             backfaceVisibility: 'hidden'
                         }}
                     >
@@ -391,7 +402,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                 className="block h-full"
                                 draggable={false}
                                 onClick={(e) => {
-                                    // OCHRANA PROTI NECHTĚNÉMU KLIKNUTÍ PŘI DRAGU
                                     if (isClickBlockedRef.current) {
                                         e.preventDefault();
                                         e.stopPropagation();
