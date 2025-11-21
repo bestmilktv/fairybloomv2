@@ -50,7 +50,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const GAP = 16;
   const ANIMATION_DURATION = 500;
-  const CLONE_COUNT = 2 * products.length; 
+  // Zvýšíme počet klonů pro bezpečný buffer
+  const CLONE_COUNT = Math.max(4, products.length); 
 
   // Příprava dat
   const allSlides = useMemo(() => {
@@ -72,7 +73,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return items;
   }, [products, CLONE_COUNT]);
 
+  // Indexy
   const START_INDEX = CLONE_COUNT;
+  const ORIGINAL_START = CLONE_COUNT;
+  const ORIGINAL_END = CLONE_COUNT + products.length - 1;
 
   // ============================================================================
   // STATE & REFS
@@ -80,18 +84,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0); // Jen pro trigger renderu v případě potřeby
   
-  // TADY BYL TEN PROBLÉM - chyběl tento řádek:
-  const [dragOffset, setDragOffset] = useState(0);
-  
-  // Refs pro DOM manipulaci
+  // Refs pro High-Performance logiku
   const dragStartX = useRef(0);
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef(0);
+  const currentIndexRef = useRef(START_INDEX); // Hlavní zdroj pravdy pro pozici
   
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]); 
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   
   const isResettingRef = useRef(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -131,15 +134,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return -(index * totalCardWidth) + centerOffset;
   }, [cardWidth, viewportWidth]);
 
-
   // ============================================================================
-  // CORE: VISUAL UPDATE ENGINE
+  // VISUAL UPDATE ENGINE (Hybridní Direct DOM Manipulation)
   // ============================================================================
-  const updateVisuals = useCallback((instant = false, overrideIndex?: number) => {
+  const updateVisuals = useCallback((instant = false) => {
     if (!trackRef.current || cardWidth === 0) return;
 
-    const targetIndex = overrideIndex !== undefined ? overrideIndex : currentIndex;
+    // Používáme currentIndexRef pro aktuální logický index
+    const targetIndex = currentIndexRef.current;
     const currentDrag = dragOffsetRef.current;
+    
     const totalCardWidth = cardWidth + GAP;
     const viewportCenter = viewportWidth / 2;
 
@@ -152,7 +156,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         ? 'none' 
         : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
 
-    // 2. Stylování Karet
+    // 2. Stylování Karet (Scale & Opacity)
     cardRefs.current.forEach((card, i) => {
         if (!card) return;
 
@@ -179,32 +183,94 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             }
         }
 
+        card.style.width = `${cardWidth}px`;
         card.style.transform = `scale(${scale}) translateZ(0)`;
         card.style.opacity = `${opacity}`;
-        card.style.width = `${cardWidth}px`;
         
         card.style.transition = (isDraggingRef.current || instant) 
             ? 'none' 
             : `transform ${ANIMATION_DURATION}ms ease-out, opacity ${ANIMATION_DURATION}ms ease-out`;
     });
 
-  }, [cardWidth, currentIndex, isDesktop, viewportWidth, getPositionForIndex]);
+  }, [cardWidth, isDesktop, viewportWidth, getPositionForIndex]);
 
+  // Synchronizace při mountu nebo změně rozměrů
   useLayoutEffect(() => {
     updateVisuals(isResettingRef.current);
-  }, [updateVisuals, currentIndex]); 
+  }, [updateVisuals, viewportWidth, cardWidth]); 
 
 
   // ============================================================================
-  // GLOBAL DRAG LISTENERS
+  // INFINITE LOOP MAGIC (Treadmill Logic)
+  // ============================================================================
+  const checkAndResetBounds = useCallback(() => {
+    if (cardWidth === 0) return;
+    
+    const current = currentIndexRef.current;
+    const totalCardWidth = cardWidth + GAP;
+    const totalOriginalsWidth = products.length * totalCardWidth;
+
+    let needsTeleport = false;
+    let indexShift = 0;
+
+    // Pokud jsme příliš vlevo (v levých klonech)
+    if (current < ORIGINAL_START) {
+        needsTeleport = true;
+        indexShift = products.length; // Posuneme index doprava (na originály)
+        // A musíme posunout dragStart DOLEVA, aby vizuální pozice zůstala stejná
+        // Logika: Zvýšíme index (+), takže Track se posune doleva (-). 
+        // Aby zůstal na místě, musíme zvýšit Drag (+). 
+        // Drag = Client - Start. Aby se Drag zvýšil, Start se musí snížit.
+        dragStartX.current -= totalOriginalsWidth;
+    } 
+    // Pokud jsme příliš vpravo (v pravých klonech)
+    else if (current > ORIGINAL_END) {
+        needsTeleport = true;
+        indexShift = -products.length; // Posuneme index doleva (na originály)
+        // Snížíme index (-), Track se posune doprava (+).
+        // Musíme snížit Drag (-).
+        // Start se musí zvýšit.
+        dragStartX.current += totalOriginalsWidth;
+    }
+
+    if (needsTeleport) {
+        currentIndexRef.current += indexShift;
+        // Update state bez triggeru re-render efektů (používáme ref pro drag)
+        setCurrentIndex(currentIndexRef.current);
+    }
+  }, [cardWidth, products.length, ORIGINAL_START, ORIGINAL_END]);
+
+
+  // ============================================================================
+  // GLOBAL LISTENERS (DRAG)
   // ============================================================================
   useEffect(() => {
     const handleGlobalMove = (e: MouseEvent | TouchEvent) => {
         if (!isDraggingRef.current) return;
         const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-        const diff = clientX - dragStartX.current;
+        
+        // 1. Spočítáme aktuální posun
+        let diff = clientX - dragStartX.current;
+        const totalCardWidth = cardWidth + GAP;
+
+        // 2. TREADMILL LOGIKA: Posouváme index během dragu, pokud přetáhneme o celou kartu
+        // Tím zajistíme, že dragOffset zůstane malý a index se mění plynule
+        while (diff > totalCardWidth) {
+            currentIndexRef.current--;
+            dragStartX.current += totalCardWidth;
+            diff -= totalCardWidth;
+            checkAndResetBounds(); // Kontrola nekonečna
+        }
+        while (diff < -totalCardWidth) {
+            currentIndexRef.current++;
+            dragStartX.current -= totalCardWidth;
+            diff += totalCardWidth;
+            checkAndResetBounds(); // Kontrola nekonečna
+        }
+
         dragOffsetRef.current = diff;
         
+        // 3. Překreslíme
         updateVisuals(true); 
     };
 
@@ -225,10 +291,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         window.removeEventListener('mouseup', handleGlobalUp);
         window.removeEventListener('touchend', handleGlobalUp);
     };
-  }, [isDragging, updateVisuals]);
+  }, [isDragging, updateVisuals, checkAndResetBounds, cardWidth]);
 
   // ============================================================================
-  // LOGIKA DRAG & DROP
+  // LOGIKA OVLÁDÁNÍ
   // ============================================================================
   const startDrag = (clientX: number) => {
     if (isResettingRef.current) return;
@@ -238,7 +304,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     isDraggingRef.current = true;
     dragStartX.current = clientX;
     dragOffsetRef.current = 0;
-    setDragOffset(0);
     setIsTransitioning(false);
     
     if (trackRef.current) {
@@ -256,103 +321,75 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const movedCards = -currentOffset / totalCardWidth;
     let indexDiff = Math.round(movedCards);
 
+    // Švihnutí
     if (Math.abs(movedCards) > 0.1 && Math.abs(currentOffset) > 50) {
         if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
         if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
     }
 
-    const newIndex = currentIndex + indexDiff;
+    // Aplikujeme změnu indexu
+    currentIndexRef.current += indexDiff;
+    
+    // Kontrola hranic po puštění (pro jistotu)
+    checkAndResetBounds();
+
+    // Synchronizujeme state
+    setCurrentIndex(currentIndexRef.current);
     
     setIsTransitioning(true);
-    dragOffsetRef.current = 0; 
-    setDragOffset(0);
+    dragOffsetRef.current = 0; // Reset offsetu (protože jsme už posunuli index)
+    setDragOffset(0); 
 
-    setCurrentIndex(newIndex);
+    // Spustíme animaci dojezdu na novou pozici
+    if (trackRef.current) {
+        // Vypočítáme, kam má dojet (base position nového indexu)
+        const targetPos = getPositionForIndex(currentIndexRef.current);
+        trackRef.current.style.transform = `translate3d(${targetPos}px, 0, 0)`;
+        trackRef.current.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
+        
+        // Update stylů karet pro animaci
+        updateVisuals(false);
+    }
 
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = setTimeout(() => {
-        if (isResettingRef.current) return;
         setIsTransitioning(false);
     }, ANIMATION_DURATION + 50);
   };
 
   // ============================================================================
-  // SEAMLESS RESET (TELEPORT)
+  // TRANSITION END (Pro jistotu, kdyby něco uteklo)
   // ============================================================================
   const handleTransitionEnd = () => {
-    if (!trackRef.current || isDragging) return;
-    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-
-    const track = trackRef.current;
-    const parent = track.parentElement;
-    if (!parent) { setIsTransitioning(false); return; }
-
-    // Detekce elementu uprostřed
-    const parentCenter = parent.getBoundingClientRect().left + (parent.offsetWidth / 2);
-    let closestElement: HTMLElement | null = null;
-    let minDist = Infinity;
-
-    Array.from(track.children).forEach((child) => {
-        const rect = (child as HTMLElement).getBoundingClientRect();
-        const dist = Math.abs(parentCenter - (rect.left + rect.width / 2));
-        if (dist < minDist) {
-            minDist = dist;
-            closestElement = child as HTMLElement;
-        }
-    });
-
-    if (!closestElement) { setIsTransitioning(false); return; }
-
-    const type = closestElement.dataset.type;
-    const productId = closestElement.dataset.productId;
-
-    // === LOGIKA TELEPORTACE ===
-    if (type === 'clone' && productId) {
-        const originalElement = Array.from(track.children).find(
-            child => (child as HTMLElement).dataset.type === 'original' && 
-                     (child as HTMLElement).dataset.productId === productId
-        ) as HTMLElement;
-
-        if (originalElement) {
-            const originalIndex = parseInt(originalElement.dataset.index || '0');
-            
-            isResettingRef.current = true;
-            
-            // 1. Update State
-            setCurrentIndex(originalIndex);
-            
-            // 2. Okamžitý DOM Update
-            updateVisuals(true, originalIndex);
-
-            // 3. Flush
-            void track.offsetHeight; 
-
-            // 4. Obnovení animací
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    isResettingRef.current = false;
-                    setIsTransitioning(false);
-                    updateVisuals(false, originalIndex);
-                });
-            });
-            return;
-        }
-    }
-
+    if (isDraggingRef.current) return;
     setIsTransitioning(false);
-    const index = parseInt(closestElement.dataset.index || '0');
-    if (index !== currentIndex) {
-        setCurrentIndex(index);
+    // Znovu zkontrolujeme hranice po dojetí animace
+    const prevIndex = currentIndexRef.current;
+    checkAndResetBounds();
+    if (prevIndex !== currentIndexRef.current) {
+        // Pokud došlo k resetu bounds, musíme okamžitě aktualizovat vizuál bez animace
+        updateVisuals(true);
     }
   };
 
-  // ============================================================================
-  // RENDER HELPERY
-  // ============================================================================
-  const getTransform = () => {
-    const basePos = getPositionForIndex(currentIndex);
-    const finalPos = basePos + dragOffset;
-    return `translate3d(${finalPos}px, 0, 0)`;
+  // Navigace tlačítky
+  const moveSlide = (step: number) => {
+      if (isTransitioning) return;
+      setIsTransitioning(true);
+      currentIndexRef.current += step;
+      checkAndResetBounds(); // Check before move? No, after logic.
+      
+      // Simple update
+      setCurrentIndex(currentIndexRef.current);
+      updateVisuals(false);
+      
+      setTimeout(() => {
+          setIsTransitioning(false);
+          // Check bounds after animation
+          const prev = currentIndexRef.current;
+          checkAndResetBounds();
+          if (prev !== currentIndexRef.current) updateVisuals(true);
+      }, ANIMATION_DURATION);
   };
 
   // ============================================================================
@@ -382,8 +419,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             style={{
                 gap: `${GAP}px`,
                 width: 'max-content',
-                transform: getTransform(),
-                transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
+                // Transform je řízen přes JS
                 willChange: 'transform',
                 backfaceVisibility: 'hidden'
             }}
@@ -395,9 +431,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                     <div 
                         key={uniqueKey}
                         ref={el => cardRefs.current[i] = el}
-                        data-product-id={item.product.id}
-                        data-type={item.isClone ? 'clone' : 'original'}
-                        data-index={i}
                         className="flex-shrink-0"
                         style={{
                             width: `${cardWidth}px`,
@@ -431,10 +464,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       </div>
 
       {/* Navigace */}
-      <button onClick={() => !isTransitioning && setCurrentIndex(prev => prev - 1)} className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
+      <button onClick={() => moveSlide(-1)} className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
-      <button onClick={() => !isTransitioning && setCurrentIndex(prev => prev + 1)} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
+      <button onClick={() => moveSlide(1)} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
     </div>
