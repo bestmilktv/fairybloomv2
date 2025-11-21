@@ -370,8 +370,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 transform: getTransform(),
                 transition: isDragging ? 'none' : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
                 willChange: 'transform',
-                backfaceVisibility: 'hidden'
-            }}
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden'
+            } as React.CSSProperties}
             onTransitionEnd={handleTransitionEnd}
         >
             {allSlides.map((item, i) => {
