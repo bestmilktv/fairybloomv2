@@ -50,7 +50,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const GAP = 16;
   const ANIMATION_DURATION = 1000;
-  const LOCK_DURATION = 500;
+  const LOCK_DURATION = 400;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
   const BUFFER_SETS = products.length < 5 ? 10 : 4;
@@ -81,12 +81,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  // isDragging state pro vizuální styly (kurzor)
+  // isDragging pro React render (kurzor atd.)
   const [isDragging, setIsDragging] = useState(false);
   
-  // Refs
+  // Refs pro logiku
   const dragStartX = useRef(0);
-  const isDraggingRef = useRef(false);
+  const isDraggingRef = useRef(false); 
   const dragOffsetRef = useRef(0);
   const currentIndexRef = useRef(START_INDEX);
   const isClickBlockedRef = useRef(false);
@@ -202,32 +202,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [updateVisuals, currentIndex]); 
 
   // ============================================================================
-  // GLOBAL MOUSE LISTENERS (Jen pro myš na desktopu)
-  // ============================================================================
-  useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-        if (!isDraggingRef.current) return; // Reagujeme jen pokud už myší táhneme
-        const diff = e.clientX - dragStartX.current;
-        dragOffsetRef.current = diff;
-        if (Math.abs(diff) > 5) isClickBlockedRef.current = true;
-        updateVisuals(true);
-    };
-
-    const handleGlobalMouseUp = () => {
-        if (!isDraggingRef.current) return;
-        stopDrag();
-    };
-
-    window.addEventListener('mousemove', handleGlobalMouseMove);
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-
-    return () => {
-        window.removeEventListener('mousemove', handleGlobalMouseMove);
-        window.removeEventListener('mouseup', handleGlobalMouseUp);
-    };
-  }, [updateVisuals]);
-
-  // ============================================================================
   // LOGIKA DRAG & TELEPORT
   // ============================================================================
   
@@ -269,12 +243,29 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (trackRef.current) {
           trackRef.current.style.transition = 'none';
       }
-      updateVisuals(true);
+      
+      // Globální listenery pro myš (tažení mimo element)
+      const handleWindowMouseMove = (moveEvent: MouseEvent) => {
+          if (!isDraggingRef.current) return;
+          const diff = moveEvent.clientX - dragStartX.current;
+          dragOffsetRef.current = diff;
+          if (Math.abs(diff) > 5) isClickBlockedRef.current = true;
+          updateVisuals(true);
+      };
+      
+      const handleWindowMouseUp = () => {
+          window.removeEventListener('mousemove', handleWindowMouseMove);
+          window.removeEventListener('mouseup', handleWindowMouseUp);
+          stopDrag();
+      };
+      
+      window.addEventListener('mousemove', handleWindowMouseMove);
+      window.addEventListener('mouseup', handleWindowMouseUp);
   };
 
-  // === DOTYK (Mobil - Native Handling) ===
+  // === DOTYK (Mobil) - ČISTÁ REAKTIVNÍ LOGIKA ===
   const handleTouchStart = (e: React.TouchEvent) => {
-      // NEBLOKUJEME (preventDefault) - necháme prohlížeč, ať se rozhodne o scrollu
+      // ZDE ŽÁDNÝ PREVENT DEFAULT! Necháme prohlížeč dýchat.
       if (isResettingRef.current) return;
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
       
@@ -282,44 +273,36 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       
       dragStartX.current = e.touches[0].clientX;
       dragOffsetRef.current = 0;
-      
       isClickBlockedRef.current = false;
+      isDraggingRef.current = false; // Ještě nevíme, jestli dragujeme
+      
       setIsTransitioning(false);
-      
-      // Nastavíme flagy, ale hlavně spoléháme na touch-action: pan-y
-      isDraggingRef.current = true;
-      setIsDragging(true);
-      
-      if (trackRef.current) {
-          trackRef.current.style.transition = 'none';
-      }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-      // Pokud prohlížeč uznal, že je to scroll, tak už tento event nepošle
-      // (díky touch-action: pan-y). Pokud jsme tady, je to swipe.
-      
-      if (!isDraggingRef.current) return;
+      // Zde nepoužíváme preventDefault, spoléháme na touch-action: pan-y.
+      // Pokud prohlížeč usoudí, že je to vertikální scroll, tento event se přestane volat.
+      // Pokud usoudí, že je to horizontální pohyb, bude se volat dál.
 
       const x = e.touches[0].clientX;
       const diffX = x - dragStartX.current;
 
+      // Aktivujeme drag logiku
+      isDraggingRef.current = true;
+      
       dragOffsetRef.current = diffX;
       
       if (Math.abs(diffX) > 5) {
           isClickBlockedRef.current = true;
       }
       
-      // Můžeme preventovat default, aby se stránka nehýbala do boku (na iOS)
-      if (e.cancelable) {
-          // e.preventDefault(); // Volitelné, pan-y by to měl řešit
-      }
-      
       updateVisuals(true);
   };
 
   const handleTouchEnd = () => {
-      stopDrag();
+      if (isDraggingRef.current) {
+          stopDrag();
+      }
   };
 
   const stopDrag = () => {
@@ -366,16 +349,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   const moveSlide = (direction: number) => {
       if (isTransitioning) return;
-      
       checkBoundsAndTeleport();
-      
       requestAnimationFrame(() => {
           setIsTransitioning(true);
           const step = layoutMode === 'desktop' ? 3 : 1;
           currentIndexRef.current += (direction * step);
           setCurrentIndex(currentIndexRef.current);
           updateVisuals(false); 
-          
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
           transitionTimeoutRef.current = setTimeout(() => {
               setIsTransitioning(false);
@@ -400,20 +380,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
-        // Eventy pro myš
+        // Myš
         onMouseDown={handleMouseDown}
-        // Eventy pro dotyk (Native React Handling)
+        // Dotyk - standardní React eventy
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
         
         style={{
-            // TOTO JE TEN ZÁZRAK:
-            // Říkáme prohlížeči: "Scrolluj vertikálně (pan-y) automaticky.
-            // Horizontální posun mi dej do JS."
+            // TOTO JE KLÍČ: pan-y znamená "prohlížeči, řeš si vertikální scroll sám".
             touchAction: 'pan-y',
-            
             maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)'
         }}
