@@ -53,7 +53,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
   // Buffer klonů - Memory Safe
-  // Min 4 sady, max 10 sad (pro extrémně málo produktů)
   const BUFFER_SETS = products.length < 5 ? 10 : 4;
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
@@ -109,7 +108,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [layoutMode, setLayoutMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
 
   // ============================================================================
-  // RESPONZIVITA (TADY JE TA NOVÁ LOGIKA 1 / 3 / 5 KARET)
+  // RESPONZIVITA
   // ============================================================================
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -184,8 +183,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
         // LOGIKA ZMENŠOVÁNÍ PODLE ZAŘÍZENÍ
         if (layoutMode === 'desktop') {
-            // Desktop (5 karet): 3 středové velké, krajní malé
-            // Main Zone = 1.5 šířky karty (střed + půlky sousedů)
             const mainZone = totalCardWidth * 1.5; 
             if (dist > mainZone) {
                 const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
@@ -193,9 +190,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 opacity = 1 - (factor * 0.5);
             }
         } else {
-            // Tablet (3 karty) & Mobil (1 karta)
-            // Zde chceme jen JEDNU hlavní kartu velkou (střed) a sousedy hned menší
-            // Main Zone = 0.5 šířky karty (jen polovina středové karty)
             const mainZone = totalCardWidth * 0.5;
             if (dist > mainZone) {
                  const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
@@ -384,6 +378,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX); }}
         onTouchStart={(e) => { startDrag(e.touches[0].clientX); }}
+        // TADY PŘIDÁVÁME MASKU (FADE EFEKT)
+        style={{
+            maskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)'
+        }}
       >
         <div
             ref={trackRef}
