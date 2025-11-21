@@ -341,14 +341,21 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsTransitioning(false);
   };
 
-  const moveSlide = (step: number) => {
+  const moveSlide = (direction: number) => {
       if (isTransitioning) return;
       
       checkBoundsAndTeleport();
       
       requestAnimationFrame(() => {
           setIsTransitioning(true);
-          currentIndexRef.current += step;
+          
+          // LOGIKA KROKU:
+          // Desktop = posun o 3 (celá skupina)
+          // Tablet/Mobil = posun o 1
+          const step = layoutMode === 'desktop' ? 3 : 1;
+          
+          currentIndexRef.current += (direction * step);
+          
           setCurrentIndex(currentIndexRef.current);
           updateVisuals(false); 
           
@@ -378,10 +385,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX); }}
         onTouchStart={(e) => { startDrag(e.touches[0].clientX); }}
-        // TADY JE NOVÝ, HEZČÍ FADE
         style={{
-            // Používáme vícekrokový gradient pro jemnější, nelineární přechod.
-            // Fade nyní zabírá 15% šířky na každé straně a je mnohem plynulejší.
             maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)'
         }}
