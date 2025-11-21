@@ -348,6 +348,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           opacity: 1 !important;
           transform: none !important;
         }
+        /* Vynutit hardwarovou akceleraci pro obrázky - GPU caching */
+        .carousel-force-no-animate img {
+          transform: translateZ(0) !important;
+          will-change: transform;
+          backfaceVisibility: hidden;
+        }
       `}</style>
 
       <div 

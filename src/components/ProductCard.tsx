@@ -68,6 +68,10 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
           className={imageClasses}
           loading={disableAnimations ? "eager" : "lazy"}
           decoding={disableAnimations ? "sync" : "async"}
+          style={disableAnimations ? {
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden'
+          } : undefined}
         />
       </div>
       
