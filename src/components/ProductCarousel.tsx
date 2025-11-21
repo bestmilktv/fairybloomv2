@@ -81,16 +81,19 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
-  // Refs pro Drag Logiku
+  // Refs
   const dragStartX = useRef(0);
+  const dragStartY = useRef(0);
   const isDraggingRef = useRef(false); 
   const dragOffsetRef = useRef(0);
   const currentIndexRef = useRef(START_INDEX);
   const isClickBlockedRef = useRef(false);
   
-  // Pointer ID pro capture
+  // Pointer tracking
   const activePointerId = useRef<number | null>(null);
+  const isScrollDetectedRef = useRef(false); // True pokud jsme zjistili, že user scrolluje stránku
   
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -203,10 +206,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [updateVisuals, currentIndex]); 
 
   // ============================================================================
-  // POINTER EVENTS - THE CORRECT WAY
+  // POINTER EVENTS LOGIC (DUAL MODE: MOUSE vs TOUCH)
   // ============================================================================
   
-  // Kontrola hranic a případný teleport
   const checkBoundsAndTeleport = () => {
       const current = currentIndexRef.current;
       if (current < SAFE_ZONE_START || current > SAFE_ZONE_END) {
@@ -227,86 +229,118 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       }
   };
 
-  // POINTER DOWN (Start)
+  // --- POINTER DOWN ---
   const handlePointerDown = (e: React.PointerEvent) => {
-      // Ignorujeme pravé tlačítko
-      if (e.button !== 0) return;
+      // Ignorujeme pravé tlačítko a pokud už něco táhneme
+      if (e.button !== 0 || activePointerId.current !== null) return;
+
+      // Uložíme ID pointeru
+      activePointerId.current = e.pointerId;
 
       if (isResettingRef.current) return;
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
 
       checkBoundsAndTeleport();
 
-      // Uložíme pointer ID pro capture
-      activePointerId.current = e.pointerId;
-      
       dragStartX.current = e.clientX;
+      dragStartY.current = e.clientY;
       dragOffsetRef.current = 0;
       
       isClickBlockedRef.current = false;
-      isDraggingRef.current = false; // Ještě nevíme, jestli se hýbe
+      isDraggingRef.current = false;
+      isScrollDetectedRef.current = false; // Reset detekce scrollu
+      
       setIsTransitioning(false);
       
       if (trackRef.current) {
           trackRef.current.style.transition = 'none';
       }
-      
-      // NEVOLÁME setPointerCapture HNED! 
-      // Necháme prohlížeč rozhodnout, jestli je to scroll.
+
+      // DŮLEŽITÉ ROZLIŠENÍ:
+      // Pokud je to MYŠ, okamžitě blokujeme default (aby se neoznačoval text/obrázky)
+      // a okamžitě aktivujeme drag.
+      if (e.pointerType === 'mouse') {
+          e.preventDefault();
+          isDraggingRef.current = true;
+          setIsDragging(true);
+          // Capture pointer hned pro myš
+          const element = e.target as HTMLElement;
+          element.setPointerCapture(e.pointerId);
+      }
+      // Pokud je to DOTYK, NEDĚLÁME preventDefault ani capture hned.
+      // Čekáme na první pohyb, abychom zjistili, jestli to není scroll.
   };
 
-  // POINTER MOVE
+  // --- POINTER MOVE ---
   const handlePointerMove = (e: React.PointerEvent) => {
-      // Pokud nemáme aktivní pointer (uživatel nedrží), ignorujeme
       if (activePointerId.current !== e.pointerId) return;
 
+      // Pokud už jsme zjistili, že uživatel scrolluje stránku, carousel ignoruje vše
+      if (isScrollDetectedRef.current) return;
+
       const diffX = e.clientX - dragStartX.current;
+      const diffY = e.clientY - dragStartY.current;
 
-      // Pokud ještě nedragujeme (začátek pohybu)
-      if (!isDraggingRef.current) {
-          // Pokud je pohyb malý (deadzone), ignorujeme
-          if (Math.abs(diffX) < 10) return;
+      // --- LOGIKA PRO DOTYK ---
+      if (e.pointerType !== 'mouse') {
+          // Pokud ještě nevíme co se děje (nezačal drag ani scroll)
+          if (!isDraggingRef.current) {
+              // Deadzone
+              if (Math.abs(diffX) < 6 && Math.abs(diffY) < 6) return;
 
-          // Pokud jsme se pohnuli horizontálně dostatečně daleko, 
-          // prohlížeč nám poslal tento event (díky touch-action: pan-y).
-          // To znamená, že to NENÍ scroll (protože u scrollu by event nepřišel).
-          
-          // Takže aktivujeme DRAG a uzamkneme pointer.
-          isDraggingRef.current = true;
-          isClickBlockedRef.current = true;
-          
-          // TOTO JE KLÍČOVÉ: Řekneme prohlížeči "Tenhle prst je můj, už nescrolluj"
-          const element = e.target as HTMLElement;
-          if (element.setPointerCapture) {
-              element.setPointerCapture(e.pointerId);
+              // Rozhodnutí: Scroll vs Swipe
+              if (Math.abs(diffY) > Math.abs(diffX)) {
+                  // Je to scroll -> Ignorujeme tento pointer a necháme prohlížeč scrollovat
+                  isScrollDetectedRef.current = true;
+                  return;
+              } else {
+                  // Je to swipe -> Zamkneme pointer pro nás
+                  isDraggingRef.current = true;
+                  setIsDragging(true);
+                  const element = e.target as HTMLElement;
+                  element.setPointerCapture(e.pointerId);
+                  // Blokujeme scroll
+                  if (e.cancelable) e.preventDefault();
+              }
           }
       }
 
-      // Pokud už dragujeme
+      // --- LOGIKA DRAGU (pokud je aktivní) ---
       if (isDraggingRef.current) {
-          // Bráníme defaultu (výběr textu atd.)
-          e.preventDefault(); 
+          // Pro myš preventujeme vždy, pro touch pokud jsme v drag módu
+          if (e.cancelable && e.pointerType !== 'mouse') e.preventDefault();
           
           dragOffsetRef.current = diffX;
+          
+          if (Math.abs(diffX) > 5) {
+              isClickBlockedRef.current = true;
+          }
+          
           updateVisuals(true);
       }
   };
 
-  // POINTER UP / LEAVE
+  // --- POINTER UP / CANCEL / LEAVE ---
   const handlePointerUp = (e: React.PointerEvent) => {
       if (activePointerId.current !== e.pointerId) return;
       
-      // Uvolníme capture
+      // Uvolníme capture pokud ho máme
       if (isDraggingRef.current) {
           const element = e.target as HTMLElement;
-          if (element.releasePointerCapture) {
-              element.releasePointerCapture(e.pointerId);
-          }
+          try {
+            if (element.hasPointerCapture(e.pointerId)) {
+                element.releasePointerCapture(e.pointerId);
+            }
+          } catch(err) { /* ignore */ }
           stopDrag();
       }
-      
+
+      // Reset všeho
       activePointerId.current = null;
       isDraggingRef.current = false;
+      isScrollDetectedRef.current = false;
+      // isDragging state v Reactu resetuje stopDrag, nebo zde pokud nebyl drag
+      if (!isClickBlockedRef.current) setIsDragging(false);
   };
 
   const stopDrag = () => {
@@ -336,6 +370,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     transitionTimeoutRef.current = setTimeout(() => {
         if (isResettingRef.current) return;
         setIsTransitioning(false);
+        setIsDragging(false);
     }, LOCK_DURATION);
   };
 
@@ -350,13 +385,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   const moveSlide = (direction: number) => {
       if (isTransitioning) return;
+      
       checkBoundsAndTeleport();
+      
       requestAnimationFrame(() => {
           setIsTransitioning(true);
           const step = layoutMode === 'desktop' ? 3 : 1;
           currentIndexRef.current += (direction * step);
           setCurrentIndex(currentIndexRef.current);
           updateVisuals(false); 
+          
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
           transitionTimeoutRef.current = setTimeout(() => {
               setIsTransitioning(false);
@@ -376,12 +414,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         .carousel-force-no-animate img {
           transform: translateZ(0) !important;
           backface-visibility: hidden;
+          pointer-events: none; /* Důležité pro drag na PC! */
         }
       `}</style>
 
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
-        // POUŽÍVÁME POINTER EVENTS (Sjednocují myš a dotyk a umožňují Capture)
+        // POUZE POINTER EVENTS
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -389,8 +428,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         onPointerLeave={handlePointerUp}
         
         style={{
-            // TOTO JE NEJDŮLEŽITĚJŠÍ ŘÁDEK CELÉHO KÓDU:
-            // Říká prohlížeči: "Vertikální gesta (scroll) si řeš sám. Horizontální (pan-x) mi posílej."
+            // pan-y: Prohlížeč ví, že vertikální pohyb je scroll
             touchAction: 'pan-y', 
             
             maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
