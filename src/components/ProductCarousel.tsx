@@ -389,6 +389,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                             ...getCardStyle(i),
                             willChange: 'transform', // Řekne prohlížeči, že se to bude hýbat
                             contain: 'paint layout', // Izoluje překreslování (zrychlí to)
+                            transform: 'translateZ(0)', // Udrží textury v GPU paměti
                         }}
                     >
                         <div className="h-full pointer-events-none"> 
