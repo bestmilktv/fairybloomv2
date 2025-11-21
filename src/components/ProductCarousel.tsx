@@ -50,26 +50,21 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   const GAP = 16;
   const ANIMATION_DURATION = 1000;
-  const LOCK_DURATION = 400;      // Jak dlouho je tlačítko zablokované
+  const LOCK_DURATION = 400; // Rychlejší odemčení pro klikání
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  // Buffer klonů - Memory Safe
   const BUFFER_SETS = products.length < 5 ? 10 : 4;
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
-  // Příprava dat
   const allSlides = useMemo(() => {
     const items = [];
-    // A) Klony vlevo
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = (products.length - 1 - (i % products.length));
         items.unshift({ product: products[sourceIndex], isClone: true, originalIndex: sourceIndex });
     }
-    // B) Originály
     products.forEach((p, i) => {
         items.push({ product: p, isClone: false, originalIndex: i });
     });
-    // C) Klony vpravo
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = i % products.length;
         items.push({ product: products[sourceIndex], isClone: true, originalIndex: sourceIndex });
@@ -90,11 +85,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [dragOffset, setDragOffset] = useState(0);
   
   const dragStartX = useRef(0);
+  const dragStartY = useRef(0); // NOVÉ: Pro detekci vertikálního scrollu
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef(0);
   const currentIndexRef = useRef(START_INDEX);
   
   const isClickBlockedRef = useRef(false);
+  // NOVÉ: Flag, který nám řekne, jestli jsme se rozhodli pro scroll nebo swipe
+  const isScrollingRef = useRef<boolean | null>(null);
   
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -103,7 +101,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const isResettingRef = useRef(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Rozměry a Layout mód
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
   const [layoutMode, setLayoutMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
@@ -119,15 +116,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       setViewportWidth(width);
       
       if (width >= 1024) {
-        // DESKTOP: 5 karet
         setLayoutMode('desktop');
         setCardWidth((width - (4 * GAP)) / 5);
       } else if (width >= 640) {
-        // TABLET / IPAD: 3 karty
         setLayoutMode('tablet');
         setCardWidth((width - (2 * GAP)) / 3);
       } else {
-        // MOBIL: 1 karta
         setLayoutMode('mobile');
         setCardWidth(width - 32);
       }
@@ -160,13 +154,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const basePos = getPositionForIndex(targetIndex);
     const finalPos = basePos + currentDrag;
     
-    // Nastavení Tracku
     trackRef.current.style.transform = `translate3d(${finalPos}px, 0, 0)`;
     trackRef.current.style.transition = (isDraggingRef.current || instant) 
         ? 'none' 
         : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
 
-    // Optimalizace loopu
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
     const startIndex = Math.max(0, targetIndex - visibleCount);
     const endIndex = Math.min(allSlides.length - 1, targetIndex + visibleCount);
@@ -182,7 +174,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         let scale = 1;
         let opacity = 1;
 
-        // LOGIKA ZMENŠOVÁNÍ PODLE ZAŘÍZENÍ
         if (layoutMode === 'desktop') {
             const mainZone = totalCardWidth * 1.5; 
             if (dist > mainZone) {
@@ -215,21 +206,50 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [updateVisuals, currentIndex]); 
 
   // ============================================================================
-  // GLOBAL LISTENERS
+  // GLOBAL LISTENERS (S DETEKCÍ SCROLLU)
   // ============================================================================
   useEffect(() => {
     const handleGlobalMove = (e: MouseEvent | TouchEvent) => {
         if (!isDraggingRef.current) return;
+
         const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-        const diff = clientX - dragStartX.current;
-        dragOffsetRef.current = diff;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
         
-        if (Math.abs(diff) > 5) {
+        const diffX = clientX - dragStartX.current;
+        const diffY = clientY - dragStartY.current;
+
+        // DETEKCE SMĚRU (Pokud jsme se ještě nerozhodli)
+        if (isScrollingRef.current === null) {
+            // Pokud je pohyb více vertikální než horizontální -> je to SCROLL
+            if (Math.abs(diffY) > Math.abs(diffX)) {
+                isScrollingRef.current = true;
+                stopDrag(); // Okamžitě přestaneme dragovat carousel
+                return; // A necháme prohlížeč scrollovat (nepoužijeme preventDefault)
+            } else {
+                // Je to SWIPE
+                isScrollingRef.current = false;
+            }
+        }
+
+        // Pokud jsme vyhodnotili, že uživatel scrolluje stránku, carousel ignoruje pohyb
+        if (isScrollingRef.current) {
+            return;
+        }
+
+        // Pokud jsme vyhodnotili, že uživatel swipuje carousel, ZABLOKUJEME scroll stránky
+        if (e.cancelable) {
+            e.preventDefault(); 
+        }
+
+        // Pokračujeme v logice carouselu...
+        dragOffsetRef.current = diffX;
+        setDragOffset(diffX);
+        
+        if (Math.abs(diffX) > 5) {
             isClickBlockedRef.current = true;
         }
         
         updateVisuals(true); 
-        setDragOffset(diff); 
     };
 
     const handleGlobalUp = () => {
@@ -239,7 +259,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     if (isDragging) {
         window.addEventListener('mousemove', handleGlobalMove);
-        window.addEventListener('touchmove', handleGlobalMove, { passive: false });
+        window.addEventListener('touchmove', handleGlobalMove, { passive: false }); // Passive false pro preventDefault
         window.addEventListener('mouseup', handleGlobalUp);
         window.addEventListener('touchend', handleGlobalUp);
     }
@@ -252,9 +272,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [isDragging, updateVisuals]);
 
   // ============================================================================
-  // LOGIKA DRAG & TELEPORT
+  // LOGIKA DRAG
   // ============================================================================
-  
   const checkBoundsAndTeleport = () => {
       const current = currentIndexRef.current;
       if (current < SAFE_ZONE_START || current > SAFE_ZONE_END) {
@@ -276,7 +295,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       }
   };
 
-  const startDrag = (clientX: number) => {
+  const startDrag = (clientX: number, clientY: number) => {
     if (isResettingRef.current) return;
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
 
@@ -284,10 +303,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     setIsDragging(true);
     isDraggingRef.current = true;
+    
     dragStartX.current = clientX;
+    dragStartY.current = clientY; // Ukládáme i Y pro detekci scrollu
+    
     dragOffsetRef.current = 0;
     setDragOffset(0);
+    
     isClickBlockedRef.current = false;
+    isScrollingRef.current = null; // Reset detekce směru
     
     setIsTransitioning(false);
     
@@ -300,6 +324,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const stopDrag = () => {
     setIsDragging(false);
     isDraggingRef.current = false;
+
+    // Pokud jsme jen scrollovali stránku, nic neřešíme
+    if (isScrollingRef.current) {
+        isScrollingRef.current = null;
+        return;
+    }
 
     const currentOffset = dragOffsetRef.current;
     const totalCardWidth = cardWidth + GAP;
@@ -314,7 +344,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const newIndex = currentIndexRef.current + indexDiff;
     
     setIsTransitioning(true);
-    
     dragOffsetRef.current = 0; 
     setDragOffset(0);
 
@@ -329,7 +358,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     transitionTimeoutRef.current = setTimeout(() => {
         if (isResettingRef.current) return;
         setIsTransitioning(false);
-    }, ANIMATION_DURATION + 50);
+    }, LOCK_DURATION);
   };
 
   // ============================================================================
@@ -349,21 +378,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       
       requestAnimationFrame(() => {
           setIsTransitioning(true);
-          
-          // LOGIKA KROKU:
-          // Desktop = posun o 3 (celá skupina)
-          // Tablet/Mobil = posun o 1
           const step = layoutMode === 'desktop' ? 3 : 1;
-          
           currentIndexRef.current += (direction * step);
-          
           setCurrentIndex(currentIndexRef.current);
           updateVisuals(false); 
           
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
           transitionTimeoutRef.current = setTimeout(() => {
               setIsTransitioning(false);
-          }, ANIMATION_DURATION + 50);
+          }, LOCK_DURATION);
       });
   };
 
@@ -384,12 +407,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
-        onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX); }}
-        onTouchStart={(e) => { startDrag(e.touches[0].clientX); }}
+        // TADY JE ZMĚNA: touch-action: pan-y povoluje vertikální scroll prohlížeče
         style={{
+            touchAction: 'pan-y',
             maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)'
         }}
+        onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientX, e.clientY); }}
+        onTouchStart={(e) => { startDrag(e.touches[0].clientX, e.touches[0].clientY); }}
       >
         <div
             ref={trackRef}
