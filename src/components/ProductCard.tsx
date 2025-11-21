@@ -53,8 +53,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
     ? "font-serif text-xl font-semibold text-luxury mb-2 line-clamp-2 min-h-[3.5rem]"
     : "font-serif text-xl font-semibold text-luxury mb-2 hover:text-gold transition-colors duration-300 line-clamp-2 min-h-[3.5rem]";
 
-  // Podmíněné třídy pro wrapper obrázku - transparent pozadí když disableAnimations
-  // aby při případném 1ms výpadku neproblikla žádná barva
+  // Podmíněné třídy pro wrapper obrázku - odstraníme bg-muted když disableAnimations
   const imageWrapperClasses = disableAnimations
     ? "aspect-square overflow-hidden"
     : "aspect-square overflow-hidden bg-muted";
@@ -68,10 +67,9 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
           alt={title}
           className={imageClasses}
           loading={disableAnimations ? "eager" : "lazy"}
-          decoding="sync"
+          decoding={disableAnimations ? "sync" : "async"}
           style={disableAnimations ? {
-            contentVisibility: 'visible', // Zakáže optimalizaci skrytí
-            transform: 'translateZ(0)',   // Force GPU layer
+            transform: 'translateZ(0)',
             backfaceVisibility: 'hidden'
           } : undefined}
         />

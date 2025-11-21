@@ -353,8 +353,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           transform: translateZ(0) !important;
           will-change: transform;
           backfaceVisibility: hidden;
-          visibility: visible !important;
-          opacity: 1 !important;
         }
       `}</style>
 
@@ -385,12 +383,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                         data-type={item.isClone ? 'clone' : 'original'}
                         data-index={i}
                         className="flex-shrink-0"
-                        style={{
-                            ...getCardStyle(i),
-                            willChange: 'transform', // Řekne prohlížeči, že se to bude hýbat
-                            contain: 'paint layout', // Izoluje překreslování (zrychlí to)
-                            transform: 'translateZ(0)', // Udrží textury v GPU paměti
-                        }}
+                        style={getCardStyle(i)}
                     >
                         <div className="h-full pointer-events-none"> 
                             <div className={isDragging ? "pointer-events-none" : "pointer-events-auto"}>
