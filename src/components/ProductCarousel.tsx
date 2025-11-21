@@ -49,7 +49,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // KONFIGURACE
   // ============================================================================
   const GAP = 16;
-  const ANIMATION_DURATION = 800;
+  const ANIMATION_DURATION = 1000;
+  const LOCK_DURATION = 400;      // Jak dlouho je tlačítko zablokované
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
   // Buffer klonů - Memory Safe
