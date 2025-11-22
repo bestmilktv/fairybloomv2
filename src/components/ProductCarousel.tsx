@@ -102,6 +102,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   
   const isResettingRef = useRef(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const rafIdRef = useRef<number | null>(null); // Pro throttling updateVisuals pomocí RAF
 
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
@@ -131,7 +132,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     updateDimensions();
     const resizeObserver = new ResizeObserver(updateDimensions);
     resizeObserver.observe(wrapperRef.current);
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      // Cleanup RAF při unmount
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+    };
   }, []);
 
   const getPositionForIndex = useCallback((index: number) => {
@@ -192,19 +200,26 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             }
         }
 
-        card.style.width = `${cardWidth}px`;
-        card.style.transform = `scale(${scale}) translateZ(0)`;
-        card.style.opacity = `${opacity}`;
-        card.style.transition = (isDraggingRef.current || instant) 
+        // Optimalizované batch DOM updates - používat jednotlivé properties místo cssText pro lepší kompatibilitu
+        const transitionValue = (isDraggingRef.current || instant) 
             ? 'none' 
             : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        
+        // Použít jednorázovou manipulaci pro lepší výkon
+        if (card.style.width !== `${cardWidth}px`) card.style.width = `${cardWidth}px`;
+        if (card.style.transform !== `scale(${scale}) translateZ(0)`) card.style.transform = `scale(${scale}) translateZ(0)`;
+        if (card.style.opacity !== `${opacity}`) card.style.opacity = `${opacity}`;
+        if (card.style.transition !== transitionValue) card.style.transition = transitionValue;
     }
 
   }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
 
   useLayoutEffect(() => {
-    updateVisuals(isResettingRef.current);
-  }, [updateVisuals, currentIndex]); 
+    // Optimalizace: update jen když je potřeba a cardWidth je nastaven
+    if (cardWidth > 0 && !isResettingRef.current) {
+      updateVisuals(isResettingRef.current);
+    }
+  }, [updateVisuals, currentIndex, cardWidth]); 
 
   // ============================================================================
   // POINTER EVENTS LOGIC (DUAL MODE: MOUSE vs TOUCH)
@@ -294,7 +309,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               isClickBlockedRef.current = true;
           }
           
-          updateVisuals(true);
+          // Throttle pomocí RAF pro lepší výkon na mobilních zařízeních
+          if (rafIdRef.current === null) {
+              rafIdRef.current = requestAnimationFrame(() => {
+                  updateVisuals(true);
+                  rafIdRef.current = null;
+              });
+          }
           return;
       }
 
@@ -323,7 +344,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                   isClickBlockedRef.current = true;
               }
               
-              updateVisuals(true);
+              // Throttle pomocí RAF pro lepší výkon na mobilních zařízeních
+              if (rafIdRef.current === null) {
+                  rafIdRef.current = requestAnimationFrame(() => {
+                      updateVisuals(true);
+                      rafIdRef.current = null;
+                  });
+              }
               return;
           }
 
@@ -360,7 +387,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               // Začni hýbat carouselem
               dragOffsetRef.current = diffX;
               isClickBlockedRef.current = true;
-              updateVisuals(true);
+              // Throttle pomocí RAF pro lepší výkon na mobilních zařízeních
+              if (rafIdRef.current === null) {
+                  rafIdRef.current = requestAnimationFrame(() => {
+                      updateVisuals(true);
+                      rafIdRef.current = null;
+                  });
+              }
           }
       }
   };
@@ -368,6 +401,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // --- POINTER UP / CANCEL / LEAVE ---
   const handlePointerUp = (e: React.PointerEvent) => {
       if (activePointerId.current !== e.pointerId) return;
+      
+      // Zrušit pending RAF update
+      if (rafIdRef.current !== null) {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+      }
       
       // Uvolníme capture pokud ho máme
       if (isDraggingRef.current) {
@@ -501,7 +540,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                         className="flex-shrink-0"
                         style={{
                             width: `${cardWidth}px`,
-                            backfaceVisibility: 'hidden'
+                            backfaceVisibility: 'hidden',
+                            willChange: 'transform, opacity' // GPU akcelerace pro lepší výkon
                         }}
                     >
                         <div className="h-full"> 
