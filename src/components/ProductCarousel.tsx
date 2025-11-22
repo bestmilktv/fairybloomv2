@@ -82,6 +82,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [currentProductIndex, setCurrentProductIndex] = useState(0);
   
   // Refs
   const dragStartX = useRef(0);
@@ -219,7 +220,21 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (cardWidth > 0 && !isResettingRef.current) {
       updateVisuals(isResettingRef.current);
     }
-  }, [updateVisuals, currentIndex, cardWidth]); 
+  }, [updateVisuals, currentIndex, cardWidth]);
+
+  // ============================================================================
+  // TRACKING CURRENT PRODUCT INDEX (pro indikátor pozice)
+  // ============================================================================
+  const getCurrentProductIndex = useCallback((index: number): number => {
+    const slideData = allSlides[index];
+    if (!slideData) return 0;
+    return slideData.originalIndex;
+  }, [allSlides]);
+
+  useEffect(() => {
+    const productIndex = getCurrentProductIndex(currentIndex);
+    setCurrentProductIndex(productIndex);
+  }, [currentIndex, getCurrentProductIndex]); 
 
   // ============================================================================
   // POINTER EVENTS LOGIC (DUAL MODE: MOUSE vs TOUCH)
@@ -580,6 +595,23 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       <button onClick={() => moveSlide(1)} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
+
+      {/* Indikátor pozice */}
+      <div className="flex justify-center items-center gap-1.5 mt-6 mb-2">
+        {products.map((_, index) => (
+          <div
+            key={index}
+            className={`transition-all duration-500 ease-out ${
+              index === currentProductIndex
+                ? 'w-6 h-1 bg-black rounded-full'
+                : 'w-1.5 h-1.5 bg-gray-300 rounded-full'
+            }`}
+            style={{
+              transitionProperty: 'width, height, background-color',
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 };
