@@ -16,6 +16,10 @@
     {
       "source": "/api/back-in-stock/webhook",
       "destination": "/api/back-in-stock"
+    },
+    {
+      "source": "/api/auth/customer/admin-update",
+      "destination": "/api/auth/customer/update"
     }
   ],
   "headers": [
