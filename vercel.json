@@ -8,6 +8,16 @@
   "env": {
     "NODE_ENV": "production"
   },
+  "rewrites": [
+    {
+      "source": "/api/back-in-stock/subscribe",
+      "destination": "/api/back-in-stock"
+    },
+    {
+      "source": "/api/back-in-stock/webhook",
+      "destination": "/api/back-in-stock"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",

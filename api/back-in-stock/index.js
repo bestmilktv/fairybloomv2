@@ -1,22 +1,243 @@
 /**
- * Back in Stock Webhook Handler
+ * Back in Stock API Endpoint
  * 
- * Handles webhook from Shopify when inventory levels change
- * Finds customers with back-in-stock tags and sends them email notifications
+ * Handles both subscription and webhook for back-in-stock notifications
  * 
- * Usage:
- * POST /api/back-in-stock/webhook
- * Body: Shopify webhook payload for inventory_levels/update
- * 
- * This endpoint should be called by Shopify webhook when inventory changes
+ * Routes:
+ * POST /api/back-in-stock/subscribe - Subscribe customer to notifications
+ * POST /api/back-in-stock/webhook - Handle Shopify webhook
  */
 
 export default async function handler(req, res) {
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  const { method, url, body } = req;
+  
+  // Extract path from URL to determine route
+  // URL format: /api/back-in-stock/subscribe or /api/back-in-stock/webhook
+  const path = url.split('?')[0]; // Remove query parameters
+  
+  // Route to subscribe endpoint
+  // Check if it's a subscription request (has email and variantId in body, but no inventory_item_id)
+  if (method === 'POST' && body && body.email && body.variantId && !body.inventory_item_id) {
+    return handleSubscribe(req, res);
   }
+  
+  // Route to webhook endpoint
+  // Check if it's a webhook request (has inventory_item_id in body)
+  if (method === 'POST' && body && body.inventory_item_id) {
+    return handleWebhook(req, res);
+  }
+  
+  // Also check URL path as fallback
+  if (method === 'POST' && path.includes('/subscribe')) {
+    return handleSubscribe(req, res);
+  }
+  
+  if (method === 'POST' && path.includes('/webhook')) {
+    return handleWebhook(req, res);
+  }
+  
+  // Default: method not allowed
+  return res.status(405).json({ error: 'Method not allowed' });
+}
 
+/**
+ * Handle subscription to back-in-stock notifications
+ */
+async function handleSubscribe(req, res) {
+  try {
+    // Get environment variables
+    const storeDomain = process.env.VITE_SHOPIFY_STORE_DOMAIN;
+    const adminToken = process.env.SHOPIFY_ADMIN_API_TOKEN;
+
+    // Validate environment variables
+    if (!storeDomain || !adminToken) {
+      console.error('Missing required environment variables');
+      return res.status(500).json({ 
+        error: 'Server configuration error: Missing Shopify credentials' 
+      });
+    }
+
+    // Get data from request body
+    const { email, variantId } = req.body;
+
+    // Validate required fields
+    if (!email) {
+      return res.status(400).json({ 
+        error: 'Email is required' 
+      });
+    }
+
+    if (!variantId) {
+      return res.status(400).json({ 
+        error: 'Variant ID is required' 
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        error: 'Invalid email format' 
+      });
+    }
+
+    // Extract numeric variant ID from GID format if needed
+    let numericVariantId = variantId;
+    if (variantId.startsWith('gid://')) {
+      const parts = variantId.split('/');
+      numericVariantId = parts[parts.length - 1];
+    }
+
+    // Use Shopify Admin API version 2024-04
+    const apiVersion = '2024-04';
+    const baseUrl = `https://${storeDomain}/admin/api/${apiVersion}`;
+
+    // Create tag for this variant: back-in-stock-{variantId}
+    const tag = `back-in-stock-${numericVariantId}`;
+
+    // Step 1: Find existing customer by email
+    const searchUrl = `${baseUrl}/customers/search.json?query=email:${encodeURIComponent(email)}`;
+    
+    console.log(`[BackInStock] Searching for customer with email: ${email}`);
+    
+    const searchResponse = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'X-Shopify-Access-Token': adminToken,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!searchResponse.ok) {
+      if (searchResponse.status === 401) {
+        console.error('[BackInStock] Invalid Shopify Admin API token');
+        return res.status(401).json({ 
+          error: 'Invalid Shopify Admin API token' 
+        });
+      }
+      const errorText = await searchResponse.text();
+      console.error(`[BackInStock] Shopify API search error: ${searchResponse.status} - ${errorText}`);
+      return res.status(searchResponse.status).json({ 
+        error: `Shopify API error: ${searchResponse.statusText}` 
+      });
+    }
+
+    const searchData = await searchResponse.json();
+    const existingCustomers = searchData.customers || [];
+    
+    if (existingCustomers.length > 0) {
+      // Customer exists - update tags
+      const customer = existingCustomers[0];
+      const customerId = customer.id;
+      
+      // Get existing tags
+      const existingTags = customer.tags ? customer.tags.split(',').map(t => t.trim()) : [];
+      
+      // Check if tag already exists
+      if (existingTags.includes(tag)) {
+        return res.status(200).json({
+          success: true,
+          message: 'Already subscribed to back-in-stock notifications for this product'
+        });
+      }
+      
+      // Add new tag
+      const updatedTags = [...existingTags, tag].join(', ');
+      
+      console.log(`[BackInStock] Updating customer ${customerId} with tag: ${tag}`);
+      
+      const updateUrl = `${baseUrl}/customers/${customerId}.json`;
+      const updatePayload = {
+        customer: {
+          id: customerId,
+          tags: updatedTags
+        }
+      };
+      
+      const updateResponse = await fetch(updateUrl, {
+        method: 'PUT',
+        headers: {
+          'X-Shopify-Access-Token': adminToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatePayload),
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        console.error(`[BackInStock] Shopify API update error: ${updateResponse.status}:`, JSON.stringify(errorData, null, 2));
+        return res.status(updateResponse.status).json({ 
+          error: 'Failed to update customer tags',
+          details: errorData
+        });
+      }
+
+      console.log(`[BackInStock] Successfully added tag ${tag} to customer ${customerId}`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Successfully subscribed to back-in-stock notifications'
+      });
+    } else {
+      // Customer doesn't exist - create new customer with tag
+      const createUrl = `${baseUrl}/customers.json`;
+      const createPayload = {
+        customer: {
+          email: email,
+          tags: tag
+        }
+      };
+      
+      console.log(`[BackInStock] Creating new customer with tag: ${tag}`);
+      
+      const createResponse = await fetch(createUrl, {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': adminToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(createPayload),
+      });
+
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json();
+        console.error(`[BackInStock] Shopify API create error: ${createResponse.status}:`, JSON.stringify(errorData, null, 2));
+        
+        // Handle duplicate email error
+        if (createResponse.status === 422 && errorData.errors?.email) {
+          return res.status(409).json({ 
+            error: 'This email is already registered. Please try again.' 
+          });
+        }
+        
+        return res.status(createResponse.status).json({ 
+          error: 'Failed to create customer',
+          details: errorData
+        });
+      }
+
+      const createResult = await createResponse.json();
+      console.log(`[BackInStock] Successfully created customer ${createResult.customer?.id} with tag ${tag}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Successfully subscribed to back-in-stock notifications'
+      });
+    }
+
+  } catch (error) {
+    console.error('[BackInStock] Error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+}
+
+/**
+ * Handle webhook from Shopify
+ */
+async function handleWebhook(req, res) {
   try {
     // Get environment variables
     const storeDomain = process.env.VITE_SHOPIFY_STORE_DOMAIN;
@@ -37,14 +258,6 @@ export default async function handler(req, res) {
     console.log('[BackInStock Webhook] Received webhook:', JSON.stringify(webhookData, null, 2));
 
     // Extract variant ID and inventory quantity from webhook
-    // Shopify webhook format for inventory_levels/update:
-    // {
-    //   "inventory_item_id": 123456789,
-    //   "location_id": 123456789,
-    //   "available": 10,
-    //   "updated_at": "2024-01-01T00:00:00Z"
-    // }
-    
     const inventoryItemId = webhookData.inventory_item_id;
     const available = webhookData.available;
     const previousAvailable = webhookData.previous_available || 0;
@@ -54,7 +267,6 @@ export default async function handler(req, res) {
       console.log(`[BackInStock Webhook] Inventory changed from ${previousAvailable} to ${available} for item ${inventoryItemId}`);
       
       // Get variant ID from inventory item ID
-      // We need to query Shopify to get variant(s) associated with this inventory item
       const apiVersion = '2024-04';
       const baseUrl = `https://${storeDomain}/admin/api/${apiVersion}`;
       
@@ -272,7 +484,7 @@ export default async function handler(req, res) {
             }
 
           } catch (emailError) {
-            console.error(`[BackInStock Webhook] Error sending email to ${customer.email}:`, emailError);
+            console.error(`[BackInStock Webhook] Error processing customer ${customer.email}:`, emailError);
             // Continue with other customers
           }
         }
