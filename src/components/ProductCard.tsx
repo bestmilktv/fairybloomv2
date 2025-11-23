@@ -134,27 +134,27 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
             <span className="text-2xl font-semibold text-gold font-serif">
               {price}
             </span>
-            <Button 
-              variant="premium" 
-              size="sm"
-              onClick={handleAddToCart}
-              disabled={isInCart || !variantId}
-              className={isInCart ? 'bg-green-600 hover:bg-green-700' : ''}
-            >
-              {isInCart ? 'Přidáno do košíku' : 'Přidat do košíku'}
-            </Button>
+            {/* Availability status - only show on collection pages, not homepage */}
+            {!isHomepage && availabilityStatus && (
+              <p className={`text-sm ${
+                availabilityStatus === 'Skladem' 
+                  ? 'text-green-600' 
+                  : 'text-red-600'
+              }`}>
+                {availabilityStatus}
+              </p>
+            )}
           </div>
           
-          {/* Availability status - only show on collection pages, not homepage */}
-          {!isHomepage && availabilityStatus && (
-            <p className={`text-sm ${
-              availabilityStatus === 'Skladem' 
-                ? 'text-green-600' 
-                : 'text-red-600'
-            }`}>
-              {availabilityStatus}
-            </p>
-          )}
+          <Button 
+            variant="premium" 
+            size="sm"
+            onClick={handleAddToCart}
+            disabled={isInCart || !variantId}
+            className={`w-full ${isInCart ? 'bg-green-600 hover:bg-green-700' : ''}`}
+          >
+            {isInCart ? 'Přidáno do košíku' : 'Přidat do košíku'}
+          </Button>
         </div>
       </div>
     </div>
