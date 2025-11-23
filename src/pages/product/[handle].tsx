@@ -484,6 +484,25 @@ const DynamicProductPage = () => {
                       'Přidat do košíku'
                     )}
                   </Button>
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    className={`aspect-square p-0 transition-all duration-300 shadow-lg hover:shadow-xl ${
+                      isFavorite(product.id)
+                        ? 'border-red-500 hover:border-red-600 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30'
+                        : 'hover:border-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/10'
+                    }`}
+                    onClick={handleToggleFavorite}
+                    disabled={favoritesLoading}
+                  >
+                    <Heart 
+                      className={`h-5 w-5 transition-all duration-300 ${
+                        isFavorite(product.id)
+                          ? 'fill-red-500 text-red-500 scale-110'
+                          : ''
+                      }`}
+                    />
+                  </Button>
                 </div>
                 
                 {/* Back in Stock Notification */}
@@ -494,26 +513,6 @@ const DynamicProductPage = () => {
                     isOutOfStock={!selectedVariant.availableForSale}
                   />
                 )}
-              </div>
-                <Button 
-                  variant="outline" 
-                  size="lg" 
-                  className={`aspect-square p-0 transition-all duration-300 shadow-lg hover:shadow-xl ${
-                    isFavorite(product.id)
-                      ? 'border-red-500 hover:border-red-600 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30'
-                      : 'hover:border-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/10'
-                  }`}
-                  onClick={handleToggleFavorite}
-                  disabled={favoritesLoading}
-                >
-                  <Heart 
-                    className={`h-5 w-5 transition-all duration-300 ${
-                      isFavorite(product.id)
-                        ? 'fill-red-500 text-red-500 scale-110'
-                        : ''
-                    }`}
-                  />
-                </Button>
               </div>
 
               {/* Product Features */}
