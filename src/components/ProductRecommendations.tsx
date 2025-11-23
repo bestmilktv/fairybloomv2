@@ -20,6 +20,7 @@ interface Product {
   category: string
   handle?: string
   variantId?: string
+  createdAt?: string
 }
 
 interface ProductRecommendationsProps {
@@ -87,7 +88,8 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                   image: firstImage?.url || getFallbackImage(czechCategory),
                   category: czechCategory,
                   handle: product.handle,
-                  variantId: firstVariant?.id
+                  variantId: firstVariant?.id,
+                  createdAt: product.createdAt
                 }
               })
               
@@ -98,13 +100,54 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
           }
         }
 
-        // Filter out current product and get recommendations
-        const filteredProducts = allProducts.filter(p => p.id !== currentProductId)
+        // Get cart item IDs to exclude products already in cart
+        const cartItemIds = new Set(items.map(item => item.id))
+        
+        // Filter out current product and products already in cart
+        const filteredProducts = allProducts.filter(p => 
+          p.id !== currentProductId && !cartItemIds.has(p.id)
+        )
+        
         const sameCategory = filteredProducts.filter(p => p.category === currentCategory)
         const otherCategories = filteredProducts.filter(p => p.category !== currentCategory)
         
-        const finalRecommendations = [...sameCategory, ...otherCategories].slice(0, 3)
-        setRecommendations(finalRecommendations)
+        // Build final recommendations:
+        // 1. First 2 products from same category (most popular - first in collection order)
+        // 2. Newest product from same category (by createdAt) as 3rd position
+        // 3. If not enough products in same category, fill from other categories
+        const finalRecommendations: Product[] = []
+        
+        // Get first 2 most popular products from same category
+        const mostPopular = sameCategory.slice(0, 2)
+        finalRecommendations.push(...mostPopular)
+        
+        // Get newest product from same category (excluding already selected ones)
+        const selectedIds = new Set(mostPopular.map(p => p.id))
+        const remainingInCategory = sameCategory.filter(p => !selectedIds.has(p.id))
+        
+        if (remainingInCategory.length > 0) {
+          // Sort by createdAt descending (newest first) and take the first one
+          const newestInCategory = remainingInCategory
+            .sort((a, b) => {
+              const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0
+              const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0
+              return bDate - aDate // Descending order (newest first)
+            })
+            .slice(0, 1)
+          
+          if (newestInCategory.length > 0) {
+            finalRecommendations.push(newestInCategory[0])
+          }
+        }
+        
+        // If we still don't have 3 products, fill from other categories
+        if (finalRecommendations.length < 3) {
+          const remaining = otherCategories.slice(0, 3 - finalRecommendations.length)
+          finalRecommendations.push(...remaining)
+        }
+        
+        // Ensure we have exactly 3 products (or less if not available)
+        setRecommendations(finalRecommendations.slice(0, 3))
       } catch (error) {
         console.error('Error fetching recommendations:', error)
         setRecommendations([])
@@ -114,7 +157,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
     }
 
     fetchRecommendations()
-  }, [currentProductId, currentCategory])
+  }, [currentProductId, currentCategory, items])
 
   const handleAddToCart = async (product: Product, event: React.MouseEvent) => {
     event.preventDefault() // Prevent Link navigation
