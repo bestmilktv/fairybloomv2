@@ -448,7 +448,7 @@ const ProductDetailPage = () => {
                   }`}
                 >
                   {items.some(item => item.id === product.id)
-                    ? 'Přidáno' 
+                    ? 'Přidáno do košíku' 
                     : (inventory !== null && inventory === 0)
                       ? 'Vyprodáno'
                       : 'Přidat do košíku'

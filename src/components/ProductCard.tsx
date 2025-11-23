@@ -1,5 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductCardProps {
   id: string;
@@ -9,11 +11,17 @@ interface ProductCardProps {
   description?: string;
   inventoryQuantity?: number | null;
   disableAnimations?: boolean;
+  variantId?: string;
 }
 
-const ProductCard = ({ id, title, price, image, description, inventoryQuantity, disableAnimations = false }: ProductCardProps) => {
+const ProductCard = ({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId }: ProductCardProps) => {
   const location = useLocation();
   const isHomepage = location.pathname === '/';
+  const { addToCart, items } = useCart();
+  const { toast } = useToast();
+  
+  // Check if product is in cart
+  const isInCart = items.some(item => item.id === id);
   
   // Determine availability status
   const getAvailabilityStatus = () => {
@@ -24,6 +32,40 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
   };
 
   const availabilityStatus = getAvailabilityStatus();
+  
+  // Handle add to cart
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isInCart || !variantId) return;
+    
+    try {
+      const priceNumber = parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+      
+      await addToCart({
+        id: id,
+        name: title,
+        price: priceNumber,
+        image: image,
+        category: 'Shopify Product',
+        variantId: variantId,
+        isShopifyProduct: true,
+      });
+      
+      toast({
+        title: "Přidáno do košíku",
+        description: `${title} byl přidán do vašeho košíku.`,
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: "Chyba při přidávání do košíku",
+        description: "Nepodařilo se přidat produkt do košíku. Zkuste to prosím znovu.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Function to truncate description to 3 lines
   const truncateDescription = (text: string) => {
@@ -92,8 +134,14 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
             <span className="text-2xl font-semibold text-gold font-serif">
               {price}
             </span>
-            <Button variant="premium" size="sm">
-              Detail
+            <Button 
+              variant="premium" 
+              size="sm"
+              onClick={handleAddToCart}
+              disabled={isInCart || !variantId}
+              className={isInCart ? 'bg-green-600 hover:bg-green-700' : ''}
+            >
+              {isInCart ? 'Přidáno do košíku' : 'Přidat do košíku'}
             </Button>
           </div>
           

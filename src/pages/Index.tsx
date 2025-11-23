@@ -78,7 +78,8 @@ const Index = () => {
                     'Cena na vyžádání',
                   image: firstImage?.url || getFallbackImage(czechKey),
                   description: product.description || 'Elegantní šperk z naší kolekce',
-                  handle: product.handle
+                  handle: product.handle,
+                  variantId: firstVariant?.id
                 };
               });
 

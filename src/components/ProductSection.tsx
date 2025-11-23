@@ -11,6 +11,7 @@ interface Product {
   image: string;
   description: string;
   inventoryQuantity?: number | null;
+  variantId?: string;
 }
 
 interface ProductSectionProps {

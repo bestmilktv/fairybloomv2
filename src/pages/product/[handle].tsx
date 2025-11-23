@@ -475,7 +475,7 @@ const DynamicProductPage = () => {
                   ) : animatingToCart ? (
                     'Přidávám...'
                   ) : items.some(item => item.id === product.id) ? (
-                    'Přidáno'
+                    'Přidáno do košíku'
                   ) : !selectedVariant?.availableForSale ? (
                     'Není skladem'
                   ) : (

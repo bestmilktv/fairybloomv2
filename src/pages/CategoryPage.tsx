@@ -78,7 +78,8 @@ const CategoryPage = () => {
                   description: product.description || 'Elegantní šperk z naší kolekce',
                   handle: product.handle,
                   inventoryQuantity,
-                  createdAt: product.createdAt || null
+                  createdAt: product.createdAt || null,
+                  variantId: firstVariant?.id
                 };
               })
             );

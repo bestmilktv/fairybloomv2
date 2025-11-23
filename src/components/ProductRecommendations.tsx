@@ -210,7 +210,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                       disabled={items.some(item => item.id === product.id)}
                       className={items.some(item => item.id === product.id) ? 'bg-green-600 hover:bg-green-700' : ''}
                     >
-                      {items.some(item => item.id === product.id) ? 'Přidáno' : 'Přidat do košíku'}
+                      {items.some(item => item.id === product.id) ? 'Přidáno do košíku' : 'Přidat do košíku'}
                     </Button>
                   </div>
                 </div>
