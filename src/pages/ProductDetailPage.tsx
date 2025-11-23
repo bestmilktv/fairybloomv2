@@ -21,11 +21,10 @@ import braceletImage from '@/assets/bracelet-placeholder.jpg';
 const ProductDetailPage = () => {
   const { handle } = useParams<{ handle: string }>();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, items } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites, isLoading: favoritesLoading } = useFavorites();
   const { toast } = useToast();
   const [selectedImage, setSelectedImage] = useState(0);
-  const [animatingToCart, setAnimatingToCart] = useState(false);
   const [product, setProduct] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -181,10 +180,11 @@ const ProductDetailPage = () => {
   };
 
   const handleAddToCart = async () => {
-    if (!product || animatingToCart) return;
+    if (!product) return;
     
-    // Start animation
-    setAnimatingToCart(true);
+    // Check if product is already in cart
+    const isInCart = items.some(item => item.id === product.id);
+    if (isInCart) return;
     
     try {
       // Get the first variant (you might want to add variant selection UI later)
@@ -216,11 +216,6 @@ const ProductDetailPage = () => {
         description: "Nepodařilo se přidat produkt do košíku. Zkuste to prosím znovu.",
         variant: "destructive",
       });
-    } finally {
-      // Reset animation after delay
-      setTimeout(() => {
-        setAnimatingToCart(false);
-      }, 1000);
     }
   };
 
@@ -443,17 +438,17 @@ const ProductDetailPage = () => {
                   variant="gold"
                   size="lg"
                   onClick={handleAddToCart}
-                  disabled={animatingToCart || (inventory !== null && inventory === 0)}
+                  disabled={items.some(item => item.id === product.id) || (inventory !== null && inventory === 0)}
                   className={`${
-                    animatingToCart
+                    items.some(item => item.id === product.id)
                       ? 'bg-green-600 hover:bg-green-700'
                       : (inventory !== null && inventory === 0)
                         ? 'bg-gray-400 cursor-not-allowed'
                         : ''
                   }`}
                 >
-                  {animatingToCart 
-                    ? 'Přidáno!' 
+                  {items.some(item => item.id === product.id)
+                    ? 'Přidáno' 
                     : (inventory !== null && inventory === 0)
                       ? 'Vyprodáno'
                       : 'Přidat do košíku'

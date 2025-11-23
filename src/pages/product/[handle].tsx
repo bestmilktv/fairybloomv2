@@ -64,7 +64,7 @@ const DynamicProductPage = () => {
   const { handle } = useParams<{ handle: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addToCart: addToLocalCart } = useCart();
+  const { addToCart: addToLocalCart, items } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites, isLoading: favoritesLoading } = useFavorites();
   const [product, setProduct] = useState<ShopifyProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -134,6 +134,10 @@ const DynamicProductPage = () => {
   const handleAddToCart = async () => {
     if (!product || !selectedVariant || isAddingToCart || animatingToCart) return;
 
+    // Check if product is already in cart
+    const isInCart = items.some(item => item.id === product.id);
+    if (isInCart) return;
+
     try {
       setIsAddingToCart(true);
       setAnimatingToCart(true);
@@ -177,6 +181,7 @@ const DynamicProductPage = () => {
             if (flyingImg && flyingImg.parentNode) {
               flyingImg.parentNode.removeChild(flyingImg);
             }
+            // Animation complete, button will now show cart state
             setAnimatingToCart(false);
           }, 850);
         } else {
@@ -454,9 +459,13 @@ const DynamicProductPage = () => {
                 <Button 
                   variant="gold" 
                   size="lg" 
-                  className="flex-1"
+                  className={`flex-1 ${
+                    items.some(item => item.id === product.id)
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : ''
+                  }`}
                   onClick={handleAddToCart}
-                  disabled={!selectedVariant || !selectedVariant.availableForSale || isAddingToCart || animatingToCart}
+                  disabled={!selectedVariant || !selectedVariant.availableForSale || isAddingToCart || animatingToCart || items.some(item => item.id === product.id)}
                 >
                   {isAddingToCart ? (
                     <>
@@ -465,6 +474,8 @@ const DynamicProductPage = () => {
                     </>
                   ) : animatingToCart ? (
                     'Přidávám...'
+                  ) : items.some(item => item.id === product.id) ? (
+                    'Přidáno'
                   ) : !selectedVariant?.availableForSale ? (
                     'Není skladem'
                   ) : (

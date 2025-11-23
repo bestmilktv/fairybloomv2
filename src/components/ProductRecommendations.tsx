@@ -28,7 +28,7 @@ interface ProductRecommendationsProps {
 }
 
 export function ProductRecommendations({ currentProductId, currentCategory }: ProductRecommendationsProps) {
-  const { addToCart } = useCart()
+  const { addToCart, items } = useCart()
   const { toast } = useToast()
   const [recommendations, setRecommendations] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -119,6 +119,10 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
   const handleAddToCart = async (product: Product, event: React.MouseEvent) => {
     event.preventDefault() // Prevent Link navigation
     
+    // Check if product is already in cart
+    const isInCart = items.some(item => item.id === product.id);
+    if (isInCart) return;
+    
     try {
       const priceNumber = parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.'))
       
@@ -203,8 +207,10 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                       variant="gold" 
                       size="sm"
                       onClick={(e) => handleAddToCart(product, e)}
+                      disabled={items.some(item => item.id === product.id)}
+                      className={items.some(item => item.id === product.id) ? 'bg-green-600 hover:bg-green-700' : ''}
                     >
-                      Přidat do košíku
+                      {items.some(item => item.id === product.id) ? 'Přidáno' : 'Přidat do košíku'}
                     </Button>
                   </div>
                 </div>
