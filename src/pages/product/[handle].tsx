@@ -11,6 +11,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 import { createCollectionHandle } from '@/lib/slugify';
+import { BackInStockNotification } from '@/components/BackInStockNotification';
 
 // Import fallback images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -455,33 +456,45 @@ const DynamicProductPage = () => {
               )}
 
               {/* Add to Cart Button */}
-              <div className="flex space-x-4">
-                <Button 
-                  variant="gold" 
-                  size="lg" 
-                  className={`flex-1 ${
-                    items.some(item => item.id === product.id)
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : ''
-                  }`}
-                  onClick={handleAddToCart}
-                  disabled={!selectedVariant || !selectedVariant.availableForSale || isAddingToCart || animatingToCart || items.some(item => item.id === product.id)}
-                >
-                  {isAddingToCart ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Přidávám...
-                    </>
-                  ) : animatingToCart ? (
-                    'Přidávám...'
-                  ) : items.some(item => item.id === product.id) ? (
-                    'Přidáno do košíku'
-                  ) : !selectedVariant?.availableForSale ? (
-                    'Není skladem'
-                  ) : (
-                    'Přidat do košíku'
-                  )}
-                </Button>
+              <div className="space-y-3">
+                <div className="flex space-x-4">
+                  <Button 
+                    variant="gold" 
+                    size="lg" 
+                    className={`flex-1 ${
+                      items.some(item => item.id === product.id)
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : ''
+                    }`}
+                    onClick={handleAddToCart}
+                    disabled={!selectedVariant || !selectedVariant.availableForSale || isAddingToCart || animatingToCart || items.some(item => item.id === product.id)}
+                  >
+                    {isAddingToCart ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Přidávám...
+                      </>
+                    ) : animatingToCart ? (
+                      'Přidávám...'
+                    ) : items.some(item => item.id === product.id) ? (
+                      'Přidáno do košíku'
+                    ) : !selectedVariant?.availableForSale ? (
+                      'Není skladem'
+                    ) : (
+                      'Přidat do košíku'
+                    )}
+                  </Button>
+                </div>
+                
+                {/* Back in Stock Notification */}
+                {selectedVariant && !selectedVariant.availableForSale && (
+                  <BackInStockNotification
+                    variantId={selectedVariant.id}
+                    productTitle={product.title}
+                    isOutOfStock={!selectedVariant.availableForSale}
+                  />
+                )}
+              </div>
                 <Button 
                   variant="outline" 
                   size="lg" 

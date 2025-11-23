@@ -11,6 +11,7 @@ import { ProductRecommendations } from '@/components/ProductRecommendations';
 import { getProductByHandle } from '@/lib/shopify';
 import BackToCollectionButton from '@/components/BackToCollectionButton';
 import { createCollectionHandle } from '@/lib/slugify';
+import { BackInStockNotification } from '@/components/BackInStockNotification';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
@@ -433,48 +434,59 @@ const ProductDetailPage = () => {
                 </p>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <Button 
-                  variant="gold"
-                  size="lg"
-                  onClick={handleAddToCart}
-                  disabled={items.some(item => item.id === product.id) || (inventory !== null && inventory === 0)}
-                  className={`${
-                    items.some(item => item.id === product.id)
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : (inventory !== null && inventory === 0)
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : ''
-                  }`}
-                >
-                  {items.some(item => item.id === product.id)
-                    ? 'Přidáno do košíku' 
-                    : (inventory !== null && inventory === 0)
-                      ? 'Vyprodáno'
-                      : 'Přidat do košíku'
-                  }
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="lg" 
-                  className={`px-6 py-4 transition-all duration-300 shadow-lg hover:shadow-xl ${
-                    isFavorite(product.id)
-                      ? 'border-red-500 hover:border-red-600 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30'
-                      : 'hover:border-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/10'
-                  }`}
-                  onClick={handleToggleFavorite}
-                  disabled={favoritesLoading}
-                >
-                  <Heart 
-                    className={`h-5 w-5 mr-2 transition-all duration-300 ${
-                      isFavorite(product.id)
-                        ? 'fill-red-500 text-red-500 scale-110'
-                        : ''
+              <div className="space-y-3">
+                <div className="flex items-center space-x-4">
+                  <Button 
+                    variant="gold"
+                    size="lg"
+                    onClick={handleAddToCart}
+                    disabled={items.some(item => item.id === product.id) || (inventory !== null && inventory === 0)}
+                    className={`${
+                      items.some(item => item.id === product.id)
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : (inventory !== null && inventory === 0)
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : ''
                     }`}
+                  >
+                    {items.some(item => item.id === product.id)
+                      ? 'Přidáno do košíku' 
+                      : (inventory !== null && inventory === 0)
+                        ? 'Vyprodáno'
+                        : 'Přidat do košíku'
+                    }
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    className={`px-6 py-4 transition-all duration-300 shadow-lg hover:shadow-xl ${
+                      isFavorite(product.id)
+                        ? 'border-red-500 hover:border-red-600 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30'
+                        : 'hover:border-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/10'
+                    }`}
+                    onClick={handleToggleFavorite}
+                    disabled={favoritesLoading}
+                  >
+                    <Heart 
+                      className={`h-5 w-5 mr-2 transition-all duration-300 ${
+                        isFavorite(product.id)
+                          ? 'fill-red-500 text-red-500 scale-110'
+                          : ''
+                      }`}
+                    />
+                    {isFavorite(product.id) ? 'Oblíbené' : 'Oblíbit'}
+                  </Button>
+                </div>
+                
+                {/* Back in Stock Notification */}
+                {inventory !== null && inventory === 0 && product.variants?.[0] && (
+                  <BackInStockNotification
+                    variantId={product.variants[0].id}
+                    productTitle={product.title}
+                    isOutOfStock={inventory === 0}
                   />
-                  {isFavorite(product.id) ? 'Oblíbené' : 'Oblíbit'}
-                </Button>
+                )}
               </div>
 
               <div className="pt-6 border-t border-border">
