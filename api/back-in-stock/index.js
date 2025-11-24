@@ -544,41 +544,100 @@ async function handleWebhook(req, res) {
             // Shopify CDN URLs are reliable and trusted by email clients
             const productImageUrl = productImage || null;
             
-            // Create email HTML template
+            // Create modern, clean email HTML template
             const emailHtml = `
               <!DOCTYPE html>
-              <html>
+              <html lang="cs">
               <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta http-equiv="X-UA-Compatible" content="IE=edge">
               </head>
-              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%); padding: 30px; border-radius: 10px;">
-                  <h1 style="color: #8B7355; font-size: 24px; margin-bottom: 20px;">Ahoj ${customerName},</h1>
-                  
-                  <p style="font-size: 16px; margin-bottom: 20px;">
-                    Máme radostnou zprávu! Produkt, který jste si přál/a sledovat, je opět skladem:
-                  </p>
-                  
-                  <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    ${productImageUrl ? `<img src="${productImageUrl}" alt="${product.title}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;" />` : ''}
-                    <h2 style="color: #333; font-size: 20px; margin-bottom: 10px;">${product.title}</h2>
-                    <p style="font-size: 18px; color: #8B7355; font-weight: bold; margin: 10px 0;">
-                      ${parseFloat(variantPrice).toLocaleString('cs-CZ')} ${variantCurrency}
-                    </p>
-                  </div>
-                  
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${productUrl}" style="display: inline-block; background-color: #8B7355; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
-                      Zobrazit produkt
-                    </a>
-                  </div>
-                  
-                  <p style="font-size: 14px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                    S pozdravem,<br>
-                    <strong>Tým FairyBloom</strong>
-                  </p>
-                </div>
+              <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa; line-height: 1.6;">
+                <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f8f9fa; padding: 20px 0;">
+                  <tr>
+                    <td align="center" style="padding: 20px 0;">
+                      <table role="presentation" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <!-- Header -->
+                        <tr>
+                          <td style="background: linear-gradient(135deg, #8B7355 0%, #A68B6B 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">
+                              ✨ Dobrá zpráva!
+                            </h1>
+                          </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                          <td style="padding: 40px 30px;">
+                            <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                              Ahoj ${customerName},
+                            </p>
+                            
+                            <p style="margin: 0 0 30px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                              Máme radostnou zprávu! Produkt, který jste si přál/a sledovat, je opět skladem:
+                            </p>
+                            
+                            <!-- Product Card -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fafafa; border-radius: 12px; overflow: hidden; margin: 0 0 30px 0; border: 1px solid #e9ecef;">
+                              <tr>
+                                <td style="padding: 0;">
+                                  ${productImageUrl ? `
+                                    <div style="background-color: #ffffff; padding: 20px; text-align: center;">
+                                      <img src="${productImageUrl}" alt="${product.title}" style="max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto;" />
+                                    </div>
+                                  ` : ''}
+                                  <div style="padding: 25px; background-color: #ffffff;">
+                                    <h2 style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 22px; font-weight: 600; line-height: 1.3;">
+                                      ${product.title}
+                                    </h2>
+                                    <p style="margin: 0; color: #8B7355; font-size: 24px; font-weight: 700;">
+                                      ${parseFloat(variantPrice).toLocaleString('cs-CZ')} ${variantCurrency}
+                                    </p>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                            
+                            <!-- CTA Button -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0 0 30px 0;">
+                              <tr>
+                                <td align="center" style="padding: 0;">
+                                  <a href="${productUrl}" style="display: inline-block; background: linear-gradient(135deg, #8B7355 0%, #A68B6B 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(139, 115, 85, 0.3); transition: all 0.3s ease;">
+                                    Zobrazit produkt →
+                                  </a>
+                                </td>
+                              </tr>
+                            </table>
+                            
+                            <!-- Footer -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin-top: 40px; padding-top: 30px; border-top: 1px solid #e9ecef;">
+                              <tr>
+                                <td style="padding: 0;">
+                                  <p style="margin: 0 0 8px 0; color: #666666; font-size: 14px; line-height: 1.5;">
+                                    S pozdravem,
+                                  </p>
+                                  <p style="margin: 0; color: #8B7355; font-size: 14px; font-weight: 600;">
+                                    Tým FairyBloom
+                                  </p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                        
+                        <!-- Bottom Spacer -->
+                        <tr>
+                          <td style="padding: 20px; background-color: #f8f9fa;">
+                            <p style="margin: 0; text-align: center; color: #999999; font-size: 12px;">
+                              Tento email vám byl odeslán, protože jste si přihlásili notifikaci o dostupnosti produktu.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
               </body>
               </html>
             `;
