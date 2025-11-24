@@ -540,9 +540,8 @@ async function handleWebhook(req, res) {
             const variantPrice = variant.price || '0';
             const variantCurrency = 'CZK'; // Default currency, adjust if needed
             
-            // Download product image if available and prepare for CID attachment
-            let attachments = [];
-            let productImageCid = null;
+            // Download product image if available and convert to base64 data URI
+            let productImageDataUri = null;
             
             if (productImage) {
               try {
@@ -553,17 +552,16 @@ async function handleWebhook(req, res) {
                   const imageBase64 = Buffer.from(imageBuffer).toString('base64');
                   const imageContentType = imageResponse.headers.get('content-type') || 'image/jpeg';
                   
-                  // Generate CID for inline image
-                  productImageCid = 'product-image';
+                  // Create data URI for inline image
+                  productImageDataUri = `data:${imageContentType};base64,${imageBase64}`;
                   
-                  attachments.push({
-                    filename: 'product.jpg',
-                    content: imageBase64,
-                    cid: productImageCid,
-                    content_type: imageContentType
-                  });
+                  const imageSizeKB = Math.round(imageBuffer.byteLength / 1024);
+                  console.log(`[BackInStock Webhook] Product image prepared as data URI (${imageSizeKB}KB)`);
                   
-                  console.log(`[BackInStock Webhook] Product image prepared as CID attachment (${Math.round(imageBuffer.byteLength / 1024)}KB)`);
+                  // Warn if image is too large (some email clients have limits)
+                  if (imageSizeKB > 1000) {
+                    console.warn(`[BackInStock Webhook] Image is large (${imageSizeKB}KB), some email clients may not display it`);
+                  }
                 } else {
                   console.warn(`[BackInStock Webhook] Failed to download product image: ${imageResponse.status}`);
                 }
@@ -589,7 +587,7 @@ async function handleWebhook(req, res) {
                   </p>
                   
                   <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    ${productImageCid ? `<img src="cid:${productImageCid}" alt="${product.title}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;">` : ''}
+                    ${productImageDataUri ? `<img src="${productImageDataUri}" alt="${product.title}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;">` : ''}
                     <h2 style="color: #333; font-size: 20px; margin-bottom: 10px;">${product.title}</h2>
                     <p style="font-size: 18px; color: #8B7355; font-weight: bold; margin: 10px 0;">
                       ${parseFloat(variantPrice).toLocaleString('cs-CZ')} ${variantCurrency}
@@ -614,25 +612,18 @@ async function handleWebhook(req, res) {
             // Send email using Resend (if API key is configured)
             if (emailApiKey) {
               try {
-                const emailPayload = {
-                  from: 'FairyBloom <noreply@fairybloom.cz>',
-                  to: customerEmail,
-                  subject: emailSubject,
-                  html: emailHtml
-                };
-                
-                // Add attachments if we have product image
-                if (attachments.length > 0) {
-                  emailPayload.attachments = attachments;
-                }
-                
                 const emailResponse = await fetch('https://api.resend.com/emails', {
                   method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${emailApiKey}`,
                     'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify(emailPayload)
+                  body: JSON.stringify({
+                    from: 'FairyBloom <noreply@fairybloom.cz>',
+                    to: customerEmail,
+                    subject: emailSubject,
+                    html: emailHtml
+                  })
                 });
 
                 if (!emailResponse.ok) {
