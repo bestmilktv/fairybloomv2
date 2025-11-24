@@ -1,5 +1,18 @@
-import { Heart, Instagram, Facebook, Mail } from 'lucide-react';
+import { Heart, Instagram } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+// TikTok Icon SVG Component
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+  </svg>
+);
+
 const Footer = () => {
   return <footer className="bg-luxury text-luxury-foreground py-16 px-6">
       <div className="max-w-7xl mx-auto">
@@ -12,14 +25,23 @@ const Footer = () => {
               Každý kousek je jedinečný a nese v sobě krásu přírody.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-luxury-foreground/60 hover:text-gold transition-colors duration-300">
+              <a 
+                href="https://www.instagram.com/fairybloom.cz" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-luxury-foreground/60 hover:text-gold transition-colors duration-300"
+                aria-label="Instagram"
+              >
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="text-luxury-foreground/60 hover:text-gold transition-colors duration-300">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-luxury-foreground/60 hover:text-gold transition-colors duration-300">
-                <Mail className="h-5 w-5" />
+              <a 
+                href="https://www.tiktok.com/@fairybloom.cz" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-luxury-foreground/60 hover:text-gold transition-colors duration-300"
+                aria-label="TikTok"
+              >
+                <TikTokIcon className="h-5 w-5" />
               </a>
             </div>
           </div>
@@ -39,10 +61,10 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4 text-gold">Informace</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">O nás</a></li>
-              <li><a href="#" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Péče o šperky</a></li>
-              <li><a href="#" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Doprava</a></li>
-              <li><a href="#" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Kontakt</a></li>
+              <li><Link to="/o-nas" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">O nás</Link></li>
+              <li><Link to="/pece-o-sperky" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Péče o šperky</Link></li>
+              <li><Link to="/doprava" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Doprava</Link></li>
+              <li><Link to="/kontakt" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Kontakt</Link></li>
             </ul>
           </div>
         </div>
