@@ -445,10 +445,53 @@ async function handleWebhook(req, res) {
         const customers = customersData.customers || [];
 
         console.log(`[BackInStock Webhook] Found ${customers.length} customers with tag ${tag}`);
+        if (customers.length > 0) {
+          console.log(`[BackInStock Webhook] Customer data sample:`, JSON.stringify(customers[0], null, 2));
+        }
 
         // Send email to each customer
         for (const customer of customers) {
           try {
+            // Get full customer data if email is missing
+            let customerEmail = customer.email;
+            let customerFirstName = customer.first_name;
+            let customerLastName = customer.last_name;
+            
+            if (!customerEmail && customer.id) {
+              console.log(`[BackInStock Webhook] Email missing for customer ${customer.id}, fetching full customer data...`);
+              
+              // Fetch full customer data using customer ID
+              const customerUrl = `${baseUrl}/customers/${customer.id}.json`;
+              const fullCustomerResponse = await fetch(customerUrl, {
+                method: 'GET',
+                headers: {
+                  'X-Shopify-Access-Token': adminToken,
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (fullCustomerResponse.ok) {
+                const fullCustomerData = await fullCustomerResponse.json();
+                const fullCustomer = fullCustomerData.customer;
+                
+                if (fullCustomer) {
+                  customerEmail = fullCustomer.email || customerEmail;
+                  customerFirstName = fullCustomer.first_name || customerFirstName;
+                  customerLastName = fullCustomer.last_name || customerLastName;
+                  console.log(`[BackInStock Webhook] Retrieved email for customer ${customer.id}: ${customerEmail}`);
+                }
+              } else {
+                const errorText = await fullCustomerResponse.text();
+                console.error(`[BackInStock Webhook] Failed to fetch full customer data: ${fullCustomerResponse.status}`, errorText);
+              }
+            }
+            
+            // Skip if still no email
+            if (!customerEmail) {
+              console.error(`[BackInStock Webhook] ⚠️ Skipping customer ${customer.id} - no email available`);
+              continue;
+            }
+            
             // Get product image
             const productImage = product.images && product.images.length > 0 
               ? product.images[0].src 
@@ -457,8 +500,8 @@ async function handleWebhook(req, res) {
             // Prepare email content
             const emailSubject = `Produkt je opět skladem! - ${product.title}`;
             const productUrl = `https://${storeDomain}/products/${product.handle}`;
-            const customerName = customer.first_name || customer.last_name 
-              ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() 
+            const customerName = customerFirstName || customerLastName 
+              ? `${customerFirstName || ''} ${customerLastName || ''}`.trim() 
               : 'zákazníku';
             
             // Get variant price (format: "123.45" from Shopify REST API)
@@ -515,7 +558,7 @@ async function handleWebhook(req, res) {
                   },
                   body: JSON.stringify({
                     from: 'FairyBloom <noreply@fairybloom.cz>',
-                    to: customer.email,
+                    to: customerEmail,
                     subject: emailSubject,
                     html: emailHtml
                   })
@@ -523,19 +566,19 @@ async function handleWebhook(req, res) {
 
                 if (!emailResponse.ok) {
                   const errorData = await emailResponse.json();
-                  console.error(`[BackInStock Webhook] Failed to send email to ${customer.email}:`, errorData);
+                  console.error(`[BackInStock Webhook] Failed to send email to ${customerEmail}:`, errorData);
                   throw new Error(`Email service error: ${emailResponse.status}`);
                 }
 
                 const emailResult = await emailResponse.json();
-                console.log(`[BackInStock Webhook] Successfully sent email to ${customer.email} (ID: ${emailResult.id})`);
+                console.log(`[BackInStock Webhook] ✅ Successfully sent email to ${customerEmail} (ID: ${emailResult.id})`);
               } catch (emailError) {
-                console.error(`[BackInStock Webhook] Error sending email to ${customer.email}:`, emailError);
+                console.error(`[BackInStock Webhook] Error sending email to ${customerEmail}:`, emailError);
                 // Continue with other customers even if one fails
               }
             } else {
               // Log if email service is not configured
-              console.log(`[BackInStock Webhook] Email service not configured. Would send email to ${customer.email} for product ${product.title}`);
+              console.log(`[BackInStock Webhook] Email service not configured. Would send email to ${customerEmail} for product ${product.title}`);
               console.log(`[BackInStock Webhook] To enable email sending, add RESEND_API_KEY to environment variables.`);
             }
 
