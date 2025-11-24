@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Heart } from 'lucide-react';
+import { ArrowLeft, Heart, Check } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -443,14 +443,19 @@ const ProductDetailPage = () => {
                     disabled={items.some(item => item.id === product.id) || (inventory !== null && inventory === 0)}
                     className={`${
                       items.some(item => item.id === product.id)
-                        ? 'bg-green-600 hover:bg-green-700'
+                        ? 'bg-slate-800/95 hover:bg-slate-800 border border-gold/40 text-gold shadow-lg shadow-gold/10 hover:shadow-gold/20 hover:border-gold/60 transition-all duration-300'
                         : (inventory !== null && inventory === 0)
                           ? 'bg-gray-400 cursor-not-allowed'
                           : ''
                     }`}
                   >
                     {items.some(item => item.id === product.id)
-                      ? 'Přidáno do košíku' 
+                      ? (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Přidáno do košíku
+                        </>
+                      )
                       : (inventory !== null && inventory === 0)
                         ? 'Vyprodáno'
                         : 'Přidat do košíku'

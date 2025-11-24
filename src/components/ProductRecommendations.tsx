@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { getProductsByCollection } from '@/lib/shopify'
 import { createCollectionHandle, createProductPath } from '@/lib/slugify'
+import { Check } from 'lucide-react'
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg'
@@ -267,9 +268,18 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                       size="sm"
                       onClick={(e) => handleAddToCart(product, e)}
                       disabled={items.some(item => item.id === product.id)}
-                      className={items.some(item => item.id === product.id) ? 'bg-green-600 hover:bg-green-700' : ''}
+                      className={items.some(item => item.id === product.id) 
+                        ? 'bg-slate-800/95 hover:bg-slate-800 border border-gold/40 text-gold shadow-lg shadow-gold/10 hover:shadow-gold/20 hover:border-gold/60 transition-all duration-300' 
+                        : ''}
                     >
-                      {items.some(item => item.id === product.id) ? 'Přidáno do košíku' : 'Přidat do košíku'}
+                      {items.some(item => item.id === product.id) ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Přidáno do košíku
+                        </>
+                      ) : (
+                        'Přidat do košíku'
+                      )}
                     </Button>
                   </div>
                 </div>

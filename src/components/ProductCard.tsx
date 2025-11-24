@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { Check } from 'lucide-react';
 
 interface ProductCardProps {
   id: string;
@@ -151,9 +152,20 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
             size="sm"
             onClick={handleAddToCart}
             disabled={isInCart || !variantId}
-            className={`w-full ${isInCart ? 'bg-green-600 hover:bg-green-700' : ''}`}
+            className={`w-full ${
+              isInCart 
+                ? 'bg-slate-800/95 hover:bg-slate-800 border border-gold/40 text-gold shadow-lg shadow-gold/10 hover:shadow-gold/20 hover:border-gold/60 transition-all duration-300' 
+                : ''
+            }`}
           >
-            {isInCart ? 'Přidáno do košíku' : 'Přidat do košíku'}
+            {isInCart ? (
+              <>
+                <Check className="h-4 w-4" />
+                Přidáno do košíku
+              </>
+            ) : (
+              'Přidat do košíku'
+            )}
           </Button>
         </div>
       </div>
