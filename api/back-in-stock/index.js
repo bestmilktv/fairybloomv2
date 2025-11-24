@@ -540,35 +540,9 @@ async function handleWebhook(req, res) {
             const variantPrice = variant.price || '0';
             const variantCurrency = 'CZK'; // Default currency, adjust if needed
             
-            // Download product image if available and convert to base64 data URI
-            let productImageDataUri = null;
-            
-            if (productImage) {
-              try {
-                console.log(`[BackInStock Webhook] Downloading product image: ${productImage}`);
-                const imageResponse = await fetch(productImage);
-                if (imageResponse.ok) {
-                  const imageBuffer = await imageResponse.arrayBuffer();
-                  const imageBase64 = Buffer.from(imageBuffer).toString('base64');
-                  const imageContentType = imageResponse.headers.get('content-type') || 'image/jpeg';
-                  
-                  // Create data URI for inline image
-                  productImageDataUri = `data:${imageContentType};base64,${imageBase64}`;
-                  
-                  const imageSizeKB = Math.round(imageBuffer.byteLength / 1024);
-                  console.log(`[BackInStock Webhook] Product image prepared as data URI (${imageSizeKB}KB)`);
-                  
-                  // Warn if image is too large (some email clients have limits)
-                  if (imageSizeKB > 1000) {
-                    console.warn(`[BackInStock Webhook] Image is large (${imageSizeKB}KB), some email clients may not display it`);
-                  }
-                } else {
-                  console.warn(`[BackInStock Webhook] Failed to download product image: ${imageResponse.status}`);
-                }
-              } catch (imageError) {
-                console.error(`[BackInStock Webhook] Error downloading product image:`, imageError);
-              }
-            }
+            // Use product image URL directly from Shopify
+            // Shopify CDN URLs are reliable and trusted by email clients
+            const productImageUrl = productImage || null;
             
             // Create email HTML template
             const emailHtml = `
@@ -587,7 +561,7 @@ async function handleWebhook(req, res) {
                   </p>
                   
                   <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    ${productImageDataUri ? `<img src="${productImageDataUri}" alt="${product.title}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;">` : ''}
+                    ${productImageUrl ? `<img src="${productImageUrl}" alt="${product.title}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;" />` : ''}
                     <h2 style="color: #333; font-size: 20px; margin-bottom: 10px;">${product.title}</h2>
                     <p style="font-size: 18px; color: #8B7355; font-weight: bold; margin: 10px 0;">
                       ${parseFloat(variantPrice).toLocaleString('cs-CZ')} ${variantCurrency}
