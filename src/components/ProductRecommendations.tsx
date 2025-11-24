@@ -164,6 +164,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
 
   const handleAddToCart = async (product: Product, event: React.MouseEvent) => {
     event.preventDefault() // Prevent Link navigation
+    event.stopPropagation() // Stop event bubbling to prevent Link click
     
     // Check if product is already in cart
     const isInCart = items.some(item => item.id === product.id);
