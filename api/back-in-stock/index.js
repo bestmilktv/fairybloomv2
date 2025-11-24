@@ -467,41 +467,114 @@ async function handleWebhook(req, res) {
             let customerFirstName = customer.first_name;
             let customerLastName = customer.last_name;
             
-            // Fetch full customer data using customer ID
-            console.log(`[BackInStock Webhook] Fetching full customer data for ID: ${customer.id}...`);
-            const customerUrl = `${baseUrl}/customers/${customer.id}.json`;
-            const fullCustomerResponse = await fetch(customerUrl, {
-              method: 'GET',
+            // Fetch full customer data using GraphQL API (REST API doesn't return email)
+            console.log(`[BackInStock Webhook] Fetching full customer data for ID: ${customer.id} using GraphQL...`);
+            
+            const customerGid = `gid://shopify/Customer/${customer.id}`;
+            const graphqlQuery = `
+              query getCustomer($id: ID!) {
+                customer(id: $id) {
+                  id
+                  email
+                  firstName
+                  lastName
+                }
+              }
+            `;
+            
+            const graphqlUrl = `https://${storeDomain}/admin/api/${apiVersion}/graphql.json`;
+            const graphqlResponse = await fetch(graphqlUrl, {
+              method: 'POST',
               headers: {
                 'X-Shopify-Access-Token': adminToken,
                 'Content-Type': 'application/json',
               },
+              body: JSON.stringify({
+                query: graphqlQuery,
+                variables: { id: customerGid }
+              }),
             });
             
-            if (fullCustomerResponse.ok) {
-              const fullCustomerData = await fullCustomerResponse.json();
-              console.log(`[BackInStock Webhook] Full customer data response:`, JSON.stringify(fullCustomerData, null, 2));
+            if (graphqlResponse.ok) {
+              const graphqlData = await graphqlResponse.json();
+              console.log(`[BackInStock Webhook] GraphQL customer data response:`, JSON.stringify(graphqlData, null, 2));
               
-              const fullCustomer = fullCustomerData.customer;
+              if (graphqlData.errors) {
+                console.error(`[BackInStock Webhook] GraphQL errors:`, graphqlData.errors);
+              }
               
-              if (fullCustomer) {
-                customerEmail = fullCustomer.email || customerEmail;
-                customerFirstName = fullCustomer.first_name || customerFirstName;
-                customerLastName = fullCustomer.last_name || customerLastName;
+              const graphqlCustomer = graphqlData.data?.customer;
+              
+              if (graphqlCustomer) {
+                // GraphQL returns email, firstName, lastName
+                customerEmail = graphqlCustomer.email || customerEmail;
+                customerFirstName = graphqlCustomer.firstName || customerFirstName;
+                customerLastName = graphqlCustomer.lastName || customerLastName;
                 
-                console.log(`[BackInStock Webhook] Customer data after fetch:`, {
-                  id: fullCustomer.id,
+                console.log(`[BackInStock Webhook] Customer data after GraphQL fetch:`, {
+                  id: graphqlCustomer.id,
                   email: customerEmail,
-                  first_name: customerFirstName,
-                  last_name: customerLastName,
+                  firstName: customerFirstName,
+                  lastName: customerLastName,
                   hasEmail: !!customerEmail
                 });
               } else {
-                console.error(`[BackInStock Webhook] No customer object in response:`, fullCustomerData);
+                console.error(`[BackInStock Webhook] No customer in GraphQL response:`, graphqlData);
+                
+                // Fallback to REST API if GraphQL fails
+                console.log(`[BackInStock Webhook] Trying REST API as fallback...`);
+                const customerUrl = `${baseUrl}/customers/${customer.id}.json`;
+                const fullCustomerResponse = await fetch(customerUrl, {
+                  method: 'GET',
+                  headers: {
+                    'X-Shopify-Access-Token': adminToken,
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                if (fullCustomerResponse.ok) {
+                  const fullCustomerData = await fullCustomerResponse.json();
+                  const fullCustomer = fullCustomerData.customer;
+                  
+                  if (fullCustomer) {
+                    customerEmail = fullCustomer.email || customerEmail;
+                    customerFirstName = fullCustomer.first_name || customerFirstName;
+                    customerLastName = fullCustomer.last_name || customerLastName;
+                    console.log(`[BackInStock Webhook] Customer data after REST fallback:`, {
+                      id: fullCustomer.id,
+                      email: customerEmail,
+                      first_name: customerFirstName,
+                      last_name: customerLastName,
+                      hasEmail: !!customerEmail
+                    });
+                  }
+                }
               }
             } else {
-              const errorText = await fullCustomerResponse.text();
-              console.error(`[BackInStock Webhook] Failed to fetch full customer data: ${fullCustomerResponse.status}`, errorText);
+              const errorText = await graphqlResponse.text();
+              console.error(`[BackInStock Webhook] Failed to fetch customer via GraphQL: ${graphqlResponse.status}`, errorText);
+              
+              // Fallback to REST API
+              console.log(`[BackInStock Webhook] Trying REST API as fallback...`);
+              const customerUrl = `${baseUrl}/customers/${customer.id}.json`;
+              const fullCustomerResponse = await fetch(customerUrl, {
+                method: 'GET',
+                headers: {
+                  'X-Shopify-Access-Token': adminToken,
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (fullCustomerResponse.ok) {
+                const fullCustomerData = await fullCustomerResponse.json();
+                const fullCustomer = fullCustomerData.customer;
+                
+                if (fullCustomer) {
+                  customerEmail = fullCustomer.email || customerEmail;
+                  customerFirstName = fullCustomer.first_name || customerFirstName;
+                  customerLastName = fullCustomer.last_name || customerLastName;
+                }
+              }
             }
             
             // Skip if still no email
