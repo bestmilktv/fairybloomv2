@@ -446,51 +446,72 @@ async function handleWebhook(req, res) {
 
         console.log(`[BackInStock Webhook] Found ${customers.length} customers with tag ${tag}`);
         if (customers.length > 0) {
-          console.log(`[BackInStock Webhook] Customer data sample:`, JSON.stringify(customers[0], null, 2));
+          console.log(`[BackInStock Webhook] Customer data from search API:`, JSON.stringify(customers[0], null, 2));
         }
 
         // Send email to each customer
         for (const customer of customers) {
           try {
-            // Get full customer data if email is missing
+            console.log(`[BackInStock Webhook] Processing customer ${customer.id}...`);
+            console.log(`[BackInStock Webhook] Customer from search:`, {
+              id: customer.id,
+              email: customer.email,
+              first_name: customer.first_name,
+              last_name: customer.last_name,
+              hasEmail: !!customer.email
+            });
+            
+            // Always fetch full customer data to ensure we have email
+            // Customer search API might not return email field
             let customerEmail = customer.email;
             let customerFirstName = customer.first_name;
             let customerLastName = customer.last_name;
             
-            if (!customerEmail && customer.id) {
-              console.log(`[BackInStock Webhook] Email missing for customer ${customer.id}, fetching full customer data...`);
+            // Fetch full customer data using customer ID
+            console.log(`[BackInStock Webhook] Fetching full customer data for ID: ${customer.id}...`);
+            const customerUrl = `${baseUrl}/customers/${customer.id}.json`;
+            const fullCustomerResponse = await fetch(customerUrl, {
+              method: 'GET',
+              headers: {
+                'X-Shopify-Access-Token': adminToken,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (fullCustomerResponse.ok) {
+              const fullCustomerData = await fullCustomerResponse.json();
+              console.log(`[BackInStock Webhook] Full customer data response:`, JSON.stringify(fullCustomerData, null, 2));
               
-              // Fetch full customer data using customer ID
-              const customerUrl = `${baseUrl}/customers/${customer.id}.json`;
-              const fullCustomerResponse = await fetch(customerUrl, {
-                method: 'GET',
-                headers: {
-                  'X-Shopify-Access-Token': adminToken,
-                  'Content-Type': 'application/json',
-                },
-              });
+              const fullCustomer = fullCustomerData.customer;
               
-              if (fullCustomerResponse.ok) {
-                const fullCustomerData = await fullCustomerResponse.json();
-                const fullCustomer = fullCustomerData.customer;
+              if (fullCustomer) {
+                customerEmail = fullCustomer.email || customerEmail;
+                customerFirstName = fullCustomer.first_name || customerFirstName;
+                customerLastName = fullCustomer.last_name || customerLastName;
                 
-                if (fullCustomer) {
-                  customerEmail = fullCustomer.email || customerEmail;
-                  customerFirstName = fullCustomer.first_name || customerFirstName;
-                  customerLastName = fullCustomer.last_name || customerLastName;
-                  console.log(`[BackInStock Webhook] Retrieved email for customer ${customer.id}: ${customerEmail}`);
-                }
+                console.log(`[BackInStock Webhook] Customer data after fetch:`, {
+                  id: fullCustomer.id,
+                  email: customerEmail,
+                  first_name: customerFirstName,
+                  last_name: customerLastName,
+                  hasEmail: !!customerEmail
+                });
               } else {
-                const errorText = await fullCustomerResponse.text();
-                console.error(`[BackInStock Webhook] Failed to fetch full customer data: ${fullCustomerResponse.status}`, errorText);
+                console.error(`[BackInStock Webhook] No customer object in response:`, fullCustomerData);
               }
+            } else {
+              const errorText = await fullCustomerResponse.text();
+              console.error(`[BackInStock Webhook] Failed to fetch full customer data: ${fullCustomerResponse.status}`, errorText);
             }
             
             // Skip if still no email
             if (!customerEmail) {
-              console.error(`[BackInStock Webhook] ⚠️ Skipping customer ${customer.id} - no email available`);
+              console.error(`[BackInStock Webhook] ⚠️ Skipping customer ${customer.id} - no email available after fetch`);
+              console.error(`[BackInStock Webhook] Customer object:`, JSON.stringify(customer, null, 2));
               continue;
             }
+            
+            console.log(`[BackInStock Webhook] ✅ Customer ${customer.id} has email: ${customerEmail}, proceeding with email send...`);
             
             // Get product image
             const productImage = product.images && product.images.length > 0 
