@@ -259,12 +259,25 @@ async function handleWebhook(req, res) {
 
     // Extract variant ID and inventory quantity from webhook
     const inventoryItemId = webhookData.inventory_item_id;
-    const available = webhookData.available;
-    const previousAvailable = webhookData.previous_available || 0;
+    const available = webhookData.available || webhookData.quantity || 0;
+    const previousAvailable = webhookData.previous_available || webhookData.previous_quantity || 0;
+    
+    console.log('[BackInStock Webhook] Inventory data:', {
+      inventoryItemId,
+      available,
+      previousAvailable,
+      webhookData: JSON.stringify(webhookData, null, 2)
+    });
 
     // Check if inventory changed from 0 (or less) to more than 0
-    if (previousAvailable <= 0 && available > 0) {
-      console.log(`[BackInStock Webhook] Inventory changed from ${previousAvailable} to ${available} for item ${inventoryItemId}`);
+    // If previous_available is not provided, we'll check all inventory changes
+    // and process if available > 0 (this is less ideal but will work)
+    const shouldProcess = (previousAvailable <= 0 && available > 0) || 
+                         (previousAvailable === 0 && available > 0) ||
+                         (!previousAvailable && available > 0);
+    
+    if (shouldProcess) {
+      console.log(`[BackInStock Webhook] ✅ Inventory changed from ${previousAvailable} to ${available} for item ${inventoryItemId} - Processing...`);
       
       // Get variant ID from inventory item ID
       const apiVersion = '2024-04';
@@ -281,7 +294,8 @@ async function handleWebhook(req, res) {
       });
 
       if (!inventoryItemResponse.ok) {
-        console.error(`[BackInStock Webhook] Failed to get inventory item: ${inventoryItemResponse.status}`);
+        const errorText = await inventoryItemResponse.text();
+        console.error(`[BackInStock Webhook] Failed to get inventory item: ${inventoryItemResponse.status}`, errorText);
         return res.status(200).json({ 
           success: true, 
           message: 'Webhook received but could not process' 
@@ -289,10 +303,75 @@ async function handleWebhook(req, res) {
       }
 
       const inventoryItemData = await inventoryItemResponse.json();
-      const variantIds = inventoryItemData.inventory_item?.variant_ids || [];
+      console.log('[BackInStock Webhook] Inventory item data:', JSON.stringify(inventoryItemData, null, 2));
+      
+      // Shopify REST API returns variant_ids as an array of numeric IDs
+      // But the structure might be different - let's check both possibilities
+      let variantIds = [];
+      
+      if (inventoryItemData.inventory_item?.variant_ids) {
+        variantIds = inventoryItemData.inventory_item.variant_ids;
+        console.log('[BackInStock Webhook] Found variant_ids in inventory_item:', variantIds);
+      } else if (inventoryItemData.inventory_item?.variant_id) {
+        // Sometimes it's a single variant_id
+        variantIds = [inventoryItemData.inventory_item.variant_id];
+        console.log('[BackInStock Webhook] Found single variant_id:', variantIds);
+      } else {
+        // Try to find variants using GraphQL API as fallback
+        console.log('[BackInStock Webhook] No variant_ids found, trying GraphQL API...');
+        
+        const graphqlQuery = `
+          query getInventoryItem($id: ID!) {
+            inventoryItem(id: $id) {
+              id
+              variant {
+                id
+                product {
+                  id
+                  title
+                  handle
+                }
+              }
+            }
+          }
+        `;
+        
+        // Convert inventory_item_id to GID format
+        const inventoryItemGid = `gid://shopify/InventoryItem/${inventoryItemId}`;
+        
+        try {
+          const graphqlUrl = `https://${storeDomain}/admin/api/${apiVersion}/graphql.json`;
+          const graphqlResponse = await fetch(graphqlUrl, {
+            method: 'POST',
+            headers: {
+              'X-Shopify-Access-Token': adminToken,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query: graphqlQuery,
+              variables: { id: inventoryItemGid }
+            }),
+          });
+          
+          if (graphqlResponse.ok) {
+            const graphqlData = await graphqlResponse.json();
+            console.log('[BackInStock Webhook] GraphQL response:', JSON.stringify(graphqlData, null, 2));
+            
+            if (graphqlData.data?.inventoryItem?.variant?.id) {
+              const variantGid = graphqlData.data.inventoryItem.variant.id;
+              // Extract numeric ID from GID
+              const numericVariantId = variantGid.split('/').pop();
+              variantIds = [numericVariantId];
+              console.log('[BackInStock Webhook] Found variant via GraphQL:', variantIds);
+            }
+          }
+        } catch (graphqlError) {
+          console.error('[BackInStock Webhook] GraphQL API error:', graphqlError);
+        }
+      }
 
       if (variantIds.length === 0) {
-        console.log('[BackInStock Webhook] No variants found for inventory item');
+        console.error('[BackInStock Webhook] No variants found for inventory item. Full response:', JSON.stringify(inventoryItemData, null, 2));
         return res.status(200).json({ 
           success: true, 
           message: 'No variants found' 
