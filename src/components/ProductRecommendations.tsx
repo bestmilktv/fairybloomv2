@@ -33,6 +33,8 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
   const { toast } = useToast()
   const [recommendations, setRecommendations] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  // Sledování produktů přidaných z této sekce - ty zůstanou viditelné i když jsou v košíku
+  const [addedFromThisSection, setAddedFromThisSection] = useState<Set<string>>(new Set())
 
   // Collection mapping for Shopify - using slugified handles
   const collectionMapping = {
@@ -104,8 +106,9 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
         const cartItemIds = new Set(items.map(item => item.id))
         
         // Filter out current product and products already in cart
+        // ALE ponecháme produkty, které byly přidány z této sekce
         const filteredProducts = allProducts.filter(p => 
-          p.id !== currentProductId && !cartItemIds.has(p.id)
+          p.id !== currentProductId && (!cartItemIds.has(p.id) || addedFromThisSection.has(p.id))
         )
         
         const sameCategory = filteredProducts.filter(p => p.category === currentCategory)
@@ -157,7 +160,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
     }
 
     fetchRecommendations()
-  }, [currentProductId, currentCategory, items])
+  }, [currentProductId, currentCategory, items, addedFromThisSection])
 
   const handleAddToCart = async (product: Product, event: React.MouseEvent) => {
     event.preventDefault() // Prevent Link navigation
@@ -178,6 +181,9 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
         variantId: product.variantId,
         isShopifyProduct: !!product.variantId, // True if we have a variant ID
       })
+      
+      // Označíme produkt jako přidaný z této sekce, aby zůstal viditelný
+      setAddedFromThisSection(prev => new Set(prev).add(product.id))
       
       toast({
         title: "Přidáno do košíku",
