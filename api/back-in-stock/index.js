@@ -92,8 +92,9 @@ async function handleSubscribe(req, res) {
     const apiVersion = '2024-04';
     const baseUrl = `https://${storeDomain}/admin/api/${apiVersion}`;
 
-    // Create tag for this variant: back-in-stock-{variantId}
-    const tag = `back-in-stock-${numericVariantId}`;
+    // Create tag for this variant: back-in-stock-{variantId}-email:{email}
+    // We store email in tag because Shopify Basic plan doesn't allow access to Customer PII via API
+    const tag = `back-in-stock-${numericVariantId}-email:${email}`;
 
     // Step 1: Find existing customer by email
     const searchUrl = `${baseUrl}/customers/search.json?query=email:${encodeURIComponent(email)}`;
@@ -133,11 +134,48 @@ async function handleSubscribe(req, res) {
       // Get existing tags
       const existingTags = customer.tags ? customer.tags.split(',').map(t => t.trim()) : [];
       
-      // Check if tag already exists
-      if (existingTags.includes(tag)) {
+      // Check if tag with this variant already exists (with any email)
+      const tagPrefix = `back-in-stock-${numericVariantId}-email:`;
+      const hasExistingTag = existingTags.some(t => t.startsWith(tagPrefix));
+      
+      if (hasExistingTag) {
+        // Remove old tag and add new one (in case email changed)
+        const filteredTags = existingTags.filter(t => !t.startsWith(tagPrefix));
+        const updatedTags = [...filteredTags, tag].join(', ');
+        
+        console.log(`[BackInStock] Updating existing subscription for customer ${customerId} with new tag: ${tag}`);
+        
+        const updateUrl = `${baseUrl}/customers/${customerId}.json`;
+        const updatePayload = {
+          customer: {
+            id: customerId,
+            tags: updatedTags
+          }
+        };
+        
+        const updateResponse = await fetch(updateUrl, {
+          method: 'PUT',
+          headers: {
+            'X-Shopify-Access-Token': adminToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatePayload),
+        });
+
+        if (!updateResponse.ok) {
+          const errorData = await updateResponse.json();
+          console.error(`[BackInStock] Shopify API update error: ${updateResponse.status}:`, JSON.stringify(errorData, null, 2));
+          return res.status(updateResponse.status).json({ 
+            error: 'Failed to update customer tags',
+            details: errorData
+          });
+        }
+
+        console.log(`[BackInStock] Successfully updated tag ${tag} for customer ${customerId}`);
+        
         return res.status(200).json({
           success: true,
-          message: 'Already subscribed to back-in-stock notifications for this product'
+          message: 'Successfully subscribed to back-in-stock notifications'
         });
       }
       
@@ -423,10 +461,12 @@ async function handleWebhook(req, res) {
         const product = productData.product;
 
         // Find customers with tag for this variant
-        const tag = `back-in-stock-${numericVariantId}`;
-        const searchUrl = `${baseUrl}/customers/search.json?query=tag:${encodeURIComponent(tag)}`;
+        // Tag format: back-in-stock-{variantId}-email:{email}
+        // We search for tags starting with back-in-stock-{variantId} to find all customers
+        const tagPrefix = `back-in-stock-${numericVariantId}`;
+        const searchUrl = `${baseUrl}/customers/search.json?query=tag:${encodeURIComponent(tagPrefix)}`;
         
-        console.log(`[BackInStock Webhook] Searching for customers with tag: ${tag}`);
+        console.log(`[BackInStock Webhook] Searching for customers with tag prefix: ${tagPrefix}`);
         
         const customersResponse = await fetch(searchUrl, {
           method: 'GET',
@@ -444,145 +484,46 @@ async function handleWebhook(req, res) {
         const customersData = await customersResponse.json();
         const customers = customersData.customers || [];
 
-        console.log(`[BackInStock Webhook] Found ${customers.length} customers with tag ${tag}`);
-        if (customers.length > 0) {
-          console.log(`[BackInStock Webhook] Customer data from search API:`, JSON.stringify(customers[0], null, 2));
-        }
+        console.log(`[BackInStock Webhook] Found ${customers.length} customers with tag prefix ${tagPrefix}`);
 
         // Send email to each customer
         for (const customer of customers) {
           try {
             console.log(`[BackInStock Webhook] Processing customer ${customer.id}...`);
-            console.log(`[BackInStock Webhook] Customer from search:`, {
-              id: customer.id,
-              email: customer.email,
-              first_name: customer.first_name,
-              last_name: customer.last_name,
-              hasEmail: !!customer.email
-            });
             
-            // Always fetch full customer data to ensure we have email
-            // Customer search API might not return email field
-            let customerEmail = customer.email;
-            let customerFirstName = customer.first_name;
-            let customerLastName = customer.last_name;
+            // Extract email from customer tags
+            // Tag format: back-in-stock-{variantId}-email:{email}
+            let customerEmail = null;
+            const customerTags = customer.tags ? customer.tags.split(',').map(t => t.trim()) : [];
             
-            // Fetch full customer data using GraphQL API (REST API doesn't return email)
-            console.log(`[BackInStock Webhook] Fetching full customer data for ID: ${customer.id} using GraphQL...`);
+            console.log(`[BackInStock Webhook] Customer tags:`, customerTags);
             
-            const customerGid = `gid://shopify/Customer/${customer.id}`;
-            const graphqlQuery = `
-              query getCustomer($id: ID!) {
-                customer(id: $id) {
-                  id
-                  email
-                  firstName
-                  lastName
-                }
-              }
-            `;
-            
-            const graphqlUrl = `https://${storeDomain}/admin/api/${apiVersion}/graphql.json`;
-            const graphqlResponse = await fetch(graphqlUrl, {
-              method: 'POST',
-              headers: {
-                'X-Shopify-Access-Token': adminToken,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                query: graphqlQuery,
-                variables: { id: customerGid }
-              }),
-            });
-            
-            if (graphqlResponse.ok) {
-              const graphqlData = await graphqlResponse.json();
-              console.log(`[BackInStock Webhook] GraphQL customer data response:`, JSON.stringify(graphqlData, null, 2));
-              
-              if (graphqlData.errors) {
-                console.error(`[BackInStock Webhook] GraphQL errors:`, graphqlData.errors);
-              }
-              
-              const graphqlCustomer = graphqlData.data?.customer;
-              
-              if (graphqlCustomer) {
-                // GraphQL returns email, firstName, lastName
-                customerEmail = graphqlCustomer.email || customerEmail;
-                customerFirstName = graphqlCustomer.firstName || customerFirstName;
-                customerLastName = graphqlCustomer.lastName || customerLastName;
-                
-                console.log(`[BackInStock Webhook] Customer data after GraphQL fetch:`, {
-                  id: graphqlCustomer.id,
-                  email: customerEmail,
-                  firstName: customerFirstName,
-                  lastName: customerLastName,
-                  hasEmail: !!customerEmail
-                });
-              } else {
-                console.error(`[BackInStock Webhook] No customer in GraphQL response:`, graphqlData);
-                
-                // Fallback to REST API if GraphQL fails
-                console.log(`[BackInStock Webhook] Trying REST API as fallback...`);
-                const customerUrl = `${baseUrl}/customers/${customer.id}.json`;
-                const fullCustomerResponse = await fetch(customerUrl, {
-                  method: 'GET',
-                  headers: {
-                    'X-Shopify-Access-Token': adminToken,
-                    'Content-Type': 'application/json',
-                  },
-                });
-                
-                if (fullCustomerResponse.ok) {
-                  const fullCustomerData = await fullCustomerResponse.json();
-                  const fullCustomer = fullCustomerData.customer;
-                  
-                  if (fullCustomer) {
-                    customerEmail = fullCustomer.email || customerEmail;
-                    customerFirstName = fullCustomer.first_name || customerFirstName;
-                    customerLastName = fullCustomer.last_name || customerLastName;
-                    console.log(`[BackInStock Webhook] Customer data after REST fallback:`, {
-                      id: fullCustomer.id,
-                      email: customerEmail,
-                      first_name: customerFirstName,
-                      last_name: customerLastName,
-                      hasEmail: !!customerEmail
-                    });
-                  }
-                }
-              }
-            } else {
-              const errorText = await graphqlResponse.text();
-              console.error(`[BackInStock Webhook] Failed to fetch customer via GraphQL: ${graphqlResponse.status}`, errorText);
-              
-              // Fallback to REST API
-              console.log(`[BackInStock Webhook] Trying REST API as fallback...`);
-              const customerUrl = `${baseUrl}/customers/${customer.id}.json`;
-              const fullCustomerResponse = await fetch(customerUrl, {
-                method: 'GET',
-                headers: {
-                  'X-Shopify-Access-Token': adminToken,
-                  'Content-Type': 'application/json',
-                },
-              });
-              
-              if (fullCustomerResponse.ok) {
-                const fullCustomerData = await fullCustomerResponse.json();
-                const fullCustomer = fullCustomerData.customer;
-                
-                if (fullCustomer) {
-                  customerEmail = fullCustomer.email || customerEmail;
-                  customerFirstName = fullCustomer.first_name || customerFirstName;
-                  customerLastName = fullCustomer.last_name || customerLastName;
+            // Find tag that matches our variant and extract email
+            for (const tag of customerTags) {
+              if (tag.startsWith(tagPrefix + '-email:')) {
+                // Extract email from tag: back-in-stock-{variantId}-email:{email}
+                const emailMatch = tag.match(/-email:(.+)$/);
+                if (emailMatch && emailMatch[1]) {
+                  customerEmail = emailMatch[1];
+                  console.log(`[BackInStock Webhook] ✅ Extracted email from tag: ${customerEmail}`);
+                  break;
                 }
               }
             }
             
-            // Skip if still no email
+            // Skip if no email found in tags
             if (!customerEmail) {
-              console.error(`[BackInStock Webhook] ⚠️ Skipping customer ${customer.id} - no email available after fetch`);
-              console.error(`[BackInStock Webhook] Customer object:`, JSON.stringify(customer, null, 2));
+              console.error(`[BackInStock Webhook] ⚠️ Skipping customer ${customer.id} - no email found in tags`);
+              console.error(`[BackInStock Webhook] Customer tags:`, customerTags);
               continue;
             }
+            
+            // Use customer name from customer data or default
+            let customerFirstName = customer.first_name || '';
+            let customerLastName = customer.last_name || '';
+            const customerName = (customerFirstName || customerLastName) 
+              ? `${customerFirstName} ${customerLastName}`.trim() 
+              : 'zákazníku';
             
             console.log(`[BackInStock Webhook] ✅ Customer ${customer.id} has email: ${customerEmail}, proceeding with email send...`);
             
@@ -594,9 +535,6 @@ async function handleWebhook(req, res) {
             // Prepare email content
             const emailSubject = `Produkt je opět skladem! - ${product.title}`;
             const productUrl = `https://${storeDomain}/products/${product.handle}`;
-            const customerName = customerFirstName || customerLastName 
-              ? `${customerFirstName || ''} ${customerLastName || ''}`.trim() 
-              : 'zákazníku';
             
             // Get variant price (format: "123.45" from Shopify REST API)
             const variantPrice = variant.price || '0';
@@ -677,12 +615,13 @@ async function handleWebhook(req, res) {
             }
 
             // Remove tag after sending notification (optional)
+            // Remove all tags matching back-in-stock-{variantId}-email:*
             const existingTags = customer.tags ? customer.tags.split(',').map(t => t.trim()) : [];
-            const updatedTags = existingTags.filter(t => t !== tag).join(', ');
+            const updatedTags = existingTags.filter(t => !t.startsWith(tagPrefix + '-email:')).join(', ');
             
             if (updatedTags !== customer.tags) {
               const updateUrl = `${baseUrl}/customers/${customer.id}.json`;
-              await fetch(updateUrl, {
+              const updateResponse = await fetch(updateUrl, {
                 method: 'PUT',
                 headers: {
                   'X-Shopify-Access-Token': adminToken,
@@ -696,7 +635,11 @@ async function handleWebhook(req, res) {
                 }),
               });
               
-              console.log(`[BackInStock Webhook] Removed tag ${tag} from customer ${customer.id}`);
+              if (updateResponse.ok) {
+                console.log(`[BackInStock Webhook] Removed back-in-stock tag from customer ${customer.id}`);
+              } else {
+                console.error(`[BackInStock Webhook] Failed to remove tag from customer ${customer.id}: ${updateResponse.status}`);
+              }
             }
 
           } catch (emailError) {
