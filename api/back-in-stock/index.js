@@ -540,6 +540,38 @@ async function handleWebhook(req, res) {
             const variantPrice = variant.price || '0';
             const variantCurrency = 'CZK'; // Default currency, adjust if needed
             
+            // Download product image if available and prepare for CID attachment
+            let attachments = [];
+            let productImageCid = null;
+            
+            if (productImage) {
+              try {
+                console.log(`[BackInStock Webhook] Downloading product image: ${productImage}`);
+                const imageResponse = await fetch(productImage);
+                if (imageResponse.ok) {
+                  const imageBuffer = await imageResponse.arrayBuffer();
+                  const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+                  const imageContentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+                  
+                  // Generate CID for inline image
+                  productImageCid = 'product-image';
+                  
+                  attachments.push({
+                    filename: 'product.jpg',
+                    content: imageBase64,
+                    cid: productImageCid,
+                    content_type: imageContentType
+                  });
+                  
+                  console.log(`[BackInStock Webhook] Product image prepared as CID attachment (${Math.round(imageBuffer.byteLength / 1024)}KB)`);
+                } else {
+                  console.warn(`[BackInStock Webhook] Failed to download product image: ${imageResponse.status}`);
+                }
+              } catch (imageError) {
+                console.error(`[BackInStock Webhook] Error downloading product image:`, imageError);
+              }
+            }
+            
             // Create email HTML template
             const emailHtml = `
               <!DOCTYPE html>
@@ -557,7 +589,7 @@ async function handleWebhook(req, res) {
                   </p>
                   
                   <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    ${productImage ? `<img src="${productImage}" alt="${product.title}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin-bottom: 15px;">` : ''}
+                    ${productImageCid ? `<img src="cid:${productImageCid}" alt="${product.title}" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;">` : ''}
                     <h2 style="color: #333; font-size: 20px; margin-bottom: 10px;">${product.title}</h2>
                     <p style="font-size: 18px; color: #8B7355; font-weight: bold; margin: 10px 0;">
                       ${parseFloat(variantPrice).toLocaleString('cs-CZ')} ${variantCurrency}
@@ -582,18 +614,25 @@ async function handleWebhook(req, res) {
             // Send email using Resend (if API key is configured)
             if (emailApiKey) {
               try {
+                const emailPayload = {
+                  from: 'FairyBloom <noreply@fairybloom.cz>',
+                  to: customerEmail,
+                  subject: emailSubject,
+                  html: emailHtml
+                };
+                
+                // Add attachments if we have product image
+                if (attachments.length > 0) {
+                  emailPayload.attachments = attachments;
+                }
+                
                 const emailResponse = await fetch('https://api.resend.com/emails', {
                   method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${emailApiKey}`,
                     'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify({
-                    from: 'FairyBloom <noreply@fairybloom.cz>',
-                    to: customerEmail,
-                    subject: emailSubject,
-                    html: emailHtml
-                  })
+                  body: JSON.stringify(emailPayload)
                 });
 
                 if (!emailResponse.ok) {
