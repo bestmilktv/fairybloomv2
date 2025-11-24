@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,8 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
   const [isLoading, setIsLoading] = useState(true)
   // Sledování produktů přidaných z této sekce - ty zůstanou viditelné i když jsou v košíku
   const [addedFromThisSection, setAddedFromThisSection] = useState<Set<string>>(new Set())
+  // Ukládání načtených produktů, aby se nemusely znovu načítat při změně košíku
+  const allProductsRef = useRef<Product[]>([])
 
   // Collection mapping for Shopify - using slugified handles
   const collectionMapping = {
@@ -55,7 +57,46 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
     }
   }
 
-  // Fetch recommendations from Shopify
+  // Funkce pro filtrování a výběr doporučení
+  const filterAndSelectRecommendations = (allProducts: Product[]) => {
+    const cartItemIds = new Set(items.map(item => item.id))
+    const filteredProducts = allProducts.filter(p => 
+      p.id !== currentProductId && (!cartItemIds.has(p.id) || addedFromThisSection.has(p.id))
+    )
+    
+    const sameCategory = filteredProducts.filter(p => p.category === currentCategory)
+    const otherCategories = filteredProducts.filter(p => p.category !== currentCategory)
+    
+    const finalRecommendations: Product[] = []
+    const mostPopular = sameCategory.slice(0, 2)
+    finalRecommendations.push(...mostPopular)
+    
+    const selectedIds = new Set(mostPopular.map(p => p.id))
+    const remainingInCategory = sameCategory.filter(p => !selectedIds.has(p.id))
+    
+    if (remainingInCategory.length > 0) {
+      const newestInCategory = remainingInCategory
+        .sort((a, b) => {
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          return bDate - aDate
+        })
+        .slice(0, 1)
+      
+      if (newestInCategory.length > 0) {
+        finalRecommendations.push(newestInCategory[0])
+      }
+    }
+    
+    if (finalRecommendations.length < 3) {
+      const remaining = otherCategories.slice(0, 3 - finalRecommendations.length)
+      finalRecommendations.push(...remaining)
+    }
+    
+    return finalRecommendations.slice(0, 3)
+  }
+
+  // Načtení produktů ze Shopify - jen když se změní currentProductId nebo currentCategory
   useEffect(() => {
     const fetchRecommendations = async () => {
       try {
@@ -102,55 +143,12 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
           }
         }
 
-        // Get cart item IDs to exclude products already in cart
-        const cartItemIds = new Set(items.map(item => item.id))
-        
-        // Filter out current product and products already in cart
-        // ALE ponecháme produkty, které byly přidány z této sekce
-        const filteredProducts = allProducts.filter(p => 
-          p.id !== currentProductId && (!cartItemIds.has(p.id) || addedFromThisSection.has(p.id))
-        )
-        
-        const sameCategory = filteredProducts.filter(p => p.category === currentCategory)
-        const otherCategories = filteredProducts.filter(p => p.category !== currentCategory)
-        
-        // Build final recommendations:
-        // 1. First 2 products from same category (most popular - first in collection order)
-        // 2. Newest product from same category (by createdAt) as 3rd position
-        // 3. If not enough products in same category, fill from other categories
-        const finalRecommendations: Product[] = []
-        
-        // Get first 2 most popular products from same category
-        const mostPopular = sameCategory.slice(0, 2)
-        finalRecommendations.push(...mostPopular)
-        
-        // Get newest product from same category (excluding already selected ones)
-        const selectedIds = new Set(mostPopular.map(p => p.id))
-        const remainingInCategory = sameCategory.filter(p => !selectedIds.has(p.id))
-        
-        if (remainingInCategory.length > 0) {
-          // Sort by createdAt descending (newest first) and take the first one
-          const newestInCategory = remainingInCategory
-            .sort((a, b) => {
-              const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0
-              const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0
-              return bDate - aDate // Descending order (newest first)
-            })
-            .slice(0, 1)
-          
-          if (newestInCategory.length > 0) {
-            finalRecommendations.push(newestInCategory[0])
-          }
-        }
-        
-        // If we still don't have 3 products, fill from other categories
-        if (finalRecommendations.length < 3) {
-          const remaining = otherCategories.slice(0, 3 - finalRecommendations.length)
-          finalRecommendations.push(...remaining)
-        }
-        
-        // Ensure we have exactly 3 products (or less if not available)
-        setRecommendations(finalRecommendations.slice(0, 3))
+        // Uložíme načtené produkty do ref
+        allProductsRef.current = allProducts
+
+        // Filtrujeme a vybíráme doporučení
+        const finalRecommendations = filterAndSelectRecommendations(allProducts)
+        setRecommendations(finalRecommendations)
       } catch (error) {
         console.error('Error fetching recommendations:', error)
         setRecommendations([])
@@ -160,7 +158,18 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
     }
 
     fetchRecommendations()
-  }, [currentProductId, currentCategory, items, addedFromThisSection])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProductId, currentCategory])
+
+  // Přefiltrování doporučení když se změní košík nebo addedFromThisSection - BEZ znovu načítání
+  useEffect(() => {
+    // Použijeme již načtené produkty z ref
+    if (allProductsRef.current.length > 0) {
+      const finalRecommendations = filterAndSelectRecommendations(allProductsRef.current)
+      setRecommendations(finalRecommendations)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, addedFromThisSection])
 
   const handleAddToCart = async (product: Product, event: React.MouseEvent) => {
     event.preventDefault() // Prevent Link navigation
