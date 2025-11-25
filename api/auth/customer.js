@@ -127,28 +127,37 @@ function normalizeCountryCode(country) {
 }
 
 /**
- * Fetch Customer Account API using customer access token (shcat_*), no cookies required
+ * Fetch Customer Account API using cookies (preferred) or access token
+ * Shopify Customer Account API prefers cookies when called from server-side
  */
-async function fetchCustomerAccount(query, variables = {}, accessToken) {
-  if (!accessToken || typeof accessToken !== 'string') {
-    console.error('[Customer Account API] Missing customer access token');
-    throw new Error('Authentication required - missing customer access token');
-  }
-
-  const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
-  console.log('[Customer Account API] Using customer access token:', tokenPreview, '(length:', accessToken.length, ')');
-
-  // Try both authorization methods - Shopify may require Authorization header
+async function fetchCustomerAccount(query, variables = {}, req = null, accessToken = null) {
   const headers = {
     'Content-Type': 'application/json',
-    'Shopify-Customer-Access-Token': accessToken,
-    'Authorization': `Bearer ${accessToken}`
   };
+
+  // Method 1: Try with cookies first (preferred for server-side calls)
+  if (req && req.headers.cookie) {
+    headers['Cookie'] = req.headers.cookie;
+    console.log('[Customer Account API] Using cookies for authentication (length):', req.headers.cookie.length);
+  } 
+  // Method 2: Fallback to access token in header
+  else if (accessToken && typeof accessToken === 'string') {
+    const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
+    console.log('[Customer Account API] Using customer access token in header:', tokenPreview, '(length:', accessToken.length, ')');
+    
+    // Try both header formats
+    headers['Shopify-Customer-Access-Token'] = accessToken;
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  } else {
+    console.error('[Customer Account API] Missing both cookies and access token');
+    throw new Error('Authentication required - missing cookies or access token');
+  }
 
   console.log('[Customer Account API] Sending request with headers:', {
     'Content-Type': 'application/json',
-    'Shopify-Customer-Access-Token': tokenPreview,
-    'Authorization': `Bearer ${tokenPreview}`
+    hasCookie: !!headers['Cookie'],
+    hasShopifyToken: !!headers['Shopify-Customer-Access-Token'],
+    hasAuthorization: !!headers['Authorization']
   });
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
@@ -165,11 +174,12 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
     console.error(`[Customer Account API] Error ${response.status}:`, errorText);
     console.error(`[Customer Account API] Response headers:`, Object.fromEntries(response.headers.entries()));
     
-    if (response.status === 401) {
-      // Try with only Authorization header if Shopify-Customer-Access-Token fails
-      console.log('[Customer Account API] 401 error, trying with Authorization header only...');
+    // If cookies failed and we have access token, try with token only
+    if (response.status === 401 && headers['Cookie'] && accessToken) {
+      console.log('[Customer Account API] 401 with cookies, trying with access token header only...');
       const headersAlt = {
         'Content-Type': 'application/json',
+        'Shopify-Customer-Access-Token': accessToken,
         'Authorization': `Bearer ${accessToken}`
       };
       
@@ -189,10 +199,12 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
           console.error('[Customer Account API] GraphQL errors (Alt):', errorMessages);
           throw new Error(`GraphQL errors: ${errorMessages}`);
         }
-        console.log('[Customer Account API] Success with Authorization header only');
+        console.log('[Customer Account API] Success with access token header only');
         return dataAlt;
       }
-      
+    }
+    
+    if (response.status === 401) {
       throw new Error('Authentication required');
     }
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -425,7 +437,8 @@ export default async function handler(req, res) {
 
         const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
         console.log('[Customer Account API] Using access_token:', tokenPreview, '(length:', accessToken.length, ')');
-        const response = await fetchCustomerAccount(customerAccountQuery, {}, accessToken);
+        // Pass both req (for cookies) and accessToken (for fallback)
+        const response = await fetchCustomerAccount(customerAccountQuery, {}, req, accessToken);
         console.log('[Customer Account API] Response received:', JSON.stringify(response, null, 2));
 
         if (response.data && response.data.customer) {
