@@ -59,7 +59,7 @@ const App = () => (
         <Route path="/naramky" element={<CategoryPage />} />
         <Route path="/produkt/:handle" element={<ProductDetailPage />} />
         <Route path="/product-shopify/:handle" element={<DynamicProductPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/muj-profil" element={<ProfilePage />} />
         <Route path="/me-objednavky" element={<OrdersPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/admin" element={<AdminPage />} />

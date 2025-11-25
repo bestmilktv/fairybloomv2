@@ -20,6 +20,10 @@
     {
       "source": "/api/auth/customer/admin-update",
       "destination": "/api/auth/customer/update"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [

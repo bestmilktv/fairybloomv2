@@ -93,9 +93,9 @@ const Navigation = () => {
                   </div>
                   <DropdownMenuSeparator className="bg-gold/20" />
                   <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold">
+                    <Link to="/muj-profil" className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold">
                       <Settings className="mr-2 h-4 w-4" />
-                      Profil
+                      Můj profil
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
