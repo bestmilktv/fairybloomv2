@@ -39,8 +39,8 @@ html {
     --accent: 120 15% 85%;
     --accent-foreground: 30 15% 15%;
 
-    /* Luxury gold accent */
-    --gold: 45 65% 65%;
+    /* Luxury gold accent - softer, more premium */
+    --gold: 45 55% 72%;
     --gold-foreground: 30 15% 15%;
 
     /* Nature green */
