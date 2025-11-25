@@ -454,16 +454,49 @@ export default async function handler(req, res) {
           // Extract email marketing subscription
           const acceptsMarketing = caCustomer.emailMarketingSubscriptionState?.emailMarketingSubscriptionState === 'SUBSCRIBED';
 
-          customerData = {
-            id: caCustomer.id ? String(caCustomer.id) : numericCustomerId,
-            email: email,
+          // Check if Customer Account API returned meaningful data
+          // If firstName, lastName, and address are all empty, treat it as failed and use fallback
+          const hasName = firstName.trim().length > 0 || lastName.trim().length > 0;
+          const hasAddress = address && (
+            (address.address1 && address.address1.trim().length > 0) ||
+            (address.city && address.city.trim().length > 0) ||
+            (address.zip && address.zip.trim().length > 0)
+          );
+          
+          const hasUsefulData = hasName || hasAddress;
+          
+          console.log('[Customer Account API] Data quality check:', {
+            hasName,
+            hasAddress,
+            hasUsefulData,
             firstName: firstName,
             lastName: lastName,
-            address: address,
-            acceptsMarketing: acceptsMarketing
-          };
+            address: address
+          });
 
-          console.log('[Customer Account API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
+          if (hasUsefulData) {
+            // Customer Account API returned useful data, use it
+            customerData = {
+              id: caCustomer.id ? String(caCustomer.id) : numericCustomerId,
+              email: email,
+              firstName: firstName,
+              lastName: lastName,
+              address: address,
+              acceptsMarketing: acceptsMarketing
+            };
+
+            console.log('[Customer Account API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
+          } else {
+            // Customer Account API returned empty data, treat as failed and use fallback
+            console.warn('[Customer Account API] Customer Account API returned empty/incomplete data, will use Admin API fallback');
+            console.warn('[Customer Account API] Customer Account API data:', {
+              firstName: firstName,
+              lastName: lastName,
+              address: address
+            });
+            customerData = null; // Force fallback to Admin API
+            dataSource = 'unknown'; // Reset dataSource since we're not using this data
+          }
         } else {
           console.warn('[Customer Account API] No customer data in response - response.data:', response.data);
         }
