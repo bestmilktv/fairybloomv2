@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Loader2, ShoppingBag } from 'lucide-react'
 
 interface AuthModalProps {
@@ -15,6 +16,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null)
   const { loginWithSSO } = useAuth()
   const { toast } = useToast()
+  const isMobile = useIsMobile()
 
   const handleSSOLogin = async () => {
     setLoading(true)
@@ -81,9 +83,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           </Button>
 
           <div className="text-xs text-center text-muted-foreground">
-            Kliknutím na tlačítko se otevře nové okno pro bezpečné přihlášení.
-            <br />
-            Pokud máte blokované popup okna, povolte je pro tento web.
+            {isMobile ? (
+              <>
+                Kliknutím na tlačítko budete přesměrováni na bezpečné přihlášení přes Shopify.
+                <br />
+                Po přihlášení se automaticky vrátíte zpět.
+              </>
+            ) : (
+              <>
+                Kliknutím na tlačítko se otevře nové okno pro bezpečné přihlášení.
+                <br />
+                Pokud máte blokované popup okna, povolte je pro tento web.
+              </>
+            )}
           </div>
         </div>
       </DialogContent>

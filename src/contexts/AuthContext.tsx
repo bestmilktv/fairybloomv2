@@ -66,13 +66,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setLoading(true)
         
-        // Check if customer is authenticated via Customer Account API
-        const isAuth = await isCustomerAuthenticated()
-        if (isAuth) {
-          // Fetch customer data, but don't set justLoggedIn - this is just page load
-          // Skip modal check since this is not a fresh login
-          setJustLoggedIn(false)
-          await refreshUser(true, false)
+        // Check if we're returning from OAuth redirect (mobile)
+        const urlParams = new URLSearchParams(window.location.search)
+        const oauthSuccess = urlParams.get('oauth_success')
+        const oauthError = urlParams.get('oauth_error')
+        
+        if (oauthSuccess === 'true') {
+          // OAuth redirect was successful - user just logged in
+          console.log('[Auth] OAuth redirect successful, refreshing user data...')
+          
+          // Clear URL parameters
+          const newUrl = window.location.pathname
+          window.history.replaceState({}, '', newUrl)
+          
+          // Mark that user just logged in
+          setJustLoggedIn(true)
+          
+          // Wait a bit for cookie to be available
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // Refresh user data
+          await refreshUser(false, true)
+        } else if (oauthError === 'true') {
+          // OAuth redirect failed
+          const errorMessage = urlParams.get('error_message') || 'Přihlášení se nezdařilo'
+          console.error('[Auth] OAuth redirect error:', errorMessage)
+          
+          // Clear URL parameters
+          const newUrl = window.location.pathname
+          window.history.replaceState({}, '', newUrl)
+          
+          // Show error toast (if available)
+          // Note: toast might not be available here, so we'll just log it
+        } else {
+          // Normal page load - check if customer is authenticated
+          const isAuth = await isCustomerAuthenticated()
+          if (isAuth) {
+            // Fetch customer data, but don't set justLoggedIn - this is just page load
+            // Skip modal check since this is not a fresh login
+            setJustLoggedIn(false)
+            await refreshUser(true, false)
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
@@ -87,11 +121,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Login with Shopify SSO using OAuth 2.0 + PKCE
+   * On mobile: uses full-page redirect (promise never resolves)
+   * On desktop: uses popup (promise resolves with result)
    */
   const loginWithSSO = async (): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true)
 
+      // Check if mobile device (will use redirect)
+      const isMobile = typeof window !== 'undefined' && (
+        window.innerWidth < 768 ||
+        /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+          navigator.userAgent.toLowerCase()
+        )
+      )
+
+      if (isMobile) {
+        // Mobile: redirect mode - initiate redirect and return immediately
+        // The actual login will be handled when user returns from OAuth
+        await initiateOAuthFlow()
+        // Promise never resolves on mobile (user is redirected)
+        // Return success immediately - actual result handled in useEffect
+        return { success: true }
+      }
+
+      // Desktop: popup mode - wait for result
       const result = await initiateOAuthFlow()
       
       if (!result.success) {
@@ -135,7 +189,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return { success: false, error: errorMessage }
     } finally {
-      setLoading(false)
+      // Only set loading to false on desktop (popup mode)
+      // On mobile, user is redirected, so loading state doesn't matter
+      const isMobile = typeof window !== 'undefined' && (
+        window.innerWidth < 768 ||
+        /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+          navigator.userAgent.toLowerCase()
+        )
+      )
+      if (!isMobile) {
+        setLoading(false)
+      }
     }
   }
 

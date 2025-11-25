@@ -1,6 +1,6 @@
 /**
  * OAuth 2.0 + PKCE flow orchestration for Shopify Customer Account API
- * Handles popup window authentication and postMessage communication
+ * Handles popup window authentication (desktop) and full-page redirect (mobile)
  */
 
 import { 
@@ -39,10 +39,83 @@ export interface OAuthError extends Error {
 }
 
 /**
+ * Check if device is mobile
+ * @returns {boolean} True if device is mobile
+ */
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  // Check screen width (mobile breakpoint)
+  if (window.innerWidth < 768) return true;
+  
+  // Check user agent for mobile devices
+  const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+  const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+  return mobileRegex.test(userAgent.toLowerCase());
+}
+
+/**
  * Initiate OAuth flow with PKCE
+ * Uses popup on desktop, full-page redirect on mobile
  * @returns {Promise<OAuthResult>} OAuth result
  */
 export async function initiateOAuthFlow(): Promise<OAuthResult> {
+  // Use full-page redirect for mobile devices
+  if (isMobileDevice()) {
+    return initiateOAuthFlowRedirect();
+  }
+  
+  // Use popup for desktop
+  return initiateOAuthFlowPopup();
+}
+
+/**
+ * OAuth flow using full-page redirect (for mobile)
+ * @returns {Promise<OAuthResult>} OAuth result (never resolves - handled by redirect)
+ */
+async function initiateOAuthFlowRedirect(): Promise<OAuthResult> {
+  try {
+    // Validate configuration
+    if (!OAUTH_CONFIG.clientId || !OAUTH_CONFIG.shopId) {
+      throw new OAuthError('Missing OAuth configuration', 'OAUTH_ERROR');
+    }
+
+    // Generate PKCE parameters
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    const state = generateState();
+
+    // Validate generated parameters
+    if (!isValidCodeVerifier(codeVerifier) || !isValidState(state)) {
+      throw new OAuthError('Failed to generate valid PKCE parameters', 'OAUTH_ERROR');
+    }
+
+    // Store parameters in sessionStorage (will be accessible after redirect)
+    sessionStorage.setItem('oauth_code_verifier', codeVerifier);
+    sessionStorage.setItem('oauth_state', state);
+    sessionStorage.setItem('oauth_redirect_mode', 'true'); // Flag to indicate redirect mode
+
+    // Build authorization URL (with redirect_mode flag)
+    const authUrl = buildAuthorizationUrl(codeChallenge, state, true);
+
+    // Redirect to OAuth URL
+    window.location.href = authUrl;
+    
+    // This promise will never resolve normally - it's handled by callback redirect
+    // Return a promise that never resolves (user will be redirected)
+    return new Promise(() => {
+      // Promise never resolves - user is redirected
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * OAuth flow using popup window (for desktop)
+ * @returns {Promise<OAuthResult>} OAuth result
+ */
+async function initiateOAuthFlowPopup(): Promise<OAuthResult> {
   return new Promise(async (resolve, reject) => {
     try {
       // Validate configuration
@@ -63,6 +136,7 @@ export async function initiateOAuthFlow(): Promise<OAuthResult> {
       // Store parameters in sessionStorage (will be accessible in popup)
       sessionStorage.setItem('oauth_code_verifier', codeVerifier);
       sessionStorage.setItem('oauth_state', state);
+      sessionStorage.removeItem('oauth_redirect_mode'); // Clear redirect flag
 
       // Build authorization URL
       const authUrl = buildAuthorizationUrl(codeChallenge, state);
@@ -125,9 +199,10 @@ export async function initiateOAuthFlow(): Promise<OAuthResult> {
  * Build Shopify OAuth authorization URL
  * @param {string} codeChallenge - PKCE code challenge
  * @param {string} state - CSRF state parameter
+ * @param {boolean} isRedirectMode - Whether this is redirect mode (for mobile)
  * @returns {string} Complete authorization URL
  */
-function buildAuthorizationUrl(codeChallenge: string, state: string): string {
+function buildAuthorizationUrl(codeChallenge: string, state: string, isRedirectMode: boolean = false): string {
   const params = new URLSearchParams({
     client_id: OAUTH_CONFIG.clientId,
     scope: OAUTH_CONFIG.scopes.join(' '),
@@ -137,6 +212,11 @@ function buildAuthorizationUrl(codeChallenge: string, state: string): string {
     code_challenge: codeChallenge,
     code_challenge_method: OAUTH_CONFIG.codeChallengeMethod
   });
+
+  // Add redirect_mode parameter for callback to know how to handle response
+  if (isRedirectMode) {
+    params.set('redirect_mode', 'true');
+  }
 
   return `https://shopify.com/${OAUTH_CONFIG.shopId}/auth/oauth/authorize?${params.toString()}`;
 }

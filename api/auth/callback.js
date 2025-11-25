@@ -17,6 +17,19 @@ export default async function handler(req, res) {
     // Handle OAuth errors
     if (error) {
       console.error('OAuth error:', error);
+      
+      // Check if redirect mode (check sessionStorage or URL)
+      const isRedirectMode = req.query.redirect_mode === 'true';
+      
+      if (isRedirectMode) {
+        // Redirect mode - redirect back with error
+        const redirectUrl = new URL(process.env.VITE_APP_URL || 'http://localhost:8080');
+        redirectUrl.searchParams.set('oauth_error', 'true');
+        redirectUrl.searchParams.set('error_message', encodeURIComponent(error));
+        return res.redirect(redirectUrl.toString());
+      }
+      
+      // Popup mode - return error page
       return res.status(400).send(`
         <!DOCTYPE html>
         <html>
@@ -31,6 +44,9 @@ export default async function handler(req, res) {
                 error: '${error}'
               }, '${process.env.VITE_APP_URL || 'http://localhost:8080'}');
               window.close();
+            } else {
+              // Fallback if popup was blocked - redirect with error
+              window.location.href = '${process.env.VITE_APP_URL || 'http://localhost:8080'}?oauth_error=true&error_message=' + encodeURIComponent('${error}');
             }
           </script>
         </body>
@@ -40,6 +56,17 @@ export default async function handler(req, res) {
 
     // Validate required parameters
     if (!code || !state) {
+      const isRedirectMode = req.query.redirect_mode === 'true';
+      
+      if (isRedirectMode) {
+        // Redirect mode - redirect back with error
+        const redirectUrl = new URL(process.env.VITE_APP_URL || 'http://localhost:8080');
+        redirectUrl.searchParams.set('oauth_error', 'true');
+        redirectUrl.searchParams.set('error_message', encodeURIComponent('Missing required parameters'));
+        return res.redirect(redirectUrl.toString());
+      }
+      
+      // Popup mode - return error page
       return res.status(400).send(`
         <!DOCTYPE html>
         <html>
@@ -54,6 +81,9 @@ export default async function handler(req, res) {
                 error: 'Missing required parameters'
               }, '${process.env.VITE_APP_URL || 'http://localhost:8080'}');
               window.close();
+            } else {
+              // Fallback if popup was blocked - redirect with error
+              window.location.href = '${process.env.VITE_APP_URL || 'http://localhost:8080'}?oauth_error=true&error_message=' + encodeURIComponent('Missing required parameters');
             }
           </script>
         </body>
@@ -65,6 +95,7 @@ export default async function handler(req, res) {
     // We'll read them in the HTML page and pass them to the server
     const storedState = req.query.stored_state;
     const codeVerifier = req.query.code_verifier;
+    const redirectMode = req.query.redirect_mode; // May come from URL or sessionStorage
 
     if (!storedState || !codeVerifier) {
       console.error('Missing stored_state or code_verifier - will read from sessionStorage');
@@ -91,10 +122,16 @@ export default async function handler(req, res) {
                 window.close();
               }
             } else {
+              // Check if redirect mode is set in sessionStorage
+              const redirectMode = sessionStorage.getItem('oauth_redirect_mode');
+              
               // Make request to callback with parameters
               const url = new URL(window.location);
               url.searchParams.set('stored_state', storedState);
               url.searchParams.set('code_verifier', codeVerifier);
+              if (redirectMode === 'true') {
+                url.searchParams.set('redirect_mode', 'true');
+              }
               window.location.href = url.toString();
             }
           </script>
@@ -281,7 +318,33 @@ export default async function handler(req, res) {
     cookieArray.push(...clearCookies);
     res.setHeader('Set-Cookie', cookieArray);
 
-    // Return success page that posts message to parent window
+    // Check if this is redirect mode (mobile) or popup mode (desktop)
+    // redirect_mode can come from:
+    // 1. URL query parameter (if Shopify passes it back)
+    // 2. sessionStorage (read via JavaScript in the HTML page)
+    // 3. We detect it by checking if window.opener exists (popup) or not (redirect)
+    // For now, we'll check the query parameter and also check in the HTML page
+    const isRedirectMode = req.query.redirect_mode === 'true';
+    
+    if (isRedirectMode) {
+      // Full-page redirect mode (mobile) - redirect back to app with success flag
+      // Cookie is already set, so we just need to redirect
+      const redirectUrl = new URL(process.env.VITE_APP_URL || 'http://localhost:8080');
+      redirectUrl.searchParams.set('oauth_success', 'true');
+      redirectUrl.searchParams.set('auth_timestamp', Date.now().toString());
+      
+      // Store customer data in sessionStorage via redirect URL (will be read by frontend)
+      if (customerData) {
+        // We'll pass customer data via URL hash (not visible in server logs)
+        // Frontend will read it and store in localStorage
+        redirectUrl.hash = `oauth_success=true&customer=${encodeURIComponent(JSON.stringify(customerData))}`;
+      }
+      
+      return res.redirect(redirectUrl.toString());
+    }
+
+    // Popup mode (desktop) - return HTML that posts message to parent window
+    // But first check if this is actually redirect mode (no window.opener)
     // NOTE: Cookie is set in popup (backup), but parent window will set it again via /api/auth/set-cookie
     return res.status(200).send(`
       <!DOCTYPE html>
@@ -291,7 +354,16 @@ export default async function handler(req, res) {
       </head>
       <body>
         <script>
-          if (window.opener) {
+          // Check if this is redirect mode (no window.opener) or popup mode (has window.opener)
+          const isRedirectMode = !window.opener || sessionStorage.getItem('oauth_redirect_mode') === 'true';
+          
+          if (isRedirectMode) {
+            // Redirect mode - redirect back to app
+            const redirectUrl = new URL('${process.env.VITE_APP_URL || 'http://localhost:8080'}');
+            redirectUrl.searchParams.set('oauth_success', 'true');
+            redirectUrl.searchParams.set('auth_timestamp', Date.now().toString());
+            window.location.href = redirectUrl.toString();
+          } else if (window.opener) {
             // Store customer data in localStorage for checkout sharing
             const customerData = ${customerData ? JSON.stringify(customerData) : 'null'};
             if (customerData) {
@@ -325,6 +397,20 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('OAuth callback error:', error);
+    
+    // Check if this is redirect mode
+    const isRedirectMode = req.query.redirect_mode === 'true' || 
+                          (typeof req.query.redirect_mode !== 'undefined' && req.query.redirect_mode !== 'false');
+    
+    if (isRedirectMode) {
+      // Redirect mode - redirect back with error
+      const redirectUrl = new URL(process.env.VITE_APP_URL || 'http://localhost:8080');
+      redirectUrl.searchParams.set('oauth_error', 'true');
+      redirectUrl.searchParams.set('error_message', encodeURIComponent('Internal server error'));
+      return res.redirect(redirectUrl.toString());
+    }
+    
+    // Popup mode - return error page
     return res.status(500).send(`
       <!DOCTYPE html>
       <html>
@@ -339,6 +425,9 @@ export default async function handler(req, res) {
               error: 'Internal server error'
             }, '${process.env.VITE_APP_URL || 'http://localhost:8080'}');
             window.close();
+          } else {
+            // Fallback if popup was blocked
+            window.location.href = '${process.env.VITE_APP_URL || 'http://localhost:8080'}?oauth_error=true';
           }
         </script>
       </body>
