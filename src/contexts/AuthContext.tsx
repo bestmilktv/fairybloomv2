@@ -213,7 +213,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (customerData) {
         // Helper function to check if a string value is actually filled (not empty/whitespace)
         const hasValue = (value: string | undefined | null): boolean => {
-          return value !== undefined && value !== null && typeof value === 'string' && value.trim().length > 0
+          if (value === undefined || value === null) {
+            return false;
+          }
+          if (typeof value !== 'string') {
+            return false;
+          }
+          const trimmed = value.trim();
+          return trimmed.length > 0;
         }
 
         console.log('Refreshing user data from Shopify (raw API response):', {
@@ -226,7 +233,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             address1: customerData.address.address1,
             city: customerData.address.city,
             zip: customerData.address.zip,
-            country: customerData.address.country
+            country: customerData.address.country,
+            // Debug: show raw values
+            address1Type: typeof customerData.address.address1,
+            address1Length: customerData.address.address1?.length,
+            cityType: typeof customerData.address.city,
+            cityLength: customerData.address.city?.length,
+            zipType: typeof customerData.address.zip,
+            zipLength: customerData.address.zip?.length,
+            countryType: typeof customerData.address.country,
+            countryLength: customerData.address.country?.length,
           } : null
         })
 
@@ -244,12 +260,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData)
         
         // Check if profile needs completion - all required fields must have non-empty values
+        // Improved validation with detailed logging
         const hasFirstName = hasValue(customerData.firstName)
         const hasLastName = hasValue(customerData.lastName)
-        const hasAddress1 = customerData.address?.address1 && hasValue(customerData.address.address1)
-        const hasCity = customerData.address?.city && hasValue(customerData.address.city)
-        const hasZip = customerData.address?.zip && hasValue(customerData.address.zip)
-        const hasCountry = customerData.address?.country && hasValue(customerData.address.country)
+        
+        // Check if address exists and has all required fields
+        const addressExists = !!customerData.address;
+        const hasAddress1 = addressExists && hasValue(customerData.address.address1)
+        const hasCity = addressExists && hasValue(customerData.address.city)
+        const hasZip = addressExists && hasValue(customerData.address.zip)
+        const hasCountry = addressExists && hasValue(customerData.address.country)
+        
+        // Debug logging for address validation
+        if (addressExists) {
+          console.log('Address validation details:', {
+            address1: {
+              value: customerData.address.address1,
+              hasValue: hasAddress1,
+              type: typeof customerData.address.address1
+            },
+            city: {
+              value: customerData.address.city,
+              hasValue: hasCity,
+              type: typeof customerData.address.city
+            },
+            zip: {
+              value: customerData.address.zip,
+              hasValue: hasZip,
+              type: typeof customerData.address.zip
+            },
+            country: {
+              value: customerData.address.country,
+              hasValue: hasCountry,
+              type: typeof customerData.address.country
+            }
+          });
+        } else {
+          console.log('No address object found in customer data');
+        }
         
         const needsCompletion = !hasFirstName || !hasLastName || !hasAddress1 || !hasCity || !hasZip || !hasCountry
         

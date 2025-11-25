@@ -14,6 +14,119 @@ const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN;
 const ADMIN_API_VERSION = '2024-04';
 
 /**
+ * Normalize country code to ISO 3166-1 alpha-2 format (e.g., "CZ")
+ * Handles various formats: "Czech Republic" -> "CZ", "Czechia" -> "CZ", "CZ" -> "CZ"
+ */
+function normalizeCountryCode(country) {
+  if (!country) {
+    return '';
+  }
+  
+  // Handle null/undefined
+  if (country === null || country === undefined) {
+    return '';
+  }
+  
+  // Convert to string if not already
+  const countryStr = String(country).trim();
+  if (!countryStr) {
+    return '';
+  }
+  
+  // If already a 2-letter code, return uppercase
+  if (countryStr.length === 2) {
+    return countryStr.toUpperCase();
+  }
+  
+  // Map common country names to codes (extended list)
+  const countryMap = {
+    // Czech Republic variants
+    'czech republic': 'CZ',
+    'czechia': 'CZ',
+    'česká republika': 'CZ',
+    'ceska republika': 'CZ',
+    // Slovakia variants
+    'slovakia': 'SK',
+    'slovak republic': 'SK',
+    'slovenská republika': 'SK',
+    'slovenska republika': 'SK',
+    // Other European countries
+    'poland': 'PL',
+    'polska': 'PL',
+    'germany': 'DE',
+    'deutschland': 'DE',
+    'austria': 'AT',
+    'österreich': 'AT',
+    'oesterreich': 'AT',
+    'hungary': 'HU',
+    'magyarország': 'HU',
+    'france': 'FR',
+    'italy': 'IT',
+    'italia': 'IT',
+    'spain': 'ES',
+    'espana': 'ES',
+    'united kingdom': 'GB',
+    'uk': 'GB',
+    'great britain': 'GB',
+    'ireland': 'IE',
+    'belgium': 'BE',
+    'belgie': 'BE',
+    'netherlands': 'NL',
+    'switzerland': 'CH',
+    'schweiz': 'CH',
+    'sweden': 'SE',
+    'sverige': 'SE',
+    'norway': 'NO',
+    'norge': 'NO',
+    'denmark': 'DK',
+    'finland': 'FI',
+    // Other countries
+    'united states': 'US',
+    'usa': 'US',
+    'united states of america': 'US',
+    'canada': 'CA',
+    'australia': 'AU',
+    'new zealand': 'NZ',
+    'japan': 'JP',
+    'china': 'CN',
+    'south korea': 'KR',
+    'india': 'IN',
+    'brazil': 'BR',
+    'mexico': 'MX',
+    'argentina': 'AR',
+    'portugal': 'PT',
+    'greece': 'GR',
+    'turkey': 'TR',
+    'russia': 'RU',
+    'ukraine': 'UA',
+    'romania': 'RO',
+    'bulgaria': 'BG',
+    'croatia': 'HR',
+    'slovenia': 'SI',
+    'estonia': 'EE',
+    'latvia': 'LV',
+    'lithuania': 'LT',
+  };
+  
+  const lower = countryStr.toLowerCase();
+  if (countryMap[lower]) {
+    return countryMap[lower];
+  }
+  
+  // If we can't map it, try to extract 2-letter code if it looks like one
+  // Some APIs might return "CZ" as part of a longer string
+  const codeMatch = countryStr.match(/\b([A-Z]{2})\b/i);
+  if (codeMatch) {
+    return codeMatch[1].toUpperCase();
+  }
+  
+  // If we can't map it, return as-is (might be a valid code we don't know about)
+  // But log it for debugging
+  console.warn('[normalizeCountryCode] Could not normalize country:', country, '-> returning as-is');
+  return countryStr;
+}
+
+/**
  * Fetch Customer Account API using customer access token (shcat_*), no cookies required
  */
 async function fetchCustomerAccount(query, variables = {}, accessToken) {
@@ -294,28 +407,48 @@ export default async function handler(req, res) {
           let address = null;
           if (caCustomer.defaultAddress) {
             const addr = caCustomer.defaultAddress;
+            console.log('[Customer Account API] Raw defaultAddress from Shopify:', JSON.stringify(addr, null, 2));
+            
+            const normalizedCountry = normalizeCountryCode(addr.country);
+            console.log('[Customer Account API] Country normalization:', {
+              original: addr.country,
+              normalized: normalizedCountry
+            });
+            
             address = {
               address1: addr.address1 || '',
               address2: addr.address2 || '',
               city: addr.city || '',
               province: addr.province || '',
               zip: addr.zip || '',
-              country: addr.country || '',
+              country: normalizedCountry,
               phone: addr.phone || ''
             };
-            console.log('[Customer Account API] Using defaultAddress');
+            console.log('[Customer Account API] Using defaultAddress, normalized address:', JSON.stringify(address, null, 2));
           } else if (caCustomer.addresses?.edges && caCustomer.addresses.edges.length > 0) {
             const addr = caCustomer.addresses.edges[0].node;
+            console.log('[Customer Account API] Raw address from addresses array:', JSON.stringify(addr, null, 2));
+            
+            const normalizedCountry = normalizeCountryCode(addr.country);
+            console.log('[Customer Account API] Country normalization:', {
+              original: addr.country,
+              normalized: normalizedCountry
+            });
+            
             address = {
               address1: addr.address1 || '',
               address2: addr.address2 || '',
               city: addr.city || '',
               province: addr.province || '',
               zip: addr.zip || '',
-              country: addr.country || '',
+              country: normalizedCountry,
               phone: addr.phone || ''
             };
-            console.log('[Customer Account API] Using first address from addresses array');
+            console.log('[Customer Account API] Using first address from addresses array, normalized address:', JSON.stringify(address, null, 2));
+          } else {
+            console.log('[Customer Account API] No address found in customer data');
+            console.log('[Customer Account API] defaultAddress:', caCustomer.defaultAddress);
+            console.log('[Customer Account API] addresses:', caCustomer.addresses);
           }
 
           // Extract email marketing subscription
@@ -369,30 +502,50 @@ export default async function handler(req, res) {
           let address = null;
           if (adminCustomer.defaultAddress) {
             const addr = adminCustomer.defaultAddress;
+            console.log('[Admin GraphQL API] Raw defaultAddress from Shopify:', JSON.stringify(addr, null, 2));
+            
             if (addr.address1 || addr.city || addr.zip) {
+              const normalizedCountry = normalizeCountryCode(addr.countryCodeV2);
+              console.log('[Admin GraphQL API] Country normalization:', {
+                original: addr.countryCodeV2,
+                normalized: normalizedCountry
+              });
+              
               address = {
                 address1: addr.address1 || '',
                 address2: addr.address2 || '',
                 city: addr.city || '',
                 province: addr.province || '',
                 zip: addr.zip || '',
-                country: addr.countryCodeV2 || '',
+                country: normalizedCountry,
                 phone: addr.phone || ''
               };
+              console.log('[Admin GraphQL API] Normalized address:', JSON.stringify(address, null, 2));
             }
           } else if (adminCustomer.addresses && adminCustomer.addresses.length > 0) {
             const addr = adminCustomer.addresses[0];
+            console.log('[Admin GraphQL API] Raw address from addresses array:', JSON.stringify(addr, null, 2));
+            
             if (addr.address1 || addr.city || addr.zip) {
+              const normalizedCountry = normalizeCountryCode(addr.countryCodeV2);
+              console.log('[Admin GraphQL API] Country normalization:', {
+                original: addr.countryCodeV2,
+                normalized: normalizedCountry
+              });
+              
               address = {
                 address1: addr.address1 || '',
                 address2: addr.address2 || '',
                 city: addr.city || '',
                 province: addr.province || '',
                 zip: addr.zip || '',
-                country: addr.countryCodeV2 || '',
+                country: normalizedCountry,
                 phone: addr.phone || ''
               };
+              console.log('[Admin GraphQL API] Normalized address:', JSON.stringify(address, null, 2));
             }
+          } else {
+            console.log('[Admin GraphQL API] No address found in customer data');
           }
 
           // Extract email marketing consent
@@ -452,30 +605,52 @@ export default async function handler(req, res) {
             let address = null;
             if (adminCustomer.default_address) {
               const addr = adminCustomer.default_address;
+              console.log('[Admin REST API] Raw default_address from Shopify:', JSON.stringify(addr, null, 2));
+              
               if (addr.address1 || addr.city || addr.zip) {
+                const rawCountry = addr.country || addr.country_name || addr.country_code || '';
+                const normalizedCountry = normalizeCountryCode(rawCountry);
+                console.log('[Admin REST API] Country normalization:', {
+                  original: rawCountry,
+                  normalized: normalizedCountry
+                });
+                
                 address = {
                   address1: addr.address1 || '',
                   address2: addr.address2 || '',
                   city: addr.city || '',
                   province: addr.province || '',
                   zip: addr.zip || '',
-                  country: addr.country || addr.country_name || addr.country_code || '',
+                  country: normalizedCountry,
                   phone: addr.phone || ''
                 };
+                console.log('[Admin REST API] Normalized address:', JSON.stringify(address, null, 2));
               }
             } else if (adminCustomer.addresses && adminCustomer.addresses.length > 0) {
               const addr = adminCustomer.addresses[0];
+              console.log('[Admin REST API] Raw address from addresses array:', JSON.stringify(addr, null, 2));
+              
               if (addr.address1 || addr.city || addr.zip) {
+                const rawCountry = addr.country || addr.country_name || addr.country_code || '';
+                const normalizedCountry = normalizeCountryCode(rawCountry);
+                console.log('[Admin REST API] Country normalization:', {
+                  original: rawCountry,
+                  normalized: normalizedCountry
+                });
+                
                 address = {
                   address1: addr.address1 || '',
                   address2: addr.address2 || '',
                   city: addr.city || '',
                   province: addr.province || '',
                   zip: addr.zip || '',
-                  country: addr.country || addr.country_name || addr.country_code || '',
+                  country: normalizedCountry,
                   phone: addr.phone || ''
                 };
+                console.log('[Admin REST API] Normalized address:', JSON.stringify(address, null, 2));
               }
+            } else {
+              console.log('[Admin REST API] No address found in customer data');
             }
 
             // Extract email marketing consent

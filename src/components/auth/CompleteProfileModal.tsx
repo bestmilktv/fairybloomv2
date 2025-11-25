@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { COUNTRIES, getCountryByCode } from '@/lib/countries'
 import { Loader2, User } from 'lucide-react'
 
 interface CompleteProfileModalProps {
@@ -254,15 +256,25 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="country">Země *</Label>
-                <Input
-                  id="country"
-                  type="text"
-                  placeholder="Např. CZ"
+                <Select
                   value={country}
-                  onChange={(e) => setCountry(e.target.value)}
+                  onValueChange={setCountry}
                   disabled={loading}
                   required
-                />
+                >
+                  <SelectTrigger id="country">
+                    <SelectValue placeholder="Vyberte zemi">
+                      {country ? (getCountryByCode(country)?.name || country) : 'Vyberte zemi'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {COUNTRIES.map((countryOption) => (
+                      <SelectItem key={countryOption.code} value={countryOption.code}>
+                        {countryOption.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

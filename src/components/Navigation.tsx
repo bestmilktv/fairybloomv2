@@ -51,33 +51,33 @@ const Navigation = () => {
     }
   };
   return <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'glass-effect shadow-lg' : 'bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity duration-300" onClick={() => {
+          <Link to="/" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity duration-300 flex-shrink-0 min-w-0" onClick={() => {
           window.scrollTo({
             top: 0,
             behavior: 'smooth'
           });
         }}>
-            <img src={logo} alt="Fairy Bloom Logo" className="h-12 w-12 object-contain" />
-            <h1 className="text-3xl font-light text-luxury tracking-[0.2em] font-serif">FAIRY BLOOM</h1>
+            <img src={logo} alt="Fairy Bloom Logo" className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain flex-shrink-0" />
+            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-luxury tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis">FAIRY BLOOM</h1>
           </Link>
 
           {/* Category Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-8 flex-shrink-0">
             {categories.map(category => <Link key={category.path} to={category.path} className="text-foreground/80 hover:text-gold transition-colors duration-300 font-medium tracking-wide">
                 {category.name}
               </Link>)}
           </div>
 
           {/* Account, Favorites & Cart */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-shrink-0">
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-gold hover:text-gold/80 relative">
-                    <UserCheck className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="text-gold hover:text-gold/80 relative h-9 w-9 sm:h-10 sm:w-10">
+                    <UserCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent 
@@ -118,21 +118,21 @@ const Navigation = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="text-foreground/80 hover:text-gold"
+                className="text-foreground/80 hover:text-gold h-9 w-9 sm:h-10 sm:w-10"
                 onClick={() => setAuthModalOpen(true)}
               >
-                <User className="h-5 w-5" />
+                <User className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             )}
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-foreground/80 hover:text-gold relative"
+              className="text-foreground/80 hover:text-gold relative h-9 w-9 sm:h-10 sm:w-10"
               onClick={() => setFavoritesSidebarOpen(true)}
             >
-              <Heart className="h-5 w-5" />
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
               {getFavoriteCount() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium">
                   {getFavoriteCount()}
                 </span>
               )}
@@ -140,13 +140,13 @@ const Navigation = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-foreground/80 hover:text-gold relative"
+              className="text-foreground/80 hover:text-gold relative h-9 w-9 sm:h-10 sm:w-10"
               onClick={() => setMiniCartOpen(true)}
               data-cart-icon
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
               {getTotalItems() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium">
                   {getTotalItems()}
                 </span>
               )}
