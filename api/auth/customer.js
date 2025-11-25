@@ -138,10 +138,18 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
   const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
   console.log('[Customer Account API] Using customer access token:', tokenPreview, '(length:', accessToken.length, ')');
 
+  // Try both authorization methods - Shopify may require Authorization header
   const headers = {
     'Content-Type': 'application/json',
-    'Shopify-Customer-Access-Token': accessToken
+    'Shopify-Customer-Access-Token': accessToken,
+    'Authorization': `Bearer ${accessToken}`
   };
+
+  console.log('[Customer Account API] Sending request with headers:', {
+    'Content-Type': 'application/json',
+    'Shopify-Customer-Access-Token': tokenPreview,
+    'Authorization': `Bearer ${tokenPreview}`
+  });
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
@@ -155,8 +163,36 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`[Customer Account API] Error ${response.status}:`, errorText);
+    console.error(`[Customer Account API] Response headers:`, Object.fromEntries(response.headers.entries()));
     
     if (response.status === 401) {
+      // Try with only Authorization header if Shopify-Customer-Access-Token fails
+      console.log('[Customer Account API] 401 error, trying with Authorization header only...');
+      const headersAlt = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      };
+      
+      const responseAlt = await fetch(CUSTOMER_ACCOUNT_URL, {
+        method: 'POST',
+        headers: headersAlt,
+        body: JSON.stringify({
+          query,
+          variables,
+        }),
+      });
+      
+      if (responseAlt.ok) {
+        const dataAlt = await responseAlt.json();
+        if (dataAlt.errors && dataAlt.errors.length > 0) {
+          const errorMessages = dataAlt.errors.map((error) => error.message).join(', ');
+          console.error('[Customer Account API] GraphQL errors (Alt):', errorMessages);
+          throw new Error(`GraphQL errors: ${errorMessages}`);
+        }
+        console.log('[Customer Account API] Success with Authorization header only');
+        return dataAlt;
+      }
+      
       throw new Error('Authentication required');
     }
     throw new Error(`HTTP error! status: ${response.status}`);
