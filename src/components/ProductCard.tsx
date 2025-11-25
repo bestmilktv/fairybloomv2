@@ -148,7 +148,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
           </div>
           
           <Button 
-            variant="premium" 
+            variant="gold" 
             size="sm"
             onClick={handleAddToCart}
             disabled={isInCart || !variantId}
