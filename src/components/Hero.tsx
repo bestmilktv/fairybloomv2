@@ -71,7 +71,7 @@ const Hero = () => {
         </p>
         
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6" style={{ minHeight: '60px' }}>
-          <Button variant="gold" size="lg" onClick={scrollToProducts} className="w-full md:w-auto">Objevit kolekce</Button>
+          <Button variant="luxury" size="lg" onClick={scrollToProducts} className="w-full md:w-auto">Objevit kolekce</Button>
           <Button variant="premium" size="lg" onClick={scrollToMyStory} className="w-full md:w-auto">Můj příběh</Button>
         </div>
       </div>

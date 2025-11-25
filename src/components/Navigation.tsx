@@ -99,7 +99,7 @@ const Navigation = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/orders" className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold">
+                    <Link to="/me-objednavky" className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold">
                       <Package className="mr-2 h-4 w-4" />
                       Mé objednávky
                     </Link>

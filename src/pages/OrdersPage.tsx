@@ -1,9 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Package, Calendar, CreditCard, ShoppingBag } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Package } from 'lucide-react'
 
 export default function OrdersPage() {
   const { user, loading } = useAuth()
@@ -34,48 +33,12 @@ export default function OrdersPage() {
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-serif font-bold text-luxury mb-4">
-              Moje objednávky
+              Mé objednávky
             </h1>
             <p className="text-muted-foreground">
               Sledujte stav svých objednávek
             </p>
           </div>
-
-          {/* Shopify Integration Notice */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5" />
-                Shopify Integrace
-              </CardTitle>
-              <CardDescription>
-                Objednávky jsou nyní spravovány přes Shopify
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h3 className="font-semibold text-foreground mb-2">Objednávky</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Všechny objednávky jsou nyní zpracovávány přes Shopify checkout systém.
-                  Pro sledování objednávek zkontrolujte svůj e-mail nebo se přihlaste do Shopify účtu.
-                </p>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span>Objednávky se zpracovávají automaticky</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>Stav objednávek najdete v e-mailu</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span>Platby jsou bezpečně zpracovávány Shopify</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Empty State */}
           <Card>
