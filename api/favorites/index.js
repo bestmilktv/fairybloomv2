@@ -21,29 +21,37 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     'Content-Type': 'application/json',
   };
 
-  // Method 1: Try with cookies first (preferred for server-side calls)
+  let hasCookies = false;
+  let hasToken = false;
+
+  // Method 1: Add cookies if available
   if (req && req.headers.cookie) {
     headers['Cookie'] = req.headers.cookie;
+    hasCookies = true;
     console.log('[Favorites] Using cookies for authentication (length):', req.headers.cookie.length);
-  } 
-  // Method 2: Fallback to access token in header
-  else if (accessToken && typeof accessToken === 'string') {
+  }
+
+  // Method 2: Add token if available (use both if possible for better compatibility)
+  if (accessToken && typeof accessToken === 'string') {
     const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
     console.log('[Favorites] Using customer access token in header:', tokenPreview, '(length:', accessToken.length, ')');
     
     // Try both header formats
     headers['Shopify-Customer-Access-Token'] = accessToken;
     headers['Authorization'] = `Bearer ${accessToken}`;
-  } else {
+    hasToken = true;
+  }
+
+  if (!hasCookies && !hasToken) {
     console.error('[Favorites] Missing both cookies and access token');
     throw new Error('Authentication required - missing cookies or access token');
   }
 
   console.log('[Favorites] Sending request with headers:', {
     'Content-Type': 'application/json',
-    hasCookie: !!headers['Cookie'],
-    hasShopifyToken: !!headers['Shopify-Customer-Access-Token'],
-    hasAuthorization: !!headers['Authorization']
+    hasCookie: hasCookies,
+    hasShopifyToken: hasToken,
+    hasAuthorization: hasToken
   });
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
@@ -59,9 +67,9 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     const errorText = await response.text();
     console.error(`[Favorites] Shopify Customer Account API error: ${response.status}`, errorText);
     
-    // If cookies failed and we have access token, try with token only
-    if (response.status === 401 && headers['Cookie'] && accessToken) {
-      console.log('[Favorites] 401 with cookies, trying with access token header only...');
+    // If we used both cookies and token and it failed, try with token only
+    if (response.status === 401 && hasCookies && hasToken) {
+      console.log('[Favorites] 401 with cookies+token, trying with access token header only...');
       const headersAlt = {
         'Content-Type': 'application/json',
         'Shopify-Customer-Access-Token': accessToken,
