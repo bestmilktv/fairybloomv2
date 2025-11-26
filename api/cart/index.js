@@ -1,11 +1,11 @@
 /**
- * Favorites API Endpoint - ADMIN API ONLY VERSION (ROBUST ID FIX)
+ * Cart API Endpoint - Store/Retrieve Cart ID in Shopify Metafield
+ * Similar to favorites, but stores cartId for cross-device cart synchronization
  */
 
 import { getAuthCookie } from '../utils/cookies.js';
 
 // Environment check
-const SHOP_ID = process.env.VITE_SHOPIFY_SHOP_ID || process.env.SHOPIFY_SHOP_ID;
 const STORE_DOMAIN = process.env.VITE_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN;
 const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN;
 const ADMIN_API_VERSION = '2024-04';
@@ -21,7 +21,7 @@ const ADMIN_GRAPHQL_URL = STORE_DOMAIN
 function formatAdminGid(rawId) {
   if (!rawId) return null;
   
-  // FIX: Force convert to string to avoid "rawId.startsWith is not a function"
+  // Force convert to string to avoid "rawId.startsWith is not a function"
   let idString = String(rawId).trim();
   
   // 1. If it's already a GID, return it
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
   try {
     authData = getAuthCookie(req);
   } catch (e) {
-    console.error('[Favorites] Cookie parsing error:', e);
+    console.error('[Cart] Cookie parsing error:', e);
     return res.status(401).json({ error: 'Invalid session cookies' });
   }
   
@@ -103,26 +103,25 @@ export default async function handler(req, res) {
   // 2. Get Customer ID from Auth Data safely
   const rawCustomerId = authData.customer?.sub;
   
-  console.log('[Favorites] Raw Customer ID from cookie:', rawCustomerId, 'Type:', typeof rawCustomerId);
+  console.log('[Cart] Raw Customer ID from cookie:', rawCustomerId, 'Type:', typeof rawCustomerId);
 
   const customerGid = formatAdminGid(rawCustomerId);
 
   if (!customerGid) {
-    console.error('[Favorites] Failed to parse Customer ID:', rawCustomerId);
+    console.error('[Cart] Failed to parse Customer ID:', rawCustomerId);
     return res.status(400).json({ error: 'Invalid Customer ID format' });
   }
 
-  // console.log('[Favorites] Using Admin GID:', customerGid);
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
 
   try {
-    // --- GET: Read Favorites ---
+    // --- GET: Read Cart ID ---
     if (req.method === 'GET') {
       const query = `
-        query getCustomerFavorites($id: ID!) {
+        query getCustomerCart($id: ID!) {
           customer(id: $id) {
             id
-            metafield(namespace: "custom", key: "favorites") {
+            metafield(namespace: "custom", key: "cart_id") {
               value
             }
           }
@@ -133,60 +132,40 @@ export default async function handler(req, res) {
         const result = await fetchAdminAPI(query, { id: customerGid });
         
         if (!result.data?.customer) {
-          console.warn('[Favorites] Customer not found in Admin API:', customerGid);
-          return res.status(200).json({ favorites: [] });
+          console.warn('[Cart] Customer not found in Admin API:', customerGid);
+          return res.status(200).json({ cartId: null });
         }
 
         const metafieldValue = result.data.customer.metafield?.value;
-        const favorites = metafieldValue ? JSON.parse(metafieldValue) : [];
+        const cartId = metafieldValue || null;
         
-        return res.status(200).json({ favorites: Array.isArray(favorites) ? favorites : [] });
+        return res.status(200).json({ cartId });
 
       } catch (error) {
-        console.error('[Favorites] Read Error:', error.message);
-        // Return empty array instead of crashing if read fails
-        return res.status(200).json({ favorites: [], error: 'Read failed' });
+        console.error('[Cart] Read Error:', error.message);
+        // Return null instead of crashing if read fails
+        return res.status(200).json({ cartId: null, error: 'Read failed' });
       }
     }
 
-    // --- POST/DELETE: Update Favorites ---
-    if (req.method === 'POST' || req.method === 'DELETE') {
-      const { productId } = req.body;
-      if (!productId) return res.status(400).json({ error: 'Product ID required' });
-
-      // Step A: Read current list first
-      const readQuery = `
-        query getCustomerFavorites($id: ID!) {
-          customer(id: $id) {
-            metafield(namespace: "custom", key: "favorites") {
-              value
-            }
-          }
-        }
-      `;
+    // --- POST: Save Cart ID ---
+    if (req.method === 'POST') {
+      const { cartId } = req.body;
       
-      const readResult = await fetchAdminAPI(readQuery, { id: customerGid });
-      const currentMetafield = readResult.data?.customer?.metafield?.value;
-      let currentFavorites = currentMetafield ? JSON.parse(currentMetafield) : [];
-      if (!Array.isArray(currentFavorites)) currentFavorites = [];
-
-      // Step B: Modify list
-      if (req.method === 'POST') {
-        // Add unique
-        if (!currentFavorites.includes(productId)) {
-          currentFavorites.push(productId);
-        }
-      } else {
-        // Delete
-        currentFavorites = currentFavorites.filter(id => id !== productId);
+      // Allow null to clear the metafield
+      if (cartId !== null && (!cartId || typeof cartId !== 'string')) {
+        return res.status(400).json({ error: 'Cart ID must be a string or null' });
       }
+      
+      // If cartId is null, we'll set it to empty string to clear the metafield
+      const valueToStore = cartId || '';
 
-      // Step C: Write back to Shopify
+      // Write cartId to Shopify metafield
       const updateQuery = `
         mutation customerUpdate($input: CustomerInput!) {
           customerUpdate(input: $input) {
             customer {
-              metafield(namespace: "custom", key: "favorites") {
+              metafield(namespace: "custom", key: "cart_id") {
                 value
               }
             }
@@ -204,8 +183,8 @@ export default async function handler(req, res) {
           metafields: [
             {
               namespace: 'custom',
-              key: 'favorites',
-              value: JSON.stringify(currentFavorites)
+              key: 'cart_id',
+              value: valueToStore
             }
           ]
         }
@@ -222,13 +201,14 @@ export default async function handler(req, res) {
         throw new Error(err);
       }
 
-      return res.status(200).json({ favorites: currentFavorites });
+      return res.status(200).json({ cartId: cartId || null, success: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
 
   } catch (error) {
-    console.error('[Favorites] Critical Error:', error.message);
+    console.error('[Cart] Critical Error:', error.message);
     return res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
+
