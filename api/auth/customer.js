@@ -135,10 +135,27 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     'Content-Type': 'application/json',
   };
 
-  // Method 1: Try with cookies first (preferred for server-side calls)
+  // Extract token from cookies if available
+  let tokenFromCookies = null;
   if (req && req.headers.cookie) {
+    try {
+      const authData = getAuthCookie(req);
+      if (authData && authData.access_token) {
+        tokenFromCookies = authData.access_token;
+        console.log('[Customer Account API] Extracted token from cookies, length:', tokenFromCookies.length);
+      }
+    } catch (error) {
+      console.error('[Customer Account API] Error extracting token from cookies:', error.message);
+    }
+  }
+
+  // Method 1: Try with cookies + token in headers (extract token from cookies)
+  if (req && req.headers.cookie && tokenFromCookies) {
     headers['Cookie'] = req.headers.cookie;
-    console.log('[Customer Account API] Using cookies for authentication (length):', req.headers.cookie.length);
+    // Use both header formats for maximum compatibility
+    headers['Shopify-Customer-Access-Token'] = tokenFromCookies;
+    headers['Authorization'] = `Bearer ${tokenFromCookies}`;
+    console.log('[Customer Account API] Using cookies + Authorization header (token extracted from cookies)');
   } 
   // Method 2: Fallback to access token in header
   else if (accessToken && typeof accessToken === 'string') {
