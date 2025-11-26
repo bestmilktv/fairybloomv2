@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
 
 interface FavoritesContextType {
@@ -19,8 +19,11 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
   const [favorites, setFavorites] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Ref aby se sync nespouštěl dvakrát
+  const isSyncingRef = useRef(false);
 
-  // Load favorites from localStorage on mount
+  // 1. Load favorites from localStorage on initial mount
   useEffect(() => {
     const loadLocalFavorites = () => {
       try {
@@ -39,196 +42,139 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     loadLocalFavorites()
   }, [])
 
-  // Load favorites from Shopify when authenticated
+  // 2. Sync & Load Logic when Auth changes
   useEffect(() => {
-    if (isAuthenticated) {
-      loadFavoritesFromShopify()
-    }
-  }, [isAuthenticated])
+    const syncAndLoad = async () => {
+      if (isAuthenticated) {
+        await syncLocalToShopify();
+      }
+    };
+    syncAndLoad();
+  }, [isAuthenticated]);
 
-  // Load favorites from Shopify Customer Account API
-  const loadFavoritesFromShopify = async () => {
+  // MAIN SYNC FUNCTION
+  const syncLocalToShopify = async () => {
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
+    setIsLoading(true);
+
     try {
-      setIsLoading(true)
-      
-      // Get local favorites first
-      const localFavoritesStr = localStorage.getItem(FAVORITES_STORAGE_KEY)
-      const localFavorites = localFavoritesStr ? JSON.parse(localFavoritesStr) : []
-      
-      const response = await fetch('/api/favorites', {
-        method: 'GET',
-        credentials: 'include',
-      })
+      // A) Načteme lokální (Guest) oblíbené
+      const localStr = localStorage.getItem(FAVORITES_STORAGE_KEY);
+      const localFavorites: string[] = localStr ? JSON.parse(localStr) : [];
 
+      // B) Načteme vzdálené (Shopify) oblíbené
+      const response = await fetch('/api/favorites', { method: 'GET' });
+      let shopifyFavorites: string[] = [];
+      
       if (response.ok) {
-        const data = await response.json()
-        const shopifyFavorites = data.favorites && Array.isArray(data.favorites) ? data.favorites : []
+        const data = await response.json();
+        shopifyFavorites = data.favorites || [];
+      }
+
+      // C) Zjistíme rozdíl: Co mám lokálně, ale v Shopify to chybí?
+      const missingInShopify = localFavorites.filter(id => !shopifyFavorites.includes(id));
+
+      // D) Pokud něco chybí, pošleme to do Shopify (Sériově, aby nedošlo k race condition na backendu)
+      if (missingInShopify.length > 0) {
+        console.log('[Favorites] Syncing local items to cloud:', missingInShopify);
         
-        // Merge: combine shopify and local, remove duplicates
-        const mergedFavorites = [...new Set([...shopifyFavorites, ...localFavorites])]
-        
-        // If there were local favorites that aren't in Shopify, sync them
-        if (localFavorites.length > 0) {
-          const toSync = localFavorites.filter(id => !shopifyFavorites.includes(id))
-          if (toSync.length > 0) {
-            // Sync unsynced favorites to Shopify
-            for (const productId of toSync) {
-              try {
-                await fetch('/api/favorites', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  credentials: 'include',
-                  body: JSON.stringify({ productId }),
-                })
-              } catch (error) {
-                console.error(`Error syncing favorite ${productId}:`, error)
-              }
-            }
-            // Reload to get final merged state
-            const reloadResponse = await fetch('/api/favorites', {
-              method: 'GET',
-              credentials: 'include',
-            })
-            if (reloadResponse.ok) {
-              const reloadData = await reloadResponse.json()
-              const finalFavorites = reloadData.favorites && Array.isArray(reloadData.favorites) ? reloadData.favorites : []
-              setFavorites(finalFavorites)
-              localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(finalFavorites))
-            }
-          } else {
-            // No need to sync, just use shopify favorites
-            setFavorites(shopifyFavorites)
-            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(shopifyFavorites))
+        for (const productId of missingInShopify) {
+          try {
+            await fetch('/api/favorites', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productId }),
+            });
+          } catch (err) {
+            console.error(`Failed to sync item ${productId}`, err);
           }
-        } else {
-          // No local favorites, just use shopify
-          setFavorites(shopifyFavorites)
-          localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(shopifyFavorites))
         }
-      } else if (response.status === 401) {
-        // Not authenticated, use localStorage
-        console.log('Not authenticated, using localStorage favorites')
-        if (localFavorites.length > 0) {
-          setFavorites(localFavorites)
+        
+        // Po odeslání všeho si stáhneme finální stav (pro jistotu)
+        const finalResponse = await fetch('/api/favorites', { method: 'GET' });
+        if (finalResponse.ok) {
+            const finalData = await finalResponse.json();
+            shopifyFavorites = finalData.favorites || [];
         }
       }
+
+      // E) Sloučíme vše dohromady (Remote má teď přednost, protože obsahuje i to co jsme tam právě poslali)
+      // Ale pro jistotu uděláme Union (sjednocení), kdyby něco selhalo.
+      const mergedFavorites = Array.from(new Set([...localFavorites, ...shopifyFavorites]));
+
+      setFavorites(mergedFavorites);
+      
+      // Uložíme sjednocený stav i do localStorage (jako cache)
+      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(mergedFavorites));
+
     } catch (error) {
-      console.error('Error loading favorites from Shopify:', error)
-      // On error, use localStorage favorites
-      const localFavoritesStr = localStorage.getItem(FAVORITES_STORAGE_KEY)
-      const localFavorites = localFavoritesStr ? JSON.parse(localFavoritesStr) : []
-      if (localFavorites.length > 0) {
-        setFavorites(localFavorites)
-      }
+      console.error('Error syncing favorites:', error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
+      isSyncingRef.current = false;
+    }
+  };
+
+  // --- ACTIONS ---
+
+  const addToFavorites = async (productId: string) => {
+    // 1. Optimistic Update (hned zobrazíme srdíčko)
+    const newFavorites = [...new Set([...favorites, productId])];
+    setFavorites(newFavorites);
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(newFavorites));
+
+    // 2. Sync to API (if logged in)
+    if (isAuthenticated) {
+      try {
+        await fetch('/api/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId }),
+        });
+      } catch (error) {
+        console.error('Error adding to cloud favorites:', error);
+        // Poznámka: Ne revertujeme optimistic update, protože lokálně to uživatel chce mít
+      }
     }
   }
 
-  // Check if product is favorite
+  const removeFromFavorites = async (productId: string) => {
+    // 1. Optimistic Update
+    const newFavorites = favorites.filter(id => id !== productId);
+    setFavorites(newFavorites);
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(newFavorites));
+
+    // 2. Sync to API (if logged in)
+    if (isAuthenticated) {
+      try {
+        await fetch('/api/favorites', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId }),
+        });
+      } catch (error) {
+        console.error('Error removing from cloud favorites:', error);
+      }
+    }
+  }
+
   const isFavorite = useCallback((productId: string): boolean => {
     return favorites.includes(productId)
   }, [favorites])
 
-  // Add product to favorites
-  const addToFavorites = async (productId: string) => {
-    // Optimistic update
-    if (!favorites.includes(productId)) {
-      const newFavorites = [...favorites, productId]
-      setFavorites(newFavorites)
-      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(newFavorites))
-    }
-
-    // Sync to Shopify if authenticated
-    if (isAuthenticated) {
-      try {
-        const response = await fetch('/api/favorites', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ productId }),
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          if (data.favorites && Array.isArray(data.favorites)) {
-            setFavorites(data.favorites)
-            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(data.favorites))
-          }
-        } else if (response.status === 401) {
-          // Not authenticated anymore, keep localStorage update
-          console.log('Not authenticated, keeping localStorage update')
-        } else {
-          // Error, revert optimistic update
-          throw new Error('Failed to add favorite')
-        }
-      } catch (error) {
-        console.error('Error adding favorite to Shopify:', error)
-        // Keep the localStorage update even if Shopify sync fails
-      }
-    }
-  }
-
-  // Remove product from favorites
-  const removeFromFavorites = async (productId: string) => {
-    // Optimistic update
-    const newFavorites = favorites.filter(id => id !== productId)
-    setFavorites(newFavorites)
-    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(newFavorites))
-
-    // Sync to Shopify if authenticated
-    if (isAuthenticated) {
-      try {
-        const response = await fetch('/api/favorites', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ productId }),
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          if (data.favorites && Array.isArray(data.favorites)) {
-            setFavorites(data.favorites)
-            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(data.favorites))
-          }
-        } else if (response.status === 401) {
-          // Not authenticated anymore, keep localStorage update
-          console.log('Not authenticated, keeping localStorage update')
-        } else {
-          // Error, revert optimistic update
-          throw new Error('Failed to remove favorite')
-        }
-      } catch (error) {
-        console.error('Error removing favorite from Shopify:', error)
-        // Keep the localStorage update even if Shopify sync fails
-      }
-    }
-  }
-
-  // Get favorite count
   const getFavoriteCount = useCallback(() => {
     return favorites.length
   }, [favorites])
 
-  // Refresh favorites (reload from Shopify)
   const refreshFavorites = useCallback(async () => {
     if (isAuthenticated) {
-      await loadFavoritesFromShopify()
+      await syncLocalToShopify();
     } else {
-      // If not authenticated, just reload from localStorage
-      const localFavoritesStr = localStorage.getItem(FAVORITES_STORAGE_KEY)
-      const localFavorites = localFavoritesStr ? JSON.parse(localFavoritesStr) : []
-      setFavorites(localFavorites)
+      const localStr = localStorage.getItem(FAVORITES_STORAGE_KEY)
+      if (localStr) setFavorites(JSON.parse(localStr))
     }
   }, [isAuthenticated])
-
 
   const value: FavoritesContextType = {
     favorites,
@@ -254,4 +200,3 @@ export function useFavorites() {
   }
   return context
 }
-
