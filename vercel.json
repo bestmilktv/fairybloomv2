@@ -19,7 +19,7 @@
     },
     {
       "source": "/api/auth/customer/admin-update",
-      "destination": "/api/auth/customer/update"
+      "destination": "/api/auth/customer"
     },
     {
       "source": "/(.*)",
