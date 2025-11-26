@@ -1,4 +1,4 @@
-import { getAuthCookie } from './utils/cookies.js';
+import { getAuthCookie } from '../utils/cookies.js';
 
 const ADMIN_API_VERSION = '2025-07';
 const STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN || process.env.VITE_SHOPIFY_STORE_DOMAIN;
@@ -254,7 +254,7 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ customer });
     } catch (error) {
-      console.error('[Customer Endpoint] GET failed', error);
+      console.error('[Shopify Customer API] GET failed', error);
       return res.status(502).json({ error: 'Failed to fetch customer data' });
     }
   }
@@ -289,7 +289,7 @@ export default async function handler(req, res) {
 
         const userErrors = updateResult?.customerUpdate?.userErrors;
         if (userErrors && userErrors.length > 0) {
-          console.warn('[Customer Endpoint] customerUpdate user errors', userErrors.map((err) => err.message));
+          console.warn('[Shopify Customer API] customerUpdate user errors', userErrors.map((err) => err.message));
           return res.status(400).json({
             error: 'Unable to update customer profile',
             details: userErrors.map((err) => err.message),
@@ -308,7 +308,7 @@ export default async function handler(req, res) {
 
         const addressErrors = upsertResult?.customerAddressUpsert?.userErrors;
         if (addressErrors && addressErrors.length > 0) {
-          console.warn('[Customer Endpoint] customerAddressUpsert user errors', addressErrors.map((err) => err.message));
+          console.warn('[Shopify Customer API] customerAddressUpsert user errors', addressErrors.map((err) => err.message));
           return res.status(400).json({
             error: 'Unable to update address',
             details: addressErrors.map((err) => err.message),
@@ -327,7 +327,7 @@ export default async function handler(req, res) {
           const defaultErrors = defaultResult?.customerDefaultAddressUpdate?.userErrors;
           if (defaultErrors && defaultErrors.length > 0) {
             const messages = defaultErrors.map((err) => err.message);
-            console.warn('[Customer Endpoint] customerDefaultAddressUpdate user errors', messages);
+            console.warn('[Shopify Customer API] customerDefaultAddressUpdate user errors', messages);
             messages.forEach((message) => warnings.push(message));
           }
         }
@@ -341,7 +341,7 @@ export default async function handler(req, res) {
           : { customer },
       );
     } catch (error) {
-      console.error('[Customer Endpoint] POST failed', error);
+      console.error('[Shopify Customer API] POST failed', error);
       return res.status(502).json({ error: 'Failed to update customer data' });
     }
   }
