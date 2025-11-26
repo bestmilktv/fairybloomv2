@@ -756,12 +756,63 @@ export default async function handler(req, res) {
       }
     }
 
+    // ========== FALLBACK TO SUPABASE ==========
+    if (!customerData || !customerData.firstName || !customerData.lastName || !customerData.address) {
+      console.log('=== FALLING BACK TO SUPABASE ===');
+      try {
+        const { getSupabaseAdmin } = await import('../utils/supabase.js');
+        const supabase = getSupabaseAdmin();
+
+        const { data: supabaseData, error: supabaseError } = await supabase
+          .from('customer_profiles')
+          .select('*')
+          .eq('shopify_customer_id', numericCustomerId)
+          .single();
+
+        if (!supabaseError && supabaseData) {
+          console.log('[Supabase Fallback] Found customer profile in Supabase');
+          
+          // Check if Supabase has meaningful data
+          const hasName = supabaseData.first_name && supabaseData.last_name;
+          const hasAddress = supabaseData.address1 && supabaseData.city && supabaseData.zip;
+
+          if (hasName || hasAddress) {
+            customerData = {
+              id: numericCustomerId,
+              email: supabaseData.email || email,
+              firstName: supabaseData.first_name || '',
+              lastName: supabaseData.last_name || '',
+              address: (supabaseData.address1 || supabaseData.city || supabaseData.zip) ? {
+                address1: supabaseData.address1 || '',
+                address2: supabaseData.address2 || '',
+                city: supabaseData.city || '',
+                province: supabaseData.province || '',
+                zip: supabaseData.zip || '',
+                country: supabaseData.country || '',
+                phone: supabaseData.phone || ''
+              } : null,
+              acceptsMarketing: supabaseData.accepts_marketing || false
+            };
+            dataSource = 'supabase';
+            console.log('[Supabase Fallback] Successfully loaded customer data from Supabase:', JSON.stringify(customerData, null, 2));
+          } else {
+            console.log('[Supabase Fallback] Supabase data exists but is incomplete');
+          }
+        } else {
+          console.log('[Supabase Fallback] No customer profile found in Supabase');
+        }
+      } catch (supabaseFallbackError) {
+        console.error('[Supabase Fallback] Error:', supabaseFallbackError.message);
+        // Continue - don't fail if Supabase is unavailable
+      }
+    }
+
     // ========== FINAL RESULT ==========
     if (!customerData) {
       console.error('[ERROR] No customer data from any source');
       return res.status(500).json({
         error: 'Failed to fetch customer data',
-        details: 'Customer data not available from Customer Account API or Admin API'
+        details: 'Customer data not available from Customer Account API, Admin API, or Supabase'
       });
     }
 

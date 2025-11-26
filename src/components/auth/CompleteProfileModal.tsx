@@ -101,6 +101,38 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
       if (!result.success) {
         setError(result.error || 'Aktualizace profilu se nezdařila.')
       } else {
+        // Also save to Supabase as backup
+        try {
+          const supabaseResponse = await fetch('/api/customer/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              address1: addressData.address1,
+              address2: addressData.address2,
+              city: addressData.city,
+              province: addressData.province,
+              zip: addressData.zip,
+              country: addressData.country,
+              phone: addressData.phone,
+              acceptsMarketing
+            })
+          })
+
+          if (supabaseResponse.ok) {
+            console.log('[CompleteProfileModal] Successfully saved to Supabase')
+          } else {
+            console.warn('[CompleteProfileModal] Failed to save to Supabase, but Shopify save succeeded')
+          }
+        } catch (supabaseError) {
+          console.warn('[CompleteProfileModal] Error saving to Supabase:', supabaseError)
+          // Don't fail the whole operation if Supabase save fails
+        }
+
         // Wait a bit for Shopify to process the update
         await new Promise(resolve => setTimeout(resolve, 500))
         
