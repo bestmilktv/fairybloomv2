@@ -32,12 +32,27 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     'Content-Type': 'application/json',
   };
 
-  // Method 1: Try with cookies first (preferred for server-side calls)
+  // Extract token from cookies if available
+  let tokenFromCookies = null;
   if (req && req.headers.cookie) {
+    try {
+      const authData = getAuthCookie(req);
+      if (authData && authData.access_token) {
+        tokenFromCookies = authData.access_token;
+        console.log('[Favorites] Extracted token from cookies, length:', tokenFromCookies.length);
+      }
+    } catch (error) {
+      console.error('[Favorites] Error extracting token from cookies:', error.message);
+    }
+  }
+
+  // Method 1: Try with cookies + token in Authorization header (Shopify needs both)
+  if (req && req.headers.cookie && tokenFromCookies) {
     headers['Cookie'] = req.headers.cookie;
-    console.log('[Favorites] Using cookies for authentication (length):', req.headers.cookie.length);
+    headers['Authorization'] = `Bearer ${tokenFromCookies}`;
+    console.log('[Favorites] Using cookies + Authorization header (token from cookies)');
   } 
-  // Method 2: Fallback to access token in header (ONLY if cookies are not available)
+  // Method 2: Try with provided access token in header
   else if (accessToken && typeof accessToken === 'string') {
     const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
     console.log('[Favorites] Using customer access token in header:', tokenPreview, '(length:', accessToken.length, ')');
@@ -70,13 +85,14 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     const errorText = await response.text();
     console.error(`[Favorites] Shopify Customer Account API error: ${response.status}`, errorText);
     
-    // If cookies failed and we have access token, try with token only
-    if (response.status === 401 && headers['Cookie'] && accessToken) {
-      console.log('[Favorites] 401 with cookies, trying with access token header only...');
+    // If cookies + token failed, try with token only (without cookies)
+    if (response.status === 401 && headers['Cookie'] && (accessToken || tokenFromCookies)) {
+      const tokenToUse = accessToken || tokenFromCookies;
+      console.log('[Favorites] 401 with cookies+token, trying with access token header only...');
       const headersAlt = {
         'Content-Type': 'application/json',
-        'Shopify-Customer-Access-Token': accessToken,
-        'Authorization': `Bearer ${accessToken}`
+        'Shopify-Customer-Access-Token': tokenToUse,
+        'Authorization': `Bearer ${tokenToUse}`
       };
       
       const responseAlt = await fetch(CUSTOMER_ACCOUNT_URL, {
@@ -97,6 +113,9 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
         }
         console.log('[Favorites] Success with access token header only');
         return dataAlt;
+      } else {
+        const errorTextAlt = await responseAlt.text();
+        console.error(`[Favorites] Fallback also failed: ${responseAlt.status}`, errorTextAlt);
       }
     }
     
