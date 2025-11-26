@@ -141,6 +141,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       // B) Načteme vzdálený (Shopify) cartId z metafieldu
       const response = await fetch('/api/cart', { method: 'GET', credentials: 'include' })
+      
+      // Handle 401 - user is not authenticated, skip sync
+      if (response.status === 401) {
+        console.warn('[Cart] User not authenticated (401), skipping sync')
+        return // Exit early, don't try to sync
+      }
+      
       let shopifyCartId: string | null = null
       
       if (response.ok) {
