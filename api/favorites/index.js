@@ -18,19 +18,17 @@ const ADMIN_GRAPHQL_URL = STORE_DOMAIN
 
 /**
  * Helper: Decode Base64 ID if necessary
- * Converts "gid://shopify/Customer/12345" (base64) to plain ID strings
  */
 function getCleanId(id) {
   if (!id) return null;
   try {
-    // Check if it looks like base64 (ends with =) or just try decoding
     const decoded = Buffer.from(id, 'base64').toString('utf-8');
     if (decoded.includes('gid://')) {
       return decoded;
     }
     return id;
   } catch (e) {
-    return id; // It wasn't base64 or failed
+    return id;
   }
 }
 
@@ -45,7 +43,6 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
   // 1. Extract token
   let tokenToUse = accessToken;
 
-  // Try cookies if token not explicitly passed
   if (!tokenToUse && req && req.headers.cookie) {
     try {
       const authData = getAuthCookie(req);
@@ -61,16 +58,18 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     throw new Error('Authentication required - no token found');
   }
 
-  // 2. Set Headers CORRECTLY
-  // Shopify Customer Account API (Unstable) is picky.
-  // DO NOT use "Bearer" prefix for the custom header.
-  headers['Shopify-Customer-Access-Token'] = tokenToUse;
+  // 2. Set Headers - THE FIX
+  // Shopify Customer Account API requires the Authorization header.
+  // Based on previous logs, "Bearer" prefix causes "missing prefix shcat_" error.
+  // So we send the raw token directly in Authorization header.
   
-  // Some versions might accept Authorization, but let's stick to the specific one first to avoid "prefix" errors.
-  // If we used Authorization, it should likely be just the token for this specific API, but let's omit it to be safe
-  // and rely on the specific Shopify header which is cleaner.
+  headers['Authorization'] = tokenToUse; 
+  headers['Shopify-Customer-Access-Token'] = tokenToUse; // Posíláme pro jistotu i tento
 
-  console.log('[Favorites] Sending request with token length:', tokenToUse.length);
+  console.log('[Favorites] Sending request with headers:', {
+    hasAuthorization: !!headers['Authorization'],
+    authHeaderStart: headers['Authorization'].substring(0, 10) + '...'
+  });
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
@@ -106,7 +105,6 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
  * GET /api/favorites - Get favorite products
  */
 export default async function handler(req, res) {
-  // Get access token from cookie
   const authData = getAuthCookie(req);
   
   if (!authData || !authData.access_token) {
@@ -158,7 +156,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Product ID is required' });
       }
 
-      // 1. Get current favorites (READ via Customer API)
+      // 1. Get current favorites (READ)
       const getQuery = `
         query {
           customer {
@@ -173,29 +171,17 @@ export default async function handler(req, res) {
       const getResult = await fetchCustomerAccount(getQuery, {}, req, accessToken);
       let currentFavorites = [];
 
-      // Extract Customer ID for the Write operation
-      // Storefront API usually returns a Base64 encoded ID or a generic one.
-      let rawCustomerId = getResult.data.customer?.id;
-      
-      if (!rawCustomerId) {
-         // Fallback to auth token sub if query fails to return ID
-         rawCustomerId = authData.customer?.sub;
-      }
+      // Extract and clean Customer ID
+      let rawCustomerId = getResult.data.customer?.id || authData.customer?.sub;
 
       if (!rawCustomerId) {
         return res.status(400).json({ error: 'Could not identify customer ID' });
       }
 
-      // FIX: Decode and format ID for Admin API
       const decodedId = getCleanId(rawCustomerId);
-      // Extract just the number (e.g. from gid://shopify/Customer/12345 get 12345)
       const idMatch = decodedId.match(/Customer\/(\d+)/);
       const cleanIdNumber = idMatch ? idMatch[1] : decodedId;
-      
-      // Admin API requires strict GID format
       const adminCustomerGid = `gid://shopify/Customer/${cleanIdNumber}`;
-
-      console.log('[Favorites] Preparing write for:', adminCustomerGid);
 
       if (getResult.data.customer?.metafield?.value) {
         try {
@@ -246,7 +232,7 @@ export default async function handler(req, res) {
               namespace: 'custom',
               key: 'favorites',
               value: JSON.stringify(currentFavorites),
-              type: 'json' // Using 'json' type is better if available, otherwise 'single_line_text_field'
+              type: 'json'
             }
           ]
         }
@@ -266,7 +252,6 @@ export default async function handler(req, res) {
 
       const adminData = await adminResponse.json();
 
-      // Check for Admin API errors
       if (adminData.errors) {
         console.error('[Favorites] Admin API Errors:', JSON.stringify(adminData.errors));
         return res.status(500).json({ error: 'Failed to save to Shopify' });
