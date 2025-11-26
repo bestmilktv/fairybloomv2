@@ -1,14 +1,14 @@
 /**
- * Favorites API Endpoint
- * Handles favorite products using Shopify Customer Account API (read) and Admin API (write)
+ * Favorites API Endpoint - ADMIN API ONLY VERSION
+ * * FIX: Bypasses "InvalidScope" errors on Customer Account API by using
+ * Admin API for BOTH reading and writing.
  */
 
 import { getAuthCookie } from '../utils/cookies.js';
 
 const SHOP_ID = process.env.VITE_SHOPIFY_SHOP_ID || process.env.SHOPIFY_SHOP_ID;
-const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/api/unstable/graphql`;
 
-// Admin API for writing metafields
+// Admin API Configuration
 const STORE_DOMAIN = process.env.VITE_SHOPIFY_STORE_DOMAIN || process.env.SHOPIFY_STORE_DOMAIN;
 const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN;
 const ADMIN_API_VERSION = '2024-04';
@@ -17,201 +17,155 @@ const ADMIN_GRAPHQL_URL = STORE_DOMAIN
   : null;
 
 /**
- * Helper: Decode Base64 ID if necessary
+ * Helper: Decode and Format Customer ID for Admin API
+ * Transforms various ID formats into "gid://shopify/Customer/123456789"
  */
-function getCleanId(id) {
-  if (!id) return null;
-  try {
-    const decoded = Buffer.from(id, 'base64').toString('utf-8');
-    if (decoded.includes('gid://')) {
-      return decoded;
+function formatAdminGid(rawId) {
+  if (!rawId) return null;
+  
+  let cleanId = rawId;
+  
+  // Try to decode if it looks like Base64 (and isn't already a gid)
+  if (!rawId.startsWith('gid://') && rawId.length > 20 && rawId.endsWith('=')) {
+    try {
+      const decoded = Buffer.from(rawId, 'base64').toString('utf-8');
+      cleanId = decoded;
+    } catch (e) {
+      // Not base64, keep original
     }
-    return id;
-  } catch (e) {
-    return id;
   }
+
+  // Extract just the numbers
+  const match = cleanId.match(/Customer\/(\d+)/) || cleanId.match(/^(\d+)$/);
+  
+  if (match && match[1]) {
+    return `gid://shopify/Customer/${match[1]}`;
+  }
+  
+  return null; // Could not parse ID
 }
 
 /**
- * Make authenticated request to Customer Account API
+ * Execute Query against Admin API
  */
-async function fetchCustomerAccount(query, variables = {}, req = null, accessToken = null) {
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-
-  // 1. Extract token
-  let tokenToUse = accessToken;
-
-  if (!tokenToUse && req && req.headers.cookie) {
-    try {
-      const authData = getAuthCookie(req);
-      if (authData && authData.access_token) {
-        tokenToUse = authData.access_token;
-      }
-    } catch (error) {
-      console.warn('[Favorites] Cookie parsing failed:', error.message);
-    }
+async function fetchAdminAPI(query, variables = {}) {
+  if (!ADMIN_GRAPHQL_URL || !ADMIN_TOKEN) {
+    throw new Error('Admin API configuration missing');
   }
 
-  if (!tokenToUse) {
-    throw new Error('Authentication required - no token found');
-  }
-
-  // 2. Set Headers - THE FIX
-  // Shopify Customer Account API requires the Authorization header.
-  // Based on previous logs, "Bearer" prefix causes "missing prefix shcat_" error.
-  // So we send the raw token directly in Authorization header.
-  
-  headers['Authorization'] = tokenToUse; 
-  headers['Shopify-Customer-Access-Token'] = tokenToUse; // Posíláme pro jistotu i tento
-
-  console.log('[Favorites] Sending request with headers:', {
-    hasAuthorization: !!headers['Authorization'],
-    authHeaderStart: headers['Authorization'].substring(0, 10) + '...'
-  });
-
-  const response = await fetch(CUSTOMER_ACCOUNT_URL, {
+  const response = await fetch(ADMIN_GRAPHQL_URL, {
     method: 'POST',
-    headers,
-    body: JSON.stringify({
-      query,
-      variables,
-    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': ADMIN_TOKEN,
+    },
+    body: JSON.stringify({ query, variables }),
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[Favorites] Shopify Customer Account API error: ${response.status}`, errorText);
-    
-    if (response.status === 401) {
-      throw new Error('Authentication required (401 from Shopify)');
-    }
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
 
   const data = await response.json();
 
-  if (data.errors && data.errors.length > 0) {
-    const errorMessages = data.errors.map((error) => error.message).join(', ');
-    console.error('[Favorites] GraphQL errors:', errorMessages);
-    throw new Error(`GraphQL errors: ${errorMessages}`);
+  if (data.errors) {
+    const msg = data.errors.map(e => e.message).join(', ');
+    throw new Error(`Admin API Error: ${msg}`);
   }
 
   return data;
 }
 
 /**
- * GET /api/favorites - Get favorite products
+ * API Handler
  */
 export default async function handler(req, res) {
+  // 1. Authenticate User via Cookies
   const authData = getAuthCookie(req);
   
   if (!authData || !authData.access_token) {
+    console.warn('[Favorites] No auth cookie found');
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const accessToken = authData.access_token;
+  // 2. Get Customer ID from Auth Data
+  const rawCustomerId = authData.customer?.sub;
+  const customerGid = formatAdminGid(rawCustomerId);
+
+  if (!customerGid) {
+    console.error('[Favorites] Could not parse Customer ID from:', rawCustomerId);
+    return res.status(400).json({ error: 'Invalid Customer ID' });
+  }
+
+  // console.log('[Favorites] Acting for Customer:', customerGid);
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
 
   try {
-    // GET - Fetch favorites
+    // --- GET: Read Favorites ---
     if (req.method === 'GET') {
       const query = `
-        query {
-          customer {
+        query getCustomerFavorites($id: ID!) {
+          customer(id: $id) {
             id
             metafield(namespace: "custom", key: "favorites") {
-              id
               value
             }
           }
         }
       `;
 
-      const result = await fetchCustomerAccount(query, {}, req, accessToken);
-      
-      if (!result.data.customer) {
-        return res.status(200).json({ favorites: [] });
-      }
-
-      const metafield = result.data.customer.metafield;
-      if (!metafield || !metafield.value) {
-        return res.status(200).json({ favorites: [] });
-      }
-
       try {
-        const favorites = JSON.parse(metafield.value);
+        const result = await fetchAdminAPI(query, { id: customerGid });
+        
+        if (!result.data?.customer) {
+          // Customer might not exist in Admin yet or ID mismatch
+          console.warn('[Favorites] Customer not found in Admin API:', customerGid);
+          return res.status(200).json({ favorites: [] });
+        }
+
+        const metafieldValue = result.data.customer.metafield?.value;
+        const favorites = metafieldValue ? JSON.parse(metafieldValue) : [];
+        
         return res.status(200).json({ favorites: Array.isArray(favorites) ? favorites : [] });
-      } catch (parseError) {
-        return res.status(200).json({ favorites: [] });
+
+      } catch (error) {
+        console.error('[Favorites] Read Error:', error.message);
+        // If read fails (e.g. permission error), return empty array instead of 500 to keep app running
+        return res.status(200).json({ favorites: [], error: 'Read failed' });
       }
     }
 
-    // POST or DELETE
+    // --- POST/DELETE: Update Favorites ---
     if (req.method === 'POST' || req.method === 'DELETE') {
       const { productId } = req.body;
+      if (!productId) return res.status(400).json({ error: 'Product ID required' });
 
-      if (!productId) {
-        return res.status(400).json({ error: 'Product ID is required' });
-      }
-
-      // 1. Get current favorites (READ)
-      const getQuery = `
-        query {
-          customer {
-            id
+      // Step A: Read current list first (Admin API)
+      const readQuery = `
+        query getCustomerFavorites($id: ID!) {
+          customer(id: $id) {
             metafield(namespace: "custom", key: "favorites") {
               value
             }
           }
         }
       `;
+      
+      const readResult = await fetchAdminAPI(readQuery, { id: customerGid });
+      const currentMetafield = readResult.data?.customer?.metafield?.value;
+      let currentFavorites = currentMetafield ? JSON.parse(currentMetafield) : [];
+      if (!Array.isArray(currentFavorites)) currentFavorites = [];
 
-      const getResult = await fetchCustomerAccount(getQuery, {}, req, accessToken);
-      let currentFavorites = [];
-
-      // Extract and clean Customer ID
-      let rawCustomerId = getResult.data.customer?.id || authData.customer?.sub;
-
-      if (!rawCustomerId) {
-        return res.status(400).json({ error: 'Could not identify customer ID' });
-      }
-
-      const decodedId = getCleanId(rawCustomerId);
-      const idMatch = decodedId.match(/Customer\/(\d+)/);
-      const cleanIdNumber = idMatch ? idMatch[1] : decodedId;
-      const adminCustomerGid = `gid://shopify/Customer/${cleanIdNumber}`;
-
-      if (getResult.data.customer?.metafield?.value) {
-        try {
-          currentFavorites = JSON.parse(getResult.data.customer.metafield.value);
-          if (!Array.isArray(currentFavorites)) currentFavorites = [];
-        } catch (e) {
-          currentFavorites = [];
-        }
-      }
-
-      // 2. Modify array
+      // Step B: Modify list
       if (req.method === 'POST') {
         if (!currentFavorites.includes(productId)) {
           currentFavorites.push(productId);
         }
-      } else if (req.method === 'DELETE') {
+      } else {
         currentFavorites = currentFavorites.filter(id => id !== productId);
       }
 
-      // 3. Write to Admin API
-      if (!ADMIN_GRAPHQL_URL || !ADMIN_TOKEN) {
-        console.error('[Favorites] Admin API not configured');
-        return res.status(500).json({ error: 'Server configuration error' });
-      }
-
+      // Step C: Write back to Shopify (Admin API)
       const updateQuery = `
         mutation customerUpdate($input: CustomerInput!) {
           customerUpdate(input: $input) {
             customer {
-              id
               metafield(namespace: "custom", key: "favorites") {
                 value
               }
@@ -224,9 +178,9 @@ export default async function handler(req, res) {
         }
       `;
 
-      const updateVariables = {
+      const variables = {
         input: {
-          id: adminCustomerGid,
+          id: customerGid,
           metafields: [
             {
               namespace: 'custom',
@@ -238,40 +192,24 @@ export default async function handler(req, res) {
         }
       };
 
-      const adminResponse = await fetch(ADMIN_GRAPHQL_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Shopify-Access-Token': ADMIN_TOKEN,
-        },
-        body: JSON.stringify({
-          query: updateQuery,
-          variables: updateVariables,
-        }),
-      });
+      const updateResult = await fetchAdminAPI(updateQuery, variables);
 
-      const adminData = await adminResponse.json();
-
-      if (adminData.errors) {
-        console.error('[Favorites] Admin API Errors:', JSON.stringify(adminData.errors));
-        return res.status(500).json({ error: 'Failed to save to Shopify' });
-      }
-
-      if (adminData.data?.customerUpdate?.userErrors?.length > 0) {
-        const msg = adminData.data.customerUpdate.userErrors[0].message;
-        console.error('[Favorites] User Errors:', msg);
-        return res.status(400).json({ error: msg });
+      if (updateResult.data?.customerUpdate?.userErrors?.length > 0) {
+        const err = updateResult.data.customerUpdate.userErrors[0].message;
+        throw new Error(err);
       }
 
       return res.status(200).json({ favorites: currentFavorites });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
+
   } catch (error) {
-    console.error('Favorites API error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
+    console.error('[Favorites] Critical Error:', error.message);
+    // If it's a permission error, tell the user clearly
+    if (error.message.includes('access the Customer object')) {
+      console.error('!!! ACTION REQUIRED: Go to Shopify Admin -> Apps -> [Your App] -> Configuration -> Admin API integration -> Enable "read_customers" and "write_customers" !!!');
+    }
+    return res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
