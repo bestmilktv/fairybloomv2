@@ -1104,14 +1104,18 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     return res.status(200).json(customerData);
 
-  } catch (error) {
-    console.error('=== CUSTOMER API ERROR ===');
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message 
-    });
+    } catch (error) {
+      console.error('=== CUSTOMER API ERROR ===');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        details: error.message 
+      });
+    }
   }
+
+  // ========== METHOD NOT ALLOWED ==========
+  return res.status(405).json({ error: 'Method not allowed' });
 }
