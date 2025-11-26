@@ -33,7 +33,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
       if (isAuth) {
         try {
           // Get access token
-          const tokenResponse = await fetch('/api/auth/token', {
+          const tokenResponse = await fetch('/api/auth/session', {
             method: 'GET',
             credentials: 'include',
           });

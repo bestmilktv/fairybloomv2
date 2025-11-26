@@ -261,8 +261,8 @@ async function handleOAuthCallback(
     // Cookie set in popup window doesn't transfer to parent window!
     if (access_token && expires_at) {
       try {
-        console.log('[OAuth] Setting cookie in parent window via /api/auth/set-cookie...');
-        const setCookieResponse = await fetch('/api/auth/set-cookie', {
+        console.log('[OAuth] Setting cookie in parent window via /api/auth/session...');
+        const setCookieResponse = await fetch('/api/auth/session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
