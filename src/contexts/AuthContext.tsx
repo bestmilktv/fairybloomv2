@@ -100,12 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Note: toast might not be available here, so we'll just log it
         } else {
           // Normal page load - check if customer is authenticated
-          const isAuth = await isCustomerAuthenticated()
-          if (isAuth) {
-            // Fetch customer data, but don't set justLoggedIn - this is just page load
-            // Skip modal check since this is not a fresh login
-            setJustLoggedIn(false)
-            await refreshUser(true, false)
+        const isAuth = await isCustomerAuthenticated()
+        if (isAuth) {
+          // Fetch customer data, but don't set justLoggedIn - this is just page load
+          // Skip modal check since this is not a fresh login
+          setJustLoggedIn(false)
+          await refreshUser(true, false)
           }
         }
       } catch (error) {
@@ -198,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         )
       )
       if (!isMobile) {
-        setLoading(false)
+      setLoading(false)
       }
     }
   }

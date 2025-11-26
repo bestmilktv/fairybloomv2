@@ -112,7 +112,7 @@ function normalizeCountryCode(country) {
   if (countryMap[lower]) {
     return countryMap[lower];
   }
-  
+
   // If we can't map it, try to extract 2-letter code if it looks like one
   // Some APIs might return "CZ" as part of a longer string
   const codeMatch = countryStr.match(/\b([A-Z]{2})\b/i);
@@ -135,27 +135,10 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     'Content-Type': 'application/json',
   };
 
-  // Extract token from cookies if available
-  let tokenFromCookies = null;
+  // Method 1: Try with cookies first (preferred for server-side calls)
   if (req && req.headers.cookie) {
-    try {
-      const authData = getAuthCookie(req);
-      if (authData && authData.access_token) {
-        tokenFromCookies = authData.access_token;
-        console.log('[Customer Account API] Extracted token from cookies, length:', tokenFromCookies.length);
-      }
-    } catch (error) {
-      console.error('[Customer Account API] Error extracting token from cookies:', error.message);
-    }
-  }
-
-  // Method 1: Try with cookies + token in headers (extract token from cookies)
-  if (req && req.headers.cookie && tokenFromCookies) {
     headers['Cookie'] = req.headers.cookie;
-    // Use both header formats for maximum compatibility
-    headers['Shopify-Customer-Access-Token'] = tokenFromCookies;
-    headers['Authorization'] = `Bearer ${tokenFromCookies}`;
-    console.log('[Customer Account API] Using cookies + Authorization header (token extracted from cookies)');
+    console.log('[Customer Account API] Using cookies for authentication (length):', req.headers.cookie.length);
   } 
   // Method 2: Fallback to access token in header
   else if (accessToken && typeof accessToken === 'string') {
@@ -374,290 +357,9 @@ async function fetchCustomerFromAdminREST(customerId) {
 }
 
 export default async function handler(req, res) {
-  // ========== POST: UPDATE CUSTOMER PROFILE ==========
-  if (req.method === 'POST') {
-    // Check URL to determine which API to use
-    const url = req.url || '';
-    const isAdminUpdate = url.includes('/admin-update');
-    
-    if (isAdminUpdate) {
-      // Handle Admin API update (full update - firstName, lastName, address, acceptsMarketing)
-      try {
-        // Verify authentication and get customer ID
-        const authData = getAuthCookie(req);
-        
-        if (!authData || !authData.customer || !authData.customer.sub) {
-          return res.status(401).json({ error: 'Not authenticated' });
-        }
-
-        // Validate Admin API credentials
-        if (!STORE_DOMAIN || !ADMIN_TOKEN) {
-          console.error('Missing Admin API configuration');
-          return res.status(500).json({ error: 'Server configuration error' });
-        }
-
-        const { firstName, lastName, address, acceptsMarketing } = req.body;
-
-        // At least one field must be provided for update
-        if (!firstName && !lastName && !address && acceptsMarketing === undefined) {
-          return res.status(400).json({ error: 'At least one field is required for update' });
-        }
-
-        // Extract customer ID from OAuth JWT (sub field)
-        const customerId = authData.customer.sub;
-        const numericCustomerId = String(customerId);
-
-        console.log('Updating customer profile via Admin API:', {
-          originalCustomerId: customerId,
-          numericCustomerId: numericCustomerId,
-          updates: { firstName, lastName, hasAddress: !!address, acceptsMarketing }
-        });
-
-        // Fetch current customer data to get existing addresses
-        const getCustomerResponse = await fetch(`https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json`, {
-          method: 'GET',
-          headers: {
-            'X-Shopify-Access-Token': ADMIN_TOKEN,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        let existingAddresses = [];
-        if (getCustomerResponse.ok) {
-          const currentData = await getCustomerResponse.json();
-          existingAddresses = currentData.customer?.addresses || [];
-        }
-
-        // Build update payload for Admin API
-        const updatePayload = {
-          customer: {}
-        };
-
-        if (firstName) updatePayload.customer.first_name = firstName;
-        if (lastName) updatePayload.customer.last_name = lastName;
-
-        // Handle address update
-        if (address) {
-          let countryCode = 'CZ';
-          if (address.country) {
-            if (address.country === 'Czech Republic' || address.country === 'Czechia') {
-              countryCode = 'CZ';
-            } else if (address.country.length === 2) {
-              countryCode = address.country.toUpperCase();
-            } else {
-              countryCode = address.country;
-            }
-          }
-
-          const addressData = {
-            address1: address.address1 || '',
-            address2: address.address2 || '',
-            city: address.city || '',
-            province: address.province || '',
-            zip: address.zip || '',
-            country: address.country || 'Czech Republic',
-            country_code: countryCode,
-            phone: address.phone || ''
-          };
-
-          if (existingAddresses.length > 0) {
-            addressData.id = existingAddresses[0].id;
-            addressData.default = true;
-            updatePayload.customer.addresses = [addressData];
-          } else {
-            addressData.default = true;
-            updatePayload.customer.addresses = [addressData];
-          }
-        }
-
-        // Handle email marketing consent
-        if (acceptsMarketing !== undefined) {
-          updatePayload.customer.accepts_marketing = acceptsMarketing;
-          
-          if (acceptsMarketing) {
-            const consentTimestamp = new Date().toISOString();
-            updatePayload.customer.email_marketing_consent = {
-              state: 'subscribed',
-              opt_in_level: 'single_opt_in',
-              consent_updated_at: consentTimestamp
-            };
-          }
-        }
-
-        // Call Shopify Admin API
-        const adminApiUrl = `https://${STORE_DOMAIN}/admin/api/${ADMIN_API_VERSION}/customers/${numericCustomerId}.json`;
-        const adminResponse = await fetch(adminApiUrl, {
-          method: 'PUT',
-          headers: {
-            'X-Shopify-Access-Token': ADMIN_TOKEN,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatePayload),
-        });
-
-        if (!adminResponse.ok) {
-          const errorText = await adminResponse.text();
-          console.error(`Shopify Admin API error: ${adminResponse.status}`, errorText);
-          
-          if (adminResponse.status === 401) {
-            return res.status(401).json({ error: 'Invalid Admin API token' });
-          }
-          if (adminResponse.status === 404) {
-            return res.status(404).json({ error: 'Customer not found' });
-          }
-          
-          return res.status(adminResponse.status).json({ 
-            error: `Shopify API error: ${adminResponse.statusText}` 
-          });
-        }
-
-        const adminData = await adminResponse.json();
-
-        if (!adminData.customer) {
-          console.error('Invalid response from Shopify Admin API:', adminData);
-          return res.status(500).json({ error: 'Neplatná odpověď z Shopify API.' });
-        }
-
-        const customer = adminData.customer;
-
-        // Get default address
-        let defaultAddress = null;
-        if (customer.addresses && customer.addresses.length > 0) {
-          defaultAddress = customer.addresses.find(addr => addr.default === true);
-          if (!defaultAddress) {
-            defaultAddress = customer.addresses[0];
-          }
-        } else if (customer.default_address) {
-          defaultAddress = customer.default_address;
-        }
-
-        const addressResponse = defaultAddress ? {
-          address1: defaultAddress.address1 || '',
-          address2: defaultAddress.address2 || '',
-          city: defaultAddress.city || '',
-          province: defaultAddress.province || '',
-          zip: defaultAddress.zip || '',
-          country: defaultAddress.country || '',
-          phone: defaultAddress.phone || ''
-        } : undefined;
-
-        const acceptsMarketingResponse = customer.email_marketing_consent?.state === 'subscribed' || 
-                                         customer.accepts_marketing === true;
-
-        console.log('Customer profile updated successfully via Admin API:', {
-          id: customer.id,
-          firstName: customer.first_name,
-          lastName: customer.last_name,
-          hasAddress: !!defaultAddress,
-          acceptsMarketing: acceptsMarketingResponse
-        });
-
-        return res.status(200).json({
-          id: customer.id.toString(),
-          email: customer.email,
-          firstName: customer.first_name || '',
-          lastName: customer.last_name || '',
-          address: addressResponse,
-          acceptsMarketing: acceptsMarketingResponse
-        });
-      } catch (error) {
-        console.error('Customer update API error:', error);
-        const errorMessage = error.message || 'Internal server error';
-        
-        return res.status(500).json({ 
-          error: errorMessage.includes('Shopify API') ? errorMessage : 'Aktualizace profilu se nezdařila. Zkuste to prosím znovu.' 
-        });
-      }
-    } else {
-      // Handle Customer Account API update (simple update - firstName, lastName only)
-      try {
-        // Verify authentication
-        const authData = getAuthCookie(req);
-        
-        if (!authData || !authData.customer) {
-          return res.status(401).json({ error: 'Not authenticated' });
-        }
-
-        const { firstName, lastName } = req.body;
-
-        if (!firstName && !lastName) {
-          return res.status(400).json({ error: 'At least firstName or lastName is required' });
-        }
-
-        // Build update input
-        const updateInput = {};
-        if (firstName) updateInput.firstName = firstName;
-        if (lastName) updateInput.lastName = lastName;
-
-        // Update customer profile
-        const updateQuery = `
-          mutation customerUpdate($input: CustomerUpdateInput!) {
-            customerUpdate(input: $input) {
-              customer {
-                id
-                firstName
-                lastName
-                email
-              }
-              userErrors {
-                field
-                message
-              }
-            }
-          }
-        `;
-
-        const updateVariables = {
-          input: updateInput
-        };
-
-        console.log('Updating customer profile with:', updateInput);
-        console.log('Using cookies from request for authentication');
-
-        const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, req, authData.access_token);
-
-        // Check for GraphQL errors in response
-        if (!updateResult.data || !updateResult.data.customerUpdate) {
-          console.error('Invalid response from Shopify API:', updateResult);
-          return res.status(500).json({ error: 'Neplatná odpověď z Shopify API.' });
-        }
-
-        if (updateResult.data.customerUpdate.userErrors && updateResult.data.customerUpdate.userErrors.length > 0) {
-          const errorMessage = updateResult.data.customerUpdate.userErrors[0].message;
-          console.error('Shopify userErrors:', updateResult.data.customerUpdate.userErrors);
-          return res.status(400).json({ error: errorMessage || 'Aktualizace profilu se nezdařila.' });
-        }
-
-        const customer = updateResult.data.customerUpdate.customer;
-
-        if (!customer) {
-          console.error('No customer data in response:', updateResult);
-          return res.status(500).json({ error: 'Aktualizace profilu se nezdařila - chybí data zákazníka.' });
-        }
-
-        console.log('Customer profile updated successfully:', customer);
-
-        return res.status(200).json({
-          id: customer.id,
-          email: customer.email,
-          firstName: customer.firstName || '',
-          lastName: customer.lastName || ''
-        });
-      } catch (error) {
-        console.error('Customer update API error:', error);
-        const errorMessage = error.message || 'Internal server error';
-        
-        if (errorMessage.includes('Authentication required')) {
-          return res.status(401).json({ error: 'Nejste přihlášeni. Prosím přihlaste se znovu.' });
-        }
-        
-        return res.status(500).json({ error: errorMessage.includes('GraphQL errors') ? errorMessage : 'Aktualizace profilu se nezdařila. Zkuste to prosím znovu.' });
-      }
-    }
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  // ========== GET: GET CUSTOMER PROFILE ==========
-  if (req.method === 'GET') {
 
   try {
     // Verify authentication
@@ -823,16 +525,16 @@ export default async function handler(req, res) {
 
           if (hasUsefulData) {
             // Customer Account API returned useful data, use it
-            customerData = {
-              id: caCustomer.id ? String(caCustomer.id) : numericCustomerId,
-              email: email,
-              firstName: firstName,
-              lastName: lastName,
-              address: address,
-              acceptsMarketing: acceptsMarketing
-            };
+          customerData = {
+            id: caCustomer.id ? String(caCustomer.id) : numericCustomerId,
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            address: address,
+            acceptsMarketing: acceptsMarketing
+          };
 
-            console.log('[Customer Account API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
+          console.log('[Customer Account API] Successfully extracted customer data:', JSON.stringify(customerData, null, 2));
           } else {
             // Customer Account API returned empty data, treat as failed and use fallback
             console.warn('[Customer Account API] Customer Account API returned empty/incomplete data, will use Admin API fallback');
@@ -1121,18 +823,14 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     return res.status(200).json(customerData);
 
-    } catch (error) {
-      console.error('=== CUSTOMER API ERROR ===');
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-      
-      return res.status(500).json({ 
-        error: 'Internal server error',
-        details: error.message 
-      });
-    }
+  } catch (error) {
+    console.error('=== CUSTOMER API ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
   }
-
-  // ========== METHOD NOT ALLOWED ==========
-  return res.status(405).json({ error: 'Method not allowed' });
 }

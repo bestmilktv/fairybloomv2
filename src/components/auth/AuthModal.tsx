@@ -91,9 +91,9 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </>
             ) : (
               <>
-                Kliknutím na tlačítko se otevře nové okno pro bezpečné přihlášení.
-                <br />
-                Pokud máte blokované popup okna, povolte je pro tento web.
+            Kliknutím na tlačítko se otevře nové okno pro bezpečné přihlášení.
+            <br />
+            Pokud máte blokované popup okna, povolte je pro tento web.
               </>
             )}
           </div>
