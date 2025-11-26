@@ -103,7 +103,7 @@ export function CompleteProfileModal({ isOpen, onComplete }: CompleteProfileModa
       } else {
         // Also save to Supabase as backup
         try {
-          const supabaseResponse = await fetch('/api/customer/save', {
+          const supabaseResponse = await fetch('/api/customer', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
