@@ -1,12 +1,13 @@
 /**
  * Auth Session Management Endpoint
- * Handles cookie setting and token retrieval
+ * Handles cookie setting, token retrieval, and logout
  * 
  * POST /api/auth/session - Set authentication cookie (from set-cookie.js)
  * GET /api/auth/session - Get access token (from token.js)
+ * DELETE /api/auth/session - Logout (clear cookie)
  */
 
-import { setAuthCookie, getAuthCookie } from '../utils/cookies.js';
+import { setAuthCookie, getAuthCookie, clearAuthCookie } from '../utils/cookies.js';
 
 export default async function handler(req, res) {
   // ========== POST: SET COOKIE ==========
@@ -72,6 +73,22 @@ export default async function handler(req, res) {
       });
     } catch (error) {
       console.error('[Session API] Error getting token:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // ========== DELETE: LOGOUT ==========
+  if (req.method === 'DELETE') {
+    try {
+      // Clear authentication cookie
+      clearAuthCookie(res);
+
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Logged out successfully' 
+      });
+    } catch (error) {
+      console.error('[Session API] Logout error:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }

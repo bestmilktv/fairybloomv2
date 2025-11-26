@@ -404,8 +404,8 @@ export async function updateCustomerProfile(updates: { firstName?: string; lastN
  */
 export async function logoutCustomer(): Promise<boolean> {
   try {
-    const response = await fetch('/api/auth/logout', {
-      method: 'POST',
+    const response = await fetch('/api/auth/session', {
+      method: 'DELETE',
       credentials: 'include',
     });
 
