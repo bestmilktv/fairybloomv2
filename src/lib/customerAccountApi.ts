@@ -374,7 +374,7 @@ export async function updateCustomerProfileDirect(updates: { firstName: string; 
  */
 export async function updateCustomerProfile(updates: { firstName?: string; lastName?: string }): Promise<CustomerAccountCustomer | null> {
   try {
-    const response = await fetch('/api/auth/customer/update', {
+    const response = await fetch('/api/auth/customer', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
