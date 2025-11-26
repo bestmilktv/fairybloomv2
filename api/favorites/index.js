@@ -10,22 +10,41 @@ const CUSTOMER_ACCOUNT_URL = `https://shopify.com/${SHOP_ID}/account/customer/ap
 
 /**
  * Make authenticated request to Customer Account API
+ * Uses same authentication approach as api/auth/customer.js
  * @param {string} query - GraphQL query
  * @param {object} variables - Query variables
+ * @param {object} req - Request object (for cookies)
+ * @param {string} accessToken - Access token (fallback)
  */
-async function fetchCustomerAccount(query, variables = {}, accessToken) {
-  if (!accessToken || typeof accessToken !== 'string') {
-    console.error('[Favorites] Missing customer access token');
-    throw new Error('Authentication required');
-  }
-
-  const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
-  console.log('[Favorites] Using customer access token:', tokenPreview, '(length:', accessToken.length, ')');
-
+async function fetchCustomerAccount(query, variables = {}, req = null, accessToken = null) {
   const headers = {
     'Content-Type': 'application/json',
-    'Shopify-Customer-Access-Token': accessToken
   };
+
+  // Method 1: Try with cookies first (preferred for server-side calls)
+  if (req && req.headers.cookie) {
+    headers['Cookie'] = req.headers.cookie;
+    console.log('[Favorites] Using cookies for authentication (length):', req.headers.cookie.length);
+  } 
+  // Method 2: Fallback to access token in header
+  else if (accessToken && typeof accessToken === 'string') {
+    const tokenPreview = `${accessToken.slice(0, 6)}...${accessToken.slice(-4)}`;
+    console.log('[Favorites] Using customer access token in header:', tokenPreview, '(length:', accessToken.length, ')');
+    
+    // Try both header formats
+    headers['Shopify-Customer-Access-Token'] = accessToken;
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  } else {
+    console.error('[Favorites] Missing both cookies and access token');
+    throw new Error('Authentication required - missing cookies or access token');
+  }
+
+  console.log('[Favorites] Sending request with headers:', {
+    'Content-Type': 'application/json',
+    hasCookie: !!headers['Cookie'],
+    hasShopifyToken: !!headers['Shopify-Customer-Access-Token'],
+    hasAuthorization: !!headers['Authorization']
+  });
 
   const response = await fetch(CUSTOMER_ACCOUNT_URL, {
     method: 'POST',
@@ -38,7 +57,37 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`Shopify Customer Account API error: ${response.status}`, errorText);
+    console.error(`[Favorites] Shopify Customer Account API error: ${response.status}`, errorText);
+    
+    // If cookies failed and we have access token, try with token only
+    if (response.status === 401 && headers['Cookie'] && accessToken) {
+      console.log('[Favorites] 401 with cookies, trying with access token header only...');
+      const headersAlt = {
+        'Content-Type': 'application/json',
+        'Shopify-Customer-Access-Token': accessToken,
+        'Authorization': `Bearer ${accessToken}`
+      };
+      
+      const responseAlt = await fetch(CUSTOMER_ACCOUNT_URL, {
+        method: 'POST',
+        headers: headersAlt,
+        body: JSON.stringify({
+          query,
+          variables,
+        }),
+      });
+      
+      if (responseAlt.ok) {
+        const dataAlt = await responseAlt.json();
+        if (dataAlt.errors && dataAlt.errors.length > 0) {
+          const errorMessages = dataAlt.errors.map((error) => error.message).join(', ');
+          console.error('[Favorites] GraphQL errors (Alt):', errorMessages);
+          throw new Error(`GraphQL errors: ${errorMessages}`);
+        }
+        console.log('[Favorites] Success with access token header only');
+        return dataAlt;
+      }
+    }
     
     if (response.status === 401) {
       throw new Error('Authentication required');
@@ -50,7 +99,7 @@ async function fetchCustomerAccount(query, variables = {}, accessToken) {
 
   if (data.errors && data.errors.length > 0) {
     const errorMessages = data.errors.map((error) => error.message).join(', ');
-    console.error('GraphQL errors from Shopify:', errorMessages);
+    console.error('[Favorites] GraphQL errors:', errorMessages);
     throw new Error(`GraphQL errors: ${errorMessages}`);
   }
 
@@ -87,7 +136,8 @@ export default async function handler(req, res) {
         }
       `;
 
-      const result = await fetchCustomerAccount(query, {}, accessToken);
+      // Pass both req (for cookies) and accessToken (for fallback)
+      const result = await fetchCustomerAccount(query, {}, req, accessToken);
       
       if (!result.data.customer) {
         return res.status(200).json({ favorites: [] });
@@ -127,7 +177,7 @@ export default async function handler(req, res) {
         }
       `;
 
-      const getResult = await fetchCustomerAccount(getQuery, {}, accessToken);
+      const getResult = await fetchCustomerAccount(getQuery, {}, req, accessToken);
       let currentFavorites = [];
 
       if (getResult.data.customer?.metafield?.value) {
@@ -174,7 +224,7 @@ export default async function handler(req, res) {
         ]
       };
 
-      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, accessToken);
+      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, req, accessToken);
 
       if (updateResult.data.customerUpdate.userErrors.length > 0) {
         const errorMessage = updateResult.data.customerUpdate.userErrors[0].message;
@@ -204,7 +254,7 @@ export default async function handler(req, res) {
         }
       `;
 
-      const getResult = await fetchCustomerAccount(getQuery, {}, accessToken);
+      const getResult = await fetchCustomerAccount(getQuery, {}, req, accessToken);
       let currentFavorites = [];
 
       if (getResult.data.customer?.metafield?.value) {
@@ -249,7 +299,7 @@ export default async function handler(req, res) {
         ]
       };
 
-      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, accessToken);
+      const updateResult = await fetchCustomerAccount(updateQuery, updateVariables, req, accessToken);
 
       if (updateResult.data.customerUpdate.userErrors.length > 0) {
         const errorMessage = updateResult.data.customerUpdate.userErrors[0].message;
