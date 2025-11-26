@@ -39,18 +39,26 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
       const authData = getAuthCookie(req);
       if (authData && authData.access_token) {
         tokenFromCookies = authData.access_token;
-        console.log('[Favorites] Extracted token from cookies, length:', tokenFromCookies.length);
+        const tokenPreview = `${tokenFromCookies.slice(0, 6)}...${tokenFromCookies.slice(-4)}`;
+        console.log('[Favorites] Extracted token from cookies:', tokenPreview, '(length:', tokenFromCookies.length, ')');
+        console.log('[Favorites] Token starts with shcat_:', tokenFromCookies.startsWith('shcat_'));
+      } else {
+        console.warn('[Favorites] Cookies present but no access_token found in authData');
       }
     } catch (error) {
       console.error('[Favorites] Error extracting token from cookies:', error.message);
+      console.error('[Favorites] Error stack:', error.stack);
     }
   }
 
-  // Method 1: Try with cookies + token in Authorization header (Shopify needs both)
+  // Method 1: Try with cookies + token in headers (extract token from cookies)
   if (req && req.headers.cookie && tokenFromCookies) {
     headers['Cookie'] = req.headers.cookie;
+    // Extract token from cookies and use it in headers simultaneously with cookies
+    // Use both header formats for maximum compatibility
+    headers['Shopify-Customer-Access-Token'] = tokenFromCookies;
     headers['Authorization'] = `Bearer ${tokenFromCookies}`;
-    console.log('[Favorites] Using cookies + Authorization header (token from cookies)');
+    console.log('[Favorites] Using cookies + Authorization header (token extracted from cookies)');
   } 
   // Method 2: Try with provided access token in header
   else if (accessToken && typeof accessToken === 'string') {
@@ -84,11 +92,27 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`[Favorites] Shopify Customer Account API error: ${response.status}`, errorText);
+    console.error('[Favorites] Request headers sent:', {
+      hasCookie: !!headers['Cookie'],
+      cookieLength: headers['Cookie'] ? headers['Cookie'].length : 0,
+      hasShopifyToken: !!headers['Shopify-Customer-Access-Token'],
+      shopifyTokenPreview: headers['Shopify-Customer-Access-Token'] 
+        ? `${headers['Shopify-Customer-Access-Token'].slice(0, 6)}...${headers['Shopify-Customer-Access-Token'].slice(-4)}`
+        : null,
+      hasAuthorization: !!headers['Authorization'],
+      authorizationPreview: headers['Authorization'] 
+        ? headers['Authorization'].substring(0, 20) + '...'
+        : null
+    });
     
     // If cookies + token failed, try with token only (without cookies)
     if (response.status === 401 && headers['Cookie'] && (accessToken || tokenFromCookies)) {
       const tokenToUse = accessToken || tokenFromCookies;
+      const tokenPreview = `${tokenToUse.slice(0, 6)}...${tokenToUse.slice(-4)}`;
       console.log('[Favorites] 401 with cookies+token, trying with access token header only...');
+      console.log('[Favorites] Fallback token preview:', tokenPreview, '(length:', tokenToUse.length, ')');
+      console.log('[Favorites] Fallback token starts with shcat_:', tokenToUse.startsWith('shcat_'));
+      
       const headersAlt = {
         'Content-Type': 'application/json',
         'Shopify-Customer-Access-Token': tokenToUse,
@@ -116,6 +140,10 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
       } else {
         const errorTextAlt = await responseAlt.text();
         console.error(`[Favorites] Fallback also failed: ${responseAlt.status}`, errorTextAlt);
+        console.error('[Favorites] Fallback request headers:', {
+          hasShopifyToken: !!headersAlt['Shopify-Customer-Access-Token'],
+          hasAuthorization: !!headersAlt['Authorization']
+        });
       }
     }
     
