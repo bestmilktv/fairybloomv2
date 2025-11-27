@@ -54,21 +54,26 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity duration-300 flex-shrink-0 min-w-0" onClick={() => {
+          <Link to="/" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-90 transition-all duration-300 flex-shrink-0 min-w-0 group" onClick={() => {
           window.scrollTo({
             top: 0,
             behavior: 'smooth'
           });
         }}>
-            <img src={logo} alt="Fairy Bloom Logo" className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain flex-shrink-0" />
-            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-primary tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis">FAIRY BLOOM</h1>
+            <img src={logo} alt="Fairy Bloom Logo" className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" />
+            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-primary tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-300 group-hover:tracking-[0.2em] sm:group-hover:tracking-[0.25em]">FAIRY BLOOM</h1>
           </Link>
 
           {/* Category Navigation */}
           <div className="hidden md:flex items-center space-x-8 flex-shrink-0">
-            {categories.map(category => <Link key={category.path} to={category.path} className="text-primary/80 hover:text-primary transition-colors duration-300 font-medium tracking-wide">
-                {category.name}
-              </Link>)}
+            {categories.map(category => <Link 
+              key={category.path} 
+              to={category.path} 
+              className="text-primary/80 hover:text-primary relative font-medium tracking-wide transition-all duration-300 group"
+            >
+              <span className="relative z-10">{category.name}</span>
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
+            </Link>)}
           </div>
 
           {/* Account, Favorites & Cart */}
@@ -76,8 +81,8 @@ const Navigation = () => {
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="!text-primary/80 hover:!text-primary hover:!bg-background/70 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-200">
-                    <UserCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <Button variant="ghost" size="icon" className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full">
+                    <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent 
@@ -93,17 +98,17 @@ const Navigation = () => {
                   </div>
                   <DropdownMenuSeparator className="bg-border" />
                   <DropdownMenuItem asChild>
-                    <Link to="/muj-profil" className="flex items-center text-primary/80 hover:bg-background/50 hover:text-primary focus:bg-background/50 focus:text-primary">
-                      <Settings className="mr-2 h-4 w-4" />
+                    <Link to="/muj-profil" className="flex items-center text-primary/80 hover:bg-background/70 hover:text-primary focus:bg-background/70 focus:text-primary transition-all duration-200 rounded-md px-2 py-1.5 group/item">
+                      <Settings className="mr-2 h-4 w-4 transition-transform duration-200 group-hover/item:rotate-12" />
                       Můj profil
                     </Link>
                   </DropdownMenuItem>
                    <DropdownMenuSeparator className="bg-border" />
                    <DropdownMenuItem 
                      onClick={handleSignOut}
-                     className="flex items-center text-primary/80 hover:bg-background/50 hover:text-primary focus:bg-background/50 focus:text-primary cursor-pointer"
+                     className="flex items-center text-primary/80 hover:bg-red-50/50 hover:text-red-600 focus:bg-red-50/50 focus:text-red-600 cursor-pointer transition-all duration-200 rounded-md px-2 py-1.5 group/item"
                    >
-                     <LogOut className="mr-2 h-4 w-4" />
+                     <LogOut className="mr-2 h-4 w-4 transition-transform duration-200 group-hover/item:translate-x-1" />
                      Odhlásit se
                    </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -112,21 +117,21 @@ const Navigation = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="!text-primary/80 hover:!text-primary hover:!bg-background/70 h-9 w-9 sm:h-10 sm:w-10 transition-all duration-200"
+                className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full"
                 onClick={() => setAuthModalOpen(true)}
               >
-                <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                <User className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
               </Button>
             )}
             <Button 
               variant="ghost" 
               size="icon" 
-              className="!text-primary/80 hover:!text-primary hover:!bg-background/70 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-200"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full group"
               onClick={() => setFavoritesSidebarOpen(true)}
             >
-              <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110 group-hover:fill-primary/20" />
               {getFavoriteCount() > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium">
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md">
                   {getFavoriteCount()}
                 </span>
               )}
@@ -134,13 +139,13 @@ const Navigation = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="!text-primary/80 hover:!text-primary hover:!bg-background/70 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-200"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full group"
               onClick={() => setMiniCartOpen(true)}
               data-cart-icon
             >
-              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
               {getTotalItems() > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium">
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md">
                   {getTotalItems()}
                 </span>
               )}
