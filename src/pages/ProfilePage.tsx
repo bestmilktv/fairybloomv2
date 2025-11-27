@@ -88,14 +88,14 @@ export default function ProfilePage() {
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-12 gap-8">
             {/* Sidebar */}
-            <aside className="col-span-12 md:col-span-3">
-              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6">
+            <aside className="col-span-12 md:col-span-3 min-w-0">
+              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 sticky top-24 self-start w-full">
                 <nav className="space-y-2">
                   {menuItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => item.isLogout ? handleLogout() : setActiveTab(item.id)}
-                      className={`w-full text-left px-4 py-3 rounded-md transition-all duration-200 font-serif relative ${
+                      className={`block w-full text-left px-4 py-3 rounded-md transition-all duration-200 font-serif relative box-border ${
                         activeTab === item.id && !item.isLogout
                           ? 'bg-[#E0C36C]/10 text-[#502038] font-semibold'
                           : 'text-[#502038]/70 hover:text-[#502038] hover:bg-[#F4F1EA]'
