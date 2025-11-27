@@ -42,6 +42,7 @@ export default function ProfilePage() {
   const [editFirstName, setEditFirstName] = useState('')
   const [editLastName, setEditLastName] = useState('')
   const [editEmail, setEditEmail] = useState('')
+  const [editContactPhone, setEditContactPhone] = useState('')
   const [editAddress1, setEditAddress1] = useState('')
   const [editAddress2, setEditAddress2] = useState('')
   const [editCity, setEditCity] = useState('')
@@ -81,6 +82,8 @@ export default function ProfilePage() {
         setEditLastName(user.lastName || '')
       } else if (editingSection === 'contact') {
         setEditEmail(user.email || '')
+        // Telefon může být v adrese nebo na customer level
+        setEditContactPhone(user.address?.phone || '')
       } else if (editingSection === 'address') {
         setEditAddress1(user.address?.address1 || '')
         setEditAddress2(user.address?.address2 || '')
@@ -371,6 +374,91 @@ export default function ProfilePage() {
     }
   }
 
+  const handleSaveContact = async () => {
+    setSaving(true)
+    try {
+      // Telefon ukládáme do adresy, protože updateProfile podporuje jen address.phone
+      // Použijeme existující adresu a aktualizujeme jen telefon
+      if (!user?.address) {
+        toast({
+          title: "Chyba",
+          description: "Pro uložení telefonu je nutné mít vyplněnou adresu. Prosím nejdříve vyplňte adresu.",
+          variant: "destructive",
+        })
+        setSaving(false)
+        return
+      }
+
+      const addressData = {
+        address1: user.address.address1,
+        address2: user.address.address2 || undefined,
+        city: user.address.city,
+        province: user.address.province || '',
+        zip: user.address.zip,
+        country: user.address.country,
+        phone: editContactPhone.trim() || undefined,
+      }
+
+      const result = await updateProfile({
+        address: addressData,
+      })
+
+      if (!result.success) {
+        toast({
+          title: "Chyba",
+          description: result.error || "Nepodařilo se uložit změny.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Also save to Supabase
+      try {
+        const supabaseResponse = await fetch('/api/customer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            firstName: user?.firstName || '',
+            lastName: user?.lastName || '',
+            address1: addressData.address1,
+            address2: addressData.address2,
+            city: addressData.city,
+            province: addressData.province,
+            zip: addressData.zip,
+            country: addressData.country,
+            phone: editContactPhone.trim() || '',
+            acceptsMarketing: false,
+          })
+        })
+
+        if (!supabaseResponse.ok) {
+          console.warn('[ProfilePage] Failed to save to Supabase, but Shopify save succeeded')
+        }
+      } catch (supabaseError) {
+        console.warn('[ProfilePage] Error saving to Supabase:', supabaseError)
+      }
+
+      await refreshUser(true, false)
+      setEditingSection(null)
+      
+      toast({
+        title: "Úspěch",
+        description: "Kontaktní údaje byly aktualizovány.",
+      })
+    } catch (error) {
+      toast({
+        title: "Chyba",
+        description: "Nastala neočekávaná chyba.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleCancelEdit = () => {
     setEditingSection(null)
   }
@@ -546,14 +634,7 @@ export default function ProfilePage() {
                       <div className="flex items-center gap-2">
                         {editingSection === 'contact' ? (
                           <>
-                            <SaveButton onSave={() => {
-                              // Email nelze editovat přes API, takže jen zrušíme edit
-                              toast({
-                                title: "Info",
-                                description: "Email nelze změnit. Kontaktujte prosím podporu.",
-                              })
-                              setEditingSection(null)
-                            }} disabled={saving} />
+                            <SaveButton onSave={handleSaveContact} disabled={saving} />
                             <CancelButton onCancel={handleCancelEdit} />
                           </>
                         ) : (
@@ -562,23 +643,45 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     {editingSection === 'contact' ? (
-                      <div>
-                        <Label htmlFor="editEmail" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Email</Label>
-                        <Input
-                          id="editEmail"
-                          type="email"
-                          value={editEmail}
-                          disabled={true}
-                          className="text-lg text-[#502038] bg-gray-100"
-                        />
-                        <p className="text-sm text-[#502038]/60 mt-2">Email nelze změnit. Kontaktujte prosím podporu.</p>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="editEmail" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Email</Label>
+                          <Input
+                            id="editEmail"
+                            type="email"
+                            value={editEmail}
+                            disabled={true}
+                            className="text-lg text-[#502038] bg-gray-100"
+                          />
+                          <p className="text-sm text-[#502038]/60 mt-2">Email nelze změnit. Kontaktujte prosím podporu.</p>
+                        </div>
+                        <div>
+                          <Label htmlFor="editContactPhone" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Telefon (volitelné)</Label>
+                          <Input
+                            id="editContactPhone"
+                            type="tel"
+                            value={editContactPhone}
+                            onChange={(e) => setEditContactPhone(e.target.value)}
+                            disabled={saving}
+                            placeholder="Např. +420 123 456 789"
+                            className="text-lg text-[#502038]"
+                          />
+                        </div>
                       </div>
                     ) : (
-                      <div>
-                        <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Email</span>
-                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
-                          {user && user.email ? user.email : '-'}
-                        </p>
+                      <div className="space-y-4">
+                        <div>
+                          <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Email</span>
+                          <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                            {user && user.email ? user.email : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Telefon</span>
+                          <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                            {user?.address?.phone ? user.address.phone : '-'}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
