@@ -153,25 +153,14 @@ html {
   /* Prevent any element from causing horizontal overflow */
   * {
     max-width: 100%;
-  
-    
-  /* Pro jistotu necháme y (svislé) na auto */
-  overflow-y: auto;
-}
+  }
 
-html, body {
-  /* Původně tu bylo hidden. Změň to na clip. */
-  overflow-x: clip; 
-  
-  /* Pro jistotu necháme y (svislé) na auto */
-  overflow-y: auto;
-}
-
-#root {
-  /* To samé pro React root */
-  width: 100%;
-  overflow-x: clip;
-}
+  /* Ensure root element doesn't cause overflow */
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
 
   /* Ensure dropdown doesn't affect layout */
   [data-radix-popper-content-wrapper] {
