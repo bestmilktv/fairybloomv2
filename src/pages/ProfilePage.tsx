@@ -9,7 +9,6 @@ export default function ProfilePage() {
   const location = useLocation()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'favorites' | 'logout'>('overview')
-  const [sidebarStyle, setSidebarStyle] = useState<React.CSSProperties>({})
 
   // Show loading only during initial auth check and only if we have no user at all
   if (loading && !user) {
@@ -20,80 +19,22 @@ export default function ProfilePage() {
     )
   }
 
-  // Refresh user data when component mounts or when navigating to this page
+  // Refresh user data logic (beze změny)
   useEffect(() => {
     const refreshData = async () => {
-      // Always refresh to get latest data from Shopify when ProfilePage is viewed
-      // Wait for loading to complete
       if (!loading) {
-        console.log('ProfilePage: Refreshing user data from Shopify...')
         try {
-          // Always refresh when ProfilePage mounts or when navigating to it
-          // Skip modal check - we don't want modal to show when visiting ProfilePage
           await refreshUser(true, false)
-          // Also explicitly set needsProfileCompletion to false to ensure modal doesn't show
           setNeedsProfileCompletion(false)
-          console.log('ProfilePage: Refresh completed')
         } catch (error) {
           console.error('ProfilePage: Error refreshing user data:', error)
         }
       }
     }
-    
     refreshData()
-    // Refresh whenever location changes (navigation to this page) or loading completes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, loading]) // Refresh when navigating to this page or when loading completes
+  }, [location.pathname, loading])
 
-  // Log user data when it changes
-  useEffect(() => {
-    console.log('ProfilePage: User object changed:', {
-      user: user,
-      firstName: user?.firstName,
-      lastName: user?.lastName,
-      email: user?.email,
-      address: user?.address,
-      address1: user?.address?.address1,
-      city: user?.address?.city,
-      zip: user?.address?.zip,
-      country: user?.address?.country
-    })
-  }, [user])
-
-  // Handle sidebar sticky positioning with scroll detection
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY
-      const navbarHeight = 96 // pt-24 = 96px
-      const initialOffset = 136 // marginTop for alignment
-      const threshold = initialOffset - navbarHeight // 136 - 96 = 40px
-
-      if (scrollY >= threshold) {
-        // Sidebar should stick to navbar
-        setSidebarStyle({
-          position: 'fixed',
-          top: `${navbarHeight}px`,
-          width: '280px',
-          maxWidth: '280px',
-          boxSizing: 'border-box',
-          zIndex: 10
-        })
-      } else {
-        // Sidebar in original position
-        setSidebarStyle({
-          position: 'relative',
-          top: 'auto'
-        })
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    handleScroll() // Initial call
-
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // If no user after loading is complete, redirect immediately
+  // Redirect if no user
   if (!user) {
     window.location.href = '/'
     return (
@@ -118,38 +59,37 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-[#F4F1EA]">
       <Navigation />
-      <div className="pt-24 pb-12">
+      
+      {/* Hlavní padding odshora (pod navbar) */}
+      <div className="pt-32 pb-12">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="flex flex-col md:flex-row gap-8 items-start">
-            {/* Sidebar */}
-            <aside className="w-full md:w-[280px] flex-shrink-0" style={{ marginTop: '136px' }}>
-              <div 
-                className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 overflow-hidden"
-                style={{ 
-                  ...sidebarStyle,
-                  width: '100%',
-                  maxWidth: '280px',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.2s ease-out'
-                }}
-              >
-                <div className="space-y-2" style={{ width: '100%' }}>
+          
+          {/* HLAVNÍ NADPIS PRO CELOU STRÁNKU (Zarovnání vlevo) */}
+          <div className="mb-10">
+            <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">
+              Vítejte, {user && user.firstName && user.firstName.trim() ? user.firstName : 'Uživateli'}
+            </h1>
+            <p className="text-[#502038]/70 text-lg">
+              Spravujte své údaje a nastavení účtu
+            </p>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-8 items-start relative">
+            
+            {/* SIDEBAR (Sticky) */}
+            {/* 'sticky top-32' zajistí, že se menu přilepí 8rem (32*4px = 128px) od vrchu okna */}
+            <aside className="w-full md:w-[280px] flex-shrink-0 md:sticky md:top-32 self-start transition-all duration-300">
+              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 overflow-hidden">
+                <div className="space-y-2 w-full">
                   {menuItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => item.isLogout ? handleLogout() : setActiveTab(item.id)}
-                      className={`block text-left px-4 py-3 rounded-md transition-all duration-200 font-serif relative ${
+                      className={`block w-full text-left px-4 py-3 rounded-md transition-all duration-200 font-serif relative ${
                         activeTab === item.id && !item.isLogout
                           ? 'bg-[#E0C36C]/10 text-[#502038] font-semibold'
                           : 'text-[#502038]/70 hover:text-[#502038] hover:bg-[#F4F1EA]'
                       }`}
-                      style={{ 
-                        width: '100%',
-                        maxWidth: '100%',
-                        boxSizing: 'border-box',
-                        position: 'relative',
-                        display: 'block'
-                      }}
                     >
                       {activeTab === item.id && !item.isLogout && (
                         <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#E0C36C] rounded-l-md"></span>
@@ -161,56 +101,45 @@ export default function ProfilePage() {
               </div>
             </aside>
 
-            {/* Main Content */}
+            {/* MAIN CONTENT */}
             <main className="flex-1 min-w-0">
+              
+              {/* Sekce: Přehled účtu */}
               {activeTab === 'overview' && (
                 <div className="space-y-6">
-                  <div className="mb-8">
-                    <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">
-                      Vítejte, {user && user.firstName && user.firstName.trim() ? user.firstName : 'Uživateli'}
-                    </h1>
-                    <p className="text-[#502038]/70 text-lg">
-                      Spravujte své údaje a nastavení účtu
-                    </p>
-                  </div>
-
-                  {/* Personal Information Card */}
+                  {/* Zde už NENÍ nadpis "Vítejte", protože je nahoře společný */}
+                  
+                  {/* Karta: Osobní údaje */}
                   <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6">
                     <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Osobní údaje</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <span className="text-sm font-medium text-[#502038]/60 block mb-2">Jméno</span>
                         <p className="text-base text-[#502038]">
-                          {user && user.firstName && user.firstName.trim() 
-                            ? user.firstName 
-                            : 'Nevyplněno'}
+                          {user && user.firstName && user.firstName.trim() ? user.firstName : 'Nevyplněno'}
                         </p>
                       </div>
                       <div>
                         <span className="text-sm font-medium text-[#502038]/60 block mb-2">Příjmení</span>
                         <p className="text-base text-[#502038]">
-                          {user && user.lastName && user.lastName.trim() 
-                            ? user.lastName 
-                            : 'Nevyplněno'}
+                          {user && user.lastName && user.lastName.trim() ? user.lastName : 'Nevyplněno'}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Contact Information Card */}
+                  {/* Karta: Kontaktní údaje */}
                   <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6">
                     <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Kontaktní údaje</h2>
                     <div>
                       <span className="text-sm font-medium text-[#502038]/60 block mb-2">Email</span>
                       <p className="text-base text-[#502038]">
-                        {user && user.email && user.email.trim() 
-                          ? user.email 
-                          : 'Nevyplněno'}
+                        {user && user.email && user.email.trim() ? user.email : 'Nevyplněno'}
                       </p>
                     </div>
                   </div>
 
-                  {/* Address Information Card */}
+                  {/* Karta: Adresa */}
                   <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6">
                     <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Adresa</h2>
                     <div>
@@ -230,14 +159,9 @@ export default function ProfilePage() {
                 </div>
               )}
 
+              {/* Sekce: Objednávky */}
               {activeTab === 'orders' && (
                 <div className="space-y-6">
-                  <div className="mb-8">
-                    <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">Moje objednávky</h1>
-                    <p className="text-[#502038]/70 text-lg">
-                      Historie vašich objednávek
-                    </p>
-                  </div>
                   <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-12 text-center">
                     <p className="text-[#502038]/70 text-lg font-serif">
                       Zatím nemáte žádné objednávky
@@ -246,14 +170,9 @@ export default function ProfilePage() {
                 </div>
               )}
 
+              {/* Sekce: Oblíbené */}
               {activeTab === 'favorites' && (
                 <div className="space-y-6">
-                  <div className="mb-8">
-                    <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">Oblíbené produkty</h1>
-                    <p className="text-[#502038]/70 text-lg">
-                      Produkty, které jste si označili jako oblíbené
-                    </p>
-                  </div>
                   <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-12 text-center">
                     <p className="text-[#502038]/70 text-lg font-serif">
                       Zatím nemáte žádné oblíbené produkty
