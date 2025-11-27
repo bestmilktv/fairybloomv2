@@ -131,11 +131,11 @@ export default async function handler(req, res) {
 
       try {
         const result = await fetchAdminAPI(query, { id: customerGid });
-      
+        
         if (!result.data?.customer) {
           console.warn('[Favorites] Customer not found in Admin API:', customerGid);
-        return res.status(200).json({ favorites: [] });
-      }
+          return res.status(200).json({ favorites: [] });
+        }
 
         const metafieldValue = result.data.customer.metafield?.value;
         const favorites = metafieldValue ? JSON.parse(metafieldValue) : [];
@@ -164,7 +164,7 @@ export default async function handler(req, res) {
           }
         }
       `;
-
+      
       const readResult = await fetchAdminAPI(readQuery, { id: customerGid });
       const currentMetafield = readResult.data?.customer?.metafield?.value;
       let currentFavorites = currentMetafield ? JSON.parse(currentMetafield) : [];
@@ -173,9 +173,9 @@ export default async function handler(req, res) {
       // Step B: Modify list
       if (req.method === 'POST') {
         // Add unique
-      if (!currentFavorites.includes(productId)) {
-        currentFavorites.push(productId);
-      }
+        if (!currentFavorites.includes(productId)) {
+          currentFavorites.push(productId);
+        }
       } else {
         // Delete
         currentFavorites = currentFavorites.filter(id => id !== productId);
@@ -185,10 +185,10 @@ export default async function handler(req, res) {
       const updateQuery = `
         mutation customerUpdate($input: CustomerInput!) {
           customerUpdate(input: $input) {
-          customer {
-            metafield(namespace: "custom", key: "favorites") {
-              value
-            }
+            customer {
+              metafield(namespace: "custom", key: "favorites") {
+                value
+              }
             }
             userErrors {
               field
@@ -201,13 +201,13 @@ export default async function handler(req, res) {
       const variables = {
         input: {
           id: customerGid,
-        metafields: [
-          {
-            namespace: 'custom',
-            key: 'favorites',
+          metafields: [
+            {
+              namespace: 'custom',
+              key: 'favorites',
               value: JSON.stringify(currentFavorites)
-          }
-        ]
+            }
+          ]
         }
       };
 

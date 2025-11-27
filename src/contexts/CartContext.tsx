@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { createCart, addToCart as addToShopifyCart, getCart, updateCartLines, removeCartLines } from '@/lib/shopify'
-import { useAuth } from './AuthContext'
 
 export interface CartItem {
   id: string
@@ -30,44 +29,28 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
   const [items, setItems] = useState<CartItem[]>([])
   const [cartId, setCartId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Ref aby se sync nespouštěl dvakrát
-  const isSyncingRef = useRef(false)
-
-  // Load cart ID from localStorage on mount (for guest users)
+  // Load cart ID from localStorage on mount
   useEffect(() => {
-    if (!isAuthenticated) {
     const savedCartId = localStorage.getItem('fairybloom-cart-id')
     if (savedCartId) {
       setCartId(savedCartId)
       // Fetch cart from Shopify
       refreshCartFromShopify(savedCartId)
-      }
     }
   }, [])
 
-  // Save cart ID to localStorage whenever it changes (for guest users)
+  // Save cart ID to localStorage whenever it changes
   useEffect(() => {
-    if (cartId && !isAuthenticated) {
+    if (cartId) {
       localStorage.setItem('fairybloom-cart-id', cartId)
-    } else if (!cartId) {
+    } else {
       localStorage.removeItem('fairybloom-cart-id')
     }
-  }, [cartId, isAuthenticated])
-
-  // Sync cart with Shopify when user logs in
-  useEffect(() => {
-    const syncCart = async () => {
-      if (isAuthenticated) {
-        await syncLocalCartToShopify()
-      }
-    }
-    syncCart()
-  }, [isAuthenticated])
+  }, [cartId])
 
   // Convert Shopify cart to local cart items
   const convertShopifyCartToItems = (shopifyCart: any): CartItem[] => {
@@ -116,138 +99,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // MAIN SYNC FUNCTION - Merge local cart with Shopify cart
-  const syncLocalCartToShopify = async () => {
-    if (isSyncingRef.current) return
-    isSyncingRef.current = true
-    setIsLoading(true)
-
-    try {
-      // A) Načteme lokální (Guest) košík
-      const localCartId = localStorage.getItem('fairybloom-cart-id')
-      let localCartItems: CartItem[] = []
-      
-      if (localCartId) {
-        try {
-          const localCart = await getCart(localCartId)
-          if (localCart) {
-            localCartItems = convertShopifyCartToItems(localCart)
-          }
-        } catch (error) {
-          console.warn('[Cart] Local cart not found or expired:', error)
-          // Local cart expired, continue without it
-        }
-      }
-
-      // B) Načteme vzdálený (Shopify) cartId z metafieldu
-      const response = await fetch('/api/cart', { method: 'GET', credentials: 'include' })
-      let shopifyCartId: string | null = null
-      
-      if (response.ok) {
-        const data = await response.json()
-        shopifyCartId = data.cartId || null
-      }
-
-      let shopifyCartItems: CartItem[] = []
-      let finalCartId: string | null = null
-
-      // C) Pokud existuje Shopify košík, načteme ho
-      if (shopifyCartId) {
-        try {
-          const shopifyCart = await getCart(shopifyCartId)
-          if (shopifyCart) {
-            shopifyCartItems = convertShopifyCartToItems(shopifyCart)
-            finalCartId = shopifyCartId
-          }
-        } catch (error) {
-          console.warn('[Cart] Shopify cart not found or expired:', error)
-          // Shopify cart expired, continue without it
-        }
-      }
-
-      // D) Sloučíme košíky - přidáme lokální položky do Shopify košíku
-      if (localCartItems.length > 0) {
-        // Pokud nemáme Shopify košík, vytvoříme nový z první lokální položky
-        if (!finalCartId && localCartItems.length > 0 && localCartItems[0].variantId) {
-          try {
-            const result = await createCart(localCartItems[0].variantId, localCartItems[0].quantity)
-            if (result.data.cartCreate.userErrors.length === 0) {
-              finalCartId = result.data.cartCreate.cart.id
-              shopifyCartItems = convertShopifyCartToItems(result.data.cartCreate.cart)
-            }
-          } catch (error) {
-            console.error('[Cart] Error creating new cart:', error)
-          }
-        }
-
-        // Přidáme všechny lokální položky do Shopify košíku (pokud tam ještě nejsou)
-        if (finalCartId) {
-          for (const localItem of localCartItems) {
-            if (!localItem.variantId) continue
-
-            // Zkontrolujeme, jestli už není v Shopify košíku
-            const existsInShopify = shopifyCartItems.some(
-              item => item.variantId === localItem.variantId
-            )
-
-            if (!existsInShopify) {
-              try {
-                await addToShopifyCart(finalCartId, localItem.variantId, localItem.quantity)
-                console.log('[Cart] Synced local item to Shopify:', localItem.name)
-              } catch (error) {
-                console.error(`[Cart] Failed to sync item ${localItem.name}:`, error)
-              }
-            }
-          }
-
-          // Načteme finální stav košíku z Shopify
-          try {
-            const finalCart = await getCart(finalCartId)
-            if (finalCart) {
-              shopifyCartItems = convertShopifyCartToItems(finalCart)
-            }
-          } catch (error) {
-            console.error('[Cart] Error fetching final cart:', error)
-          }
-        }
-      }
-
-      // E) Nastavíme finální stav
-      if (finalCartId) {
-        setCartId(finalCartId)
-        setItems(shopifyCartItems)
-        
-        // Uložíme cartId do metafieldu
-        try {
-          await fetch('/api/cart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ cartId: finalCartId }),
-          })
-        } catch (error) {
-          console.error('[Cart] Error saving cartId to metafield:', error)
-        }
-      } else if (localCartItems.length > 0) {
-        // Pokud máme jen lokální košík, použijeme ho
-        setItems(localCartItems)
-        if (localCartId) {
-          setCartId(localCartId)
-        }
-      } else {
-        // Žádný košík
-        setItems([])
-        setCartId(null)
-      }
-
-    } catch (error) {
-      console.error('[Cart] Error syncing cart:', error)
-    } finally {
-      setIsLoading(false)
-      isSyncingRef.current = false
-    }
-  }
-
   // Refresh cart from Shopify
   const refreshCart = async () => {
     if (cartId) {
@@ -287,20 +138,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCartId(newCartId)
         // Refresh cart from Shopify
         await refreshCartFromShopify(newCartId)
-        
-        // Save cartId to metafield if authenticated
-        if (isAuthenticated) {
-          try {
-            await fetch('/api/cart', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({ cartId: newCartId }),
-            })
-          } catch (error) {
-            console.error('[Cart] Error saving cartId to metafield:', error)
-          }
-        }
       }
     } catch (error) {
       console.error('Error adding to cart:', error)
@@ -326,20 +163,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       // Refresh cart from Shopify
       await refreshCartFromShopify(cartId)
-      
-      // Update metafield if authenticated
-      if (isAuthenticated && cartId) {
-        try {
-          await fetch('/api/cart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ cartId }),
-          })
-        } catch (error) {
-          console.error('[Cart] Error updating cartId in metafield:', error)
-        }
-      }
     } catch (error) {
       console.error('Error removing from cart:', error)
       throw error
@@ -369,20 +192,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       // Refresh cart from Shopify
       await refreshCartFromShopify(cartId)
-      
-      // Update metafield if authenticated
-      if (isAuthenticated && cartId) {
-        try {
-          await fetch('/api/cart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ cartId }),
-          })
-        } catch (error) {
-          console.error('[Cart] Error updating cartId in metafield:', error)
-        }
-      }
     } catch (error) {
       console.error('Error updating quantity:', error)
       throw error
@@ -411,20 +220,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Clear cart ID and items
       setCartId(null)
       setItems([])
-      
-      // Clear metafield if authenticated (send empty string to clear)
-      if (isAuthenticated) {
-        try {
-          await fetch('/api/cart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ cartId: '' }),
-          })
-        } catch (error) {
-          console.error('[Cart] Error clearing cartId in metafield:', error)
-        }
-      }
     } catch (error) {
       console.error('Error clearing cart:', error)
       throw error
