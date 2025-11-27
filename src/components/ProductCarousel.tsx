@@ -607,7 +607,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             className={`transition-all duration-500 ease-out ${
               index === currentProductIndex
                 ? 'w-6 h-1 bg-black rounded-full'
-                : 'w-1.5 h-1.5 bg-gray-300 rounded-full'
+                : 'w-1.5 h-1.5 bg-muted rounded-full'
             }`}
             style={{
               transitionProperty: 'width, height, background-color',

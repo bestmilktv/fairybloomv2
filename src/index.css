@@ -11,71 +11,72 @@ html {
 
 @layer base {
   :root {
-    /* Base colors - ivory and warm tones */
-    --background: 35 20% 98%;
-    --foreground: 30 15% 15%;
+    /* Base colors - Premium color palette: F4F1EA, 582038, E0C36C */
+    /* Background: #F4F1EA - light beige/ivory */
+    --background: 42 31% 94%;
+    --foreground: 326 42% 24%;
 
     /* Card system - subtle warmth */
-    --card: 35 25% 96%;
-    --card-foreground: 30 15% 15%;
+    --card: 42 28% 96%;
+    --card-foreground: 326 42% 24%;
 
     /* Popover system */
-    --popover: 35 25% 96%;
-    --popover-foreground: 30 15% 15%;
+    --popover: 42 28% 96%;
+    --popover-foreground: 326 42% 24%;
 
-    /* Primary - deep charcoal for elegance */
-    --primary: 30 15% 15%;
-    --primary-foreground: 35 20% 98%;
+    /* Primary - burgundy/maroon #582038 */
+    --primary: 326 42% 24%;
+    --primary-foreground: 42 31% 94%;
 
-    /* Secondary - warm beige */
-    --secondary: 35 15% 88%;
-    --secondary-foreground: 30 15% 15%;
+    /* Secondary - light beige background */
+    --secondary: 42 25% 92%;
+    --secondary-foreground: 326 42% 24%;
 
     /* Muted tones */
-    --muted: 35 12% 92%;
-    --muted-foreground: 30 8% 45%;
+    --muted: 42 20% 90%;
+    --muted-foreground: 326 30% 40%;
 
-    /* Accent - soft sage green for nature touch */
-    --accent: 120 15% 85%;
-    --accent-foreground: 30 15% 15%;
+    /* Accent - golden yellow #E0C36C */
+    --accent: 45 65% 65%;
+    --accent-foreground: 326 42% 24%;
 
-    /* Luxury gold accent - softer, more premium */
-    --gold: 45 55% 72%;
-    --gold-foreground: 30 15% 15%;
+    /* Luxury gold accent - golden yellow #E0C36C */
+    --gold: 45 65% 65%;
+    --gold-foreground: 326 42% 24%;
 
-    /* Nature green */
-    --nature: 120 25% 45%;
-    --nature-foreground: 35 20% 98%;
+    /* Nature green - using accent color for consistency */
+    --nature: 45 50% 60%;
+    --nature-foreground: 42 31% 94%;
 
-    /* Premium variants */
-    --luxury: 30 15% 8%;
-    --luxury-foreground: 35 20% 98%;
+    /* Premium variants - burgundy #582038 */
+    --luxury: 326 42% 24%;
+    --luxury-foreground: 42 31% 94%;
 
     /* System colors */
     --destructive: 0 65% 55%;
-    --destructive-foreground: 35 20% 98%;
+    --destructive-foreground: 42 31% 94%;
 
-    --border: 35 15% 88%;
-    --input: 35 15% 88%;
+    --border: 42 20% 85%;
+    --input: 42 20% 90%;
     --ring: 45 65% 65%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 42 31% 94%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-foreground: 326 42% 24%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: 326 42% 24%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-primary-foreground: 42 31% 94%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 45 50% 70%;
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent-foreground: 326 42% 24%;
 
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 42 20% 85%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 45 65% 65%;
   }
 
   .dark {
@@ -325,6 +326,16 @@ html {
   .glass-effect {
     backdrop-filter: blur(10px);
     background: hsl(var(--background) / 0.8);
+  }
+  
+  .glass-card {
+    background: hsl(var(--card) / 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+  
+  .bg-gradient-subtle {
+    background: linear-gradient(to bottom, hsl(var(--background)), hsl(var(--secondary) / 0.3));
   }
 }
 
