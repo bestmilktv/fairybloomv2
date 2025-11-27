@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, UserCheck, LogOut, Package, Settings, Heart } from 'lucide-react';
+import { ShoppingCart, User, UserCheck, LogOut, Settings, Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -96,12 +96,6 @@ const Navigation = () => {
                     <Link to="/muj-profil" className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold">
                       <Settings className="mr-2 h-4 w-4" />
                       Můj profil
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/me-objednavky" className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold">
-                      <Package className="mr-2 h-4 w-4" />
-                      Mé objednávky
                     </Link>
                   </DropdownMenuItem>
                    <DropdownMenuSeparator className="bg-gold/20" />

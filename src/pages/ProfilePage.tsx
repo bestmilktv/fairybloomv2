@@ -1,31 +1,116 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFavorites } from '@/contexts/FavoritesContext'
+import { useCart } from '@/contexts/CartContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { User, Package, Heart, LogOut, ChevronRight, Pencil } from 'lucide-react'
+import { User, Package, Heart, LogOut, ChevronRight, Pencil, ShoppingCart, X, Loader2 } from 'lucide-react'
+import { getProductById } from '@/lib/shopify'
+import { useToast } from '@/hooks/use-toast'
+
+interface FavoriteProduct {
+  id: string
+  title: string
+  handle: string
+  image: string
+  price: string
+  variantId?: string
+}
 
 export default function ProfilePage() {
   const { user, loading, refreshUser, setNeedsProfileCompletion, logout } = useAuth()
-  const { getFavoriteCount } = useFavorites()
+  const { favorites, getFavoriteCount, removeFromFavorites, isLoading: favoritesLoading } = useFavorites()
+  const { addToCart } = useCart()
+  const { toast } = useToast()
   const location = useLocation()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'favorites' | 'logout'>('overview')
+  const [favoriteProducts, setFavoriteProducts] = useState<FavoriteProduct[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(false)
+  const [addingToCart, setAddingToCart] = useState<string | null>(null)
 
-  if (loading && !user) return <div className="min-h-screen bg-[#F4F1EA]" />
+  // Loading state
+  if (loading && !user) {
+    return (
+      <div className="min-h-screen bg-[#F4F1EA] flex items-center justify-center">
+        <div className="animate-pulse text-[#502038]">Načítám...</div>
+      </div>
+    )
+  }
 
   // Refresh user data logic
   useEffect(() => {
     const refreshData = async () => {
-      if (!loading) await refreshUser(true, false).catch(console.error)
+      if (!loading) {
+        try {
+          await refreshUser(true, false)
+          setNeedsProfileCompletion(false)
+        } catch (error) {
+          console.error('ProfilePage: Error refreshing user data:', error)
+        }
+      }
     }
     refreshData()
   }, [location.pathname, loading])
 
+  // Fetch favorite products when favorites tab is active
+  useEffect(() => {
+    if (activeTab === 'favorites') {
+      if (favorites.length === 0) {
+        setFavoriteProducts([])
+        return
+      }
+
+      const fetchFavoriteProducts = async () => {
+        setLoadingProducts(true)
+        try {
+          const products = await Promise.all(
+            favorites.map(async (productId) => {
+              try {
+                const product = await getProductById(productId)
+                if (!product) return null
+
+                const firstImage = product.images?.edges?.[0]?.node
+                const firstVariant = product.variants?.edges?.[0]?.node
+
+                return {
+                  id: product.id,
+                  title: product.title,
+                  handle: product.handle,
+                  image: firstImage?.url || '',
+                  price: firstVariant?.price
+                    ? `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}`
+                    : 'Cena na vyžádání',
+                  variantId: firstVariant?.id,
+                }
+              } catch (error) {
+                console.error(`Error fetching product ${productId}:`, error)
+                return null
+              }
+            })
+          )
+
+          setFavoriteProducts(products.filter((p) => p !== null) as FavoriteProduct[])
+        } catch (error) {
+          console.error('Error fetching favorite products:', error)
+        } finally {
+          setLoadingProducts(false)
+        }
+      }
+
+      fetchFavoriteProducts()
+    }
+  }, [activeTab, favorites])
+
+  // Redirect if no user
   if (!user) {
     window.location.href = '/'
-    return null
+    return (
+      <div className="min-h-screen bg-[#F4F1EA] flex items-center justify-center">
+        <div className="animate-pulse text-[#502038]">Přesměrovávám...</div>
+      </div>
+    )
   }
 
   const handleLogout = async () => {
@@ -33,10 +118,70 @@ export default function ProfilePage() {
     navigate('/')
   }
 
+  const handleRemoveFavorite = async (productId: string) => {
+    try {
+      await removeFromFavorites(productId)
+      toast({
+        title: "Odebráno z oblíbených",
+        description: "Produkt byl odebrán z vašich oblíbených.",
+      })
+    } catch (error) {
+      console.error('Error removing favorite:', error)
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se odebrat produkt z oblíbených.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleAddToCart = async (product: FavoriteProduct, event: React.MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!product.variantId) {
+      toast({
+        title: "Chyba",
+        description: "Produkt nemá dostupné varianty.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setAddingToCart(product.id)
+      const priceNumber = parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+
+      await addToCart({
+        id: product.id,
+        name: product.title,
+        price: priceNumber,
+        image: product.image,
+        category: 'Shopify Product',
+        variantId: product.variantId,
+        isShopifyProduct: true,
+      })
+
+      toast({
+        title: "Přidáno do košíku",
+        description: `${product.title} byl přidán do vašeho košíku.`,
+      })
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast({
+        title: "Chyba při přidávání do košíku",
+        description: "Nepodařilo se přidat produkt do košíku. Zkuste to prosím znovu.",
+        variant: "destructive",
+      })
+    } finally {
+      setAddingToCart(null)
+    }
+  }
+
   const menuItems = [
     { id: 'overview' as const, label: 'Přehled účtu', icon: User },
     { id: 'orders' as const, label: 'Moje objednávky', icon: Package },
-    { id: 'favorites' as const, label: `Oblíbené (${getFavoriteCount()})`, icon: Heart },
+    { id: 'favorites' as const, label: `Oblíbené produkty (${getFavoriteCount()})`, icon: Heart },
     { id: 'logout' as const, label: 'Odhlásit se', icon: LogOut, isLogout: true },
   ]
 
@@ -50,74 +195,92 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#F4F1EA]">
       <Navigation />
       
+      {/* Hlavní padding odshora */}
       <div className="pt-32 pb-20">
         <div className="max-w-[1200px] mx-auto px-6">
           
+          {/* HLAVNÍ NADPIS */}
           <div className="mb-12 text-center max-w-2xl mx-auto">
             <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#502038] mb-4">
-              Vítejte, {user.firstName || 'Uživateli'}
+              Vítejte, {user && user.firstName ? user.firstName : 'Uživateli'}
             </h1>
             <p className="text-[#502038]/70 text-lg font-light">
-              Váš osobní prostor pro správu účtu
+              Váš osobní prostor pro správu objednávek a přání
             </p>
           </div>
 
-          {/* GRID: Bez 'items-start', aby se sloupce natáhly na výšku */}
+          {/* GRID LAYOUT - ZMĚNA ZDE */}
+          {/* 1. Odstranil jsem 'items-start'. Nyní se sloupce natáhnou na stejnou výšku. */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
             
-            {/* LEVÝ SLOUPEC: Slouží jako kolejnice pro sticky */}
-            <aside className="lg:col-span-3 h-full">
+            {/* SIDEBAR SLOUPER */}
+            {/* 2. Odstranil jsem 'sticky' z tohoto wrapperu. Tento wrapper teď slouží jako "kolejnice" přes celou výšku. */}
+            <aside className="lg:col-span-3">
               
-              {/* STICKY MENU: */}
-              {/* top-32 = odstup od vrchu */}
-              {/* self-start = důležité, aby se element neroztahoval, ale držel svou velikost */}
-              <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 overflow-hidden py-2 sticky top-32 self-start transition-all duration-300">
+              {/* 3. PŘIDAL JSEM STICKY SEM - na vnitřní kartu */}
+              {/* sticky top-32: karta se přilepí k vrchu okna (s odstupem) a pojede dolů v rámci sloupce */}
+              <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 overflow-hidden py-2 lg:sticky lg:top-32 transition-all duration-300">
                 <div className="space-y-1 p-2">
-                  {menuItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => item.isLogout ? handleLogout() : setActiveTab(item.id)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
-                        activeTab === item.id && !item.isLogout
-                          ? 'bg-[#E0C36C] text-white shadow-md'
-                          : item.isLogout 
-                            ? 'text-red-500 hover:bg-red-50' 
-                            : 'text-[#502038]/80 hover:bg-[#F4F1EA] hover:text-[#502038]'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <item.icon className={`w-4 h-4 ${activeTab === item.id && !item.isLogout ? 'text-white' : ''}`} />
-                        <span className="font-medium">{item.label}</span>
-                      </div>
-                      {!item.isLogout && activeTab === item.id && <ChevronRight className="w-4 h-4 text-white" />}
-                    </button>
-                  ))}
+                  {menuItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    const isLogout = item.isLogout;
+
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => isLogout ? handleLogout() : setActiveTab(item.id)}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
+                          isActive && !isLogout
+                            ? 'bg-[#E0C36C] text-white shadow-md'
+                            : isLogout 
+                              ? 'text-red-500 hover:bg-red-50' 
+                              : 'text-[#502038]/80 hover:bg-[#F4F1EA] hover:text-[#502038]'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Icon className={`w-4 h-4 ${isActive && !isLogout ? 'text-white' : ''}`} />
+                          <span className="font-medium">{item.label}</span>
+                        </div>
+                        {!isLogout && isActive && <ChevronRight className="w-4 h-4 text-white" />}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </aside>
 
-            {/* PRAVÝ OBSAH */}
+            {/* MAIN CONTENT */}
             <main className="lg:col-span-9 min-w-0">
               
+              {/* Sekce: Přehled účtu */}
               {activeTab === 'overview' && (
                 <div className="space-y-6 fade-in-up">
+                  
+                  {/* Karta: Osobní údaje */}
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Osobní údaje</h2>
                       <EditButton />
                     </div>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div>
                         <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Jméno</span>
-                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">{user.firstName || '-'}</p>
+                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                          {user && user.firstName ? user.firstName : '-'}
+                        </p>
                       </div>
                       <div>
                         <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Příjmení</span>
-                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">{user.lastName || '-'}</p>
+                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                          {user && user.lastName ? user.lastName : '-'}
+                        </p>
                       </div>
                     </div>
                   </div>
 
+                  {/* Karta: Kontaktní údaje */}
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Kontaktní údaje</h2>
@@ -125,10 +288,13 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Email</span>
-                      <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">{user.email || '-'}</p>
+                      <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                        {user && user.email ? user.email : '-'}
+                      </p>
                     </div>
                   </div>
 
+                  {/* Karta: Adresa */}
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Doručovací adresa</h2>
@@ -152,6 +318,7 @@ export default function ProfilePage() {
                 </div>
               )}
 
+              {/* Sekce: Objednávky */}
               {activeTab === 'orders' && (
                 <div className="space-y-6 fade-in-up">
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
@@ -160,7 +327,7 @@ export default function ProfilePage() {
                     </div>
                     <h3 className="text-2xl font-serif text-[#502038] mb-2">Žádné objednávky</h3>
                     <p className="text-[#502038]/60 max-w-md mx-auto">
-                      Zatím jste u nás nenakoupili.
+                      Zatím jste u nás nenakoupili. Objevte naše jedinečné šperky a udělejte si radost.
                     </p>
                     <button onClick={() => navigate('/nahrdelniky')} className="mt-6 px-6 py-3 bg-[#502038] text-white rounded-full hover:bg-[#502038]/90 transition-colors">
                       Prohlédnout kolekci
@@ -169,20 +336,84 @@ export default function ProfilePage() {
                 </div>
               )}
 
+              {/* Sekce: Oblíbené */}
               {activeTab === 'favorites' && (
                 <div className="space-y-6 fade-in-up">
-                  <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
-                    <div className="w-20 h-20 bg-[#F4F1EA] rounded-full flex items-center justify-center mb-6">
-                      <Heart className="w-10 h-10 text-[#502038]/40" />
+                  {loadingProducts || favoritesLoading ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-[#502038]/40 mb-4" />
+                      <p className="text-[#502038]/60">Načítám oblíbené produkty...</p>
                     </div>
-                    <h3 className="text-2xl font-serif text-[#502038] mb-2">Seznam přání je prázdný</h3>
-                    <p className="text-[#502038]/60 max-w-md mx-auto">
-                      Označte si produkty srdíčkem, abyste je zde našli.
-                    </p>
-                    <button onClick={() => navigate('/')} className="mt-6 px-6 py-3 bg-[#E0C36C] text-white rounded-full hover:bg-[#E0C36C]/90 transition-colors shadow-lg shadow-[#E0C36C]/20">
-                      Jít nakupovat
-                    </button>
-                  </div>
+                  ) : favoriteProducts.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
+                      <div className="w-20 h-20 bg-[#F4F1EA] rounded-full flex items-center justify-center mb-6">
+                        <Heart className="w-10 h-10 text-[#502038]/40" />
+                      </div>
+                      <h3 className="text-2xl font-serif text-[#502038] mb-2">Seznam přání je prázdný</h3>
+                      <p className="text-[#502038]/60 max-w-md mx-auto">
+                        Označte si produkty srdíčkem, abyste je zde našli.
+                      </p>
+                      <button onClick={() => navigate('/')} className="mt-6 px-6 py-3 bg-[#E0C36C] text-white rounded-full hover:bg-[#E0C36C]/90 transition-colors shadow-lg shadow-[#E0C36C]/20">
+                        Jít nakupovat
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8">
+                      <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">
+                        Oblíbené produkty ({favoriteProducts.length})
+                      </h2>
+                      <div className="space-y-4">
+                        {favoriteProducts.map((product, index) => (
+                          <div 
+                            key={product.id} 
+                            className="flex items-center space-x-4 p-4 rounded-xl bg-gradient-to-r from-[#F4F1EA]/30 to-[#F4F1EA]/10 border border-[#502038]/10 hover:border-[#E0C36C]/30 transition-all duration-300"
+                            style={{ animationDelay: `${index * 0.1}s` }}
+                          >
+                            <Link
+                              to={`/produkt/${product.handle}`}
+                              className="flex items-center space-x-4 flex-1 min-w-0"
+                            >
+                              <div className="relative flex-shrink-0">
+                                <img
+                                  src={product.image || '/placeholder.jpg'}
+                                  alt={product.title}
+                                  className="w-20 h-20 object-cover rounded-lg shadow-sm"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-medium text-[#502038] truncate mb-1">
+                                  {product.title}
+                                </h3>
+                                <p className="text-sm font-semibold text-[#E0C36C]">
+                                  {product.price}
+                                </p>
+                              </div>
+                            </Link>
+                            <div className="flex flex-col space-y-2">
+                              <button
+                                onClick={(e) => handleAddToCart(product, e)}
+                                disabled={addingToCart === product.id || !product.variantId}
+                                className="h-8 px-3 rounded-lg border border-[#502038]/20 hover:bg-[#E0C36C]/10 hover:border-[#E0C36C] disabled:opacity-50 transition-colors flex items-center justify-center"
+                              >
+                                {addingToCart === product.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <ShoppingCart className="h-3 w-3" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleRemoveFavorite(product.id)}
+                                disabled={favoritesLoading}
+                                className="h-8 px-3 rounded-lg text-[#502038]/60 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 flex items-center justify-center"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

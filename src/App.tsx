@@ -9,7 +9,6 @@ import CategoryPage from "./pages/CategoryPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import DynamicProductPage from "./pages/product/[handle]";
 import ProfilePage from "./pages/ProfilePage";
-import OrdersPage from "./pages/OrdersPage";
 import CartPage from "./pages/CartPage";
 import AdminPage from "./pages/AdminPage";
 import AboutPage from "./pages/AboutPage";
@@ -60,7 +59,6 @@ const App = () => (
         <Route path="/produkt/:handle" element={<ProductDetailPage />} />
         <Route path="/product-shopify/:handle" element={<DynamicProductPage />} />
         <Route path="/muj-profil" element={<ProfilePage />} />
-        <Route path="/me-objednavky" element={<OrdersPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/o-nas" element={<AboutPage />} />
