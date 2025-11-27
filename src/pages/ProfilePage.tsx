@@ -9,6 +9,7 @@ export default function ProfilePage() {
   const location = useLocation()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'favorites' | 'logout'>('overview')
+  const [sidebarStyle, setSidebarStyle] = useState<React.CSSProperties>({})
 
   // Show loading only during initial auth check and only if we have no user at all
   if (loading && !user) {
@@ -59,6 +60,39 @@ export default function ProfilePage() {
     })
   }, [user])
 
+  // Handle sidebar sticky positioning with scroll detection
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      const navbarHeight = 96 // pt-24 = 96px
+      const initialOffset = 136 // marginTop for alignment
+      const threshold = initialOffset - navbarHeight // 136 - 96 = 40px
+
+      if (scrollY >= threshold) {
+        // Sidebar should stick to navbar
+        setSidebarStyle({
+          position: 'fixed',
+          top: `${navbarHeight}px`,
+          width: '280px',
+          maxWidth: '280px',
+          boxSizing: 'border-box',
+          zIndex: 10
+        })
+      } else {
+        // Sidebar in original position
+        setSidebarStyle({
+          position: 'relative',
+          top: 'auto'
+        })
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    handleScroll() // Initial call
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   // If no user after loading is complete, redirect immediately
   if (!user) {
     window.location.href = '/'
@@ -92,11 +126,11 @@ export default function ProfilePage() {
               <div 
                 className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 overflow-hidden"
                 style={{ 
-                  position: 'sticky',
-                  top: '96px',
+                  ...sidebarStyle,
                   width: '100%',
                   maxWidth: '280px',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  transition: 'all 0.2s ease-out'
                 }}
               >
                 <div className="space-y-2" style={{ width: '100%' }}>
