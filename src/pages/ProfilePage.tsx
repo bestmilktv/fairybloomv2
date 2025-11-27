@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useFavorites } from '@/contexts/FavoritesContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { User, Package, Heart, LogOut, ChevronRight, Pencil } from 'lucide-react' // Přidána ikona Pencil
+import { User, Package, Heart, LogOut, ChevronRight, Pencil } from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, loading, refreshUser, setNeedsProfileCompletion, logout } = useAuth()
@@ -59,7 +59,6 @@ export default function ProfilePage() {
     { id: 'logout' as const, label: 'Odhlásit se', icon: LogOut, isLogout: true },
   ]
 
-  // Komponenta pro Editační tlačítko (Tužka)
   const EditButton = () => (
     <button className="p-2 bg-[#F4F1EA] rounded-full text-[#502038] hover:bg-[#E0C36C] hover:text-white transition-all duration-300 shadow-sm">
       <Pencil className="w-4 h-4" />
@@ -84,17 +83,17 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          {/* GRID LAYOUT */}
-          {/* items-start zajistí, že sloupce začínají nahoře, což je potřeba pro sticky sidebar */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative">
+          {/* GRID LAYOUT - ZMĚNA ZDE */}
+          {/* 1. Odstranil jsem 'items-start'. Nyní se sloupce natáhnou na stejnou výšku. */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
             
-            {/* SIDEBAR (Sticky Menu) */}
-            {/* lg:sticky - zapne lepení na velkých obrazovkách */}
-            {/* lg:top-28 - menu se zastaví 112px (28 * 4) od vrchu okna, tedy pod navbarem */}
-            {/* self-start - zajistí, že se element neroztahuje na výšku rodiče, což je nutné pro sticky */}
-            <aside className="lg:col-span-3 lg:sticky lg:top-28 self-start z-10 transition-all duration-300">
-              <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 overflow-hidden py-2">
-                {/* ZDE JSEM ODSTRANIL "MENU" HLAVIČKU - Teď je to čistý seznam */}
+            {/* SIDEBAR SLOUPER */}
+            {/* 2. Odstranil jsem 'sticky' z tohoto wrapperu. Tento wrapper teď slouží jako "kolejnice" přes celou výšku. */}
+            <aside className="lg:col-span-3">
+              
+              {/* 3. PŘIDAL JSEM STICKY SEM - na vnitřní kartu */}
+              {/* sticky top-32: karta se přilepí k vrchu okna (s odstupem) a pojede dolů v rámci sloupce */}
+              <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 overflow-hidden py-2 lg:sticky lg:top-32 transition-all duration-300">
                 <div className="space-y-1 p-2">
                   {menuItems.map((item) => {
                     const Icon = item.icon;
@@ -136,7 +135,7 @@ export default function ProfilePage() {
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Osobní údaje</h2>
-                      <EditButton /> {/* Ikona tužky */}
+                      <EditButton />
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -159,7 +158,7 @@ export default function ProfilePage() {
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Kontaktní údaje</h2>
-                      <EditButton /> {/* Ikona tužky */}
+                      <EditButton />
                     </div>
                     <div>
                       <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Email</span>
@@ -173,7 +172,7 @@ export default function ProfilePage() {
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Doručovací adresa</h2>
-                      <EditButton /> {/* Ikona tužky */}
+                      <EditButton />
                     </div>
                     <div>
                       {user?.address && user.address.address1 ? (
