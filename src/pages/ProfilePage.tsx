@@ -1,18 +1,20 @@
-import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 
 export default function ProfilePage() {
-  const { user, loading, refreshUser, setNeedsProfileCompletion } = useAuth()
+  const { user, loading, refreshUser, setNeedsProfileCompletion, logout } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'favorites' | 'settings'>('overview')
 
   // Show loading only during initial auth check and only if we have no user at all
   if (loading && !user) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Načítám...</div>
+      <div className="min-h-screen bg-[#F4F1EA] flex items-center justify-center">
+        <div className="animate-pulse text-[#502038]">Načítám...</div>
       </div>
     )
   }
@@ -61,73 +63,177 @@ export default function ProfilePage() {
   if (!user) {
     window.location.href = '/'
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Přesměrovávám...</div>
+      <div className="min-h-screen bg-[#F4F1EA] flex items-center justify-center">
+        <div className="animate-pulse text-[#502038]">Přesměrovávám...</div>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <div className="pt-24 px-6 py-12">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-4xl font-serif font-bold text-luxury mb-4">
-              Můj profil
-            </h1>
-            <p className="text-muted-foreground">
-              Spravujte své údaje a nastavení účtu
-            </p>
-          </div>
+  const handleLogout = async () => {
+    await logout()
+    navigate('/')
+  }
 
-          {/* Display User Information */}
-          <section className="p-6 rounded-lg shadow bg-white">
-            <h2 className="text-lg font-semibold mb-4">Vaše údaje</h2>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">Email:</span>
-                <p className="text-base">
-                  {user && user.email && user.email.trim() 
-                    ? user.email 
-                    : 'Nevyplněno'}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">Jméno:</span>
-                <p className="text-base">
-                  {user && user.firstName && user.firstName.trim() 
-                    ? user.firstName 
-                    : 'Nevyplněno'}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">Příjmení:</span>
-                <p className="text-base">
-                  {user && user.lastName && user.lastName.trim() 
-                    ? user.lastName 
-                    : 'Nevyplněno'}
-                </p>
-              </div>
-              {user?.address && user.address.address1 && user.address.address1.trim() ? (
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">Adresa:</span>
-                  <p className="text-base">
-                    {user.address.address1}
-                    {user.address.address2 && user.address.address2.trim() && `, ${user.address.address2}`}
-                    {user.address.city && user.address.city.trim() && `, ${user.address.city}`}
-                    {user.address.zip && user.address.zip.trim() && ` ${user.address.zip}`}
-                    {user.address.country && user.address.country.trim() && `, ${user.address.country}`}
-                  </p>
+  const menuItems = [
+    { id: 'overview' as const, label: 'Přehled účtu' },
+    { id: 'orders' as const, label: 'Moje objednávky' },
+    { id: 'favorites' as const, label: 'Oblíbené produkty' },
+    { id: 'settings' as const, label: 'Nastavení' },
+  ]
+
+  return (
+    <div className="min-h-screen bg-[#F4F1EA]">
+      <Navigation />
+      <div className="pt-24 pb-12">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="grid grid-cols-12 gap-8">
+            {/* Sidebar */}
+            <aside className="col-span-12 md:col-span-3">
+              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 sticky top-24">
+                <nav className="space-y-2">
+                  {menuItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full text-left px-4 py-3 rounded-md transition-all duration-200 font-serif ${
+                        activeTab === item.id
+                          ? 'bg-[#E0C36C]/10 text-[#502038] border-l-4 border-[#E0C36C] font-semibold'
+                          : 'text-[#502038]/70 hover:text-[#502038] hover:bg-[#F4F1EA]'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </nav>
+                <div className="mt-8 pt-6 border-t border-[#502038]/10">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-3 rounded-md text-[#502038]/70 hover:text-[#502038] hover:bg-[#F4F1EA] transition-all duration-200 font-serif"
+                  >
+                    Odhlásit se
+                  </button>
                 </div>
-              ) : (
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">Adresa:</span>
-                  <p className="text-base">Nevyplněno</p>
+              </div>
+            </aside>
+
+            {/* Main Content */}
+            <main className="col-span-12 md:col-span-9">
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  <div className="mb-8">
+                    <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">
+                      Vítejte, {user && user.firstName && user.firstName.trim() ? user.firstName : 'Uživateli'}
+                    </h1>
+                    <p className="text-[#502038]/70 text-lg">
+                      Spravujte své údaje a nastavení účtu
+                    </p>
+                  </div>
+
+                  {/* Personal Information Card */}
+                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6">
+                    <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Osobní údaje</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <span className="text-sm font-medium text-[#502038]/60 block mb-2">Jméno</span>
+                        <p className="text-base text-[#502038]">
+                          {user && user.firstName && user.firstName.trim() 
+                            ? user.firstName 
+                            : 'Nevyplněno'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-[#502038]/60 block mb-2">Příjmení</span>
+                        <p className="text-base text-[#502038]">
+                          {user && user.lastName && user.lastName.trim() 
+                            ? user.lastName 
+                            : 'Nevyplněno'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Information Card */}
+                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6">
+                    <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Kontaktní údaje</h2>
+                    <div>
+                      <span className="text-sm font-medium text-[#502038]/60 block mb-2">Email</span>
+                      <p className="text-base text-[#502038]">
+                        {user && user.email && user.email.trim() 
+                          ? user.email 
+                          : 'Nevyplněno'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Address Information Card */}
+                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6">
+                    <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Adresa</h2>
+                    <div>
+                      {user?.address && user.address.address1 && user.address.address1.trim() ? (
+                        <p className="text-base text-[#502038] leading-relaxed">
+                          {user.address.address1}
+                          {user.address.address2 && user.address.address2.trim() && `, ${user.address.address2}`}
+                          {user.address.city && user.address.city.trim() && `, ${user.address.city}`}
+                          {user.address.zip && user.address.zip.trim() && ` ${user.address.zip}`}
+                          {user.address.country && user.address.country.trim() && `, ${user.address.country}`}
+                        </p>
+                      ) : (
+                        <p className="text-base text-[#502038]">Nevyplněno</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
-            </div>
-          </section>
+
+              {activeTab === 'orders' && (
+                <div className="space-y-6">
+                  <div className="mb-8">
+                    <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">Moje objednávky</h1>
+                    <p className="text-[#502038]/70 text-lg">
+                      Historie vašich objednávek
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-12 text-center">
+                    <p className="text-[#502038]/70 text-lg font-serif">
+                      Zatím nemáte žádné objednávky
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'favorites' && (
+                <div className="space-y-6">
+                  <div className="mb-8">
+                    <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">Oblíbené produkty</h1>
+                    <p className="text-[#502038]/70 text-lg">
+                      Produkty, které jste si označili jako oblíbené
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-12 text-center">
+                    <p className="text-[#502038]/70 text-lg font-serif">
+                      Zatím nemáte žádné oblíbené produkty
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'settings' && (
+                <div className="space-y-6">
+                  <div className="mb-8">
+                    <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">Nastavení</h1>
+                    <p className="text-[#502038]/70 text-lg">
+                      Spravujte nastavení svého účtu
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-12 text-center">
+                    <p className="text-[#502038]/70 text-lg font-serif">
+                      Nastavení budou brzy k dispozici
+                    </p>
+                  </div>
+                </div>
+              )}
+            </main>
+          </div>
         </div>
       </div>
       <Footer />
