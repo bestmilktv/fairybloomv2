@@ -85,7 +85,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
 
   // Podmíněné třídy podle disableAnimations
   const cardClasses = disableAnimations
-    ? "bg-card rounded-2xl overflow-hidden shadow-sm h-full flex flex-col transition-none"
+    ? "bg-card rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] h-full flex flex-col transition-none"
     : "bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col";
   
   const imageClasses = disableAnimations
@@ -93,8 +93,8 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
     : "w-full h-full object-cover transition-transform duration-700 hover:scale-110";
   
   const titleClasses = disableAnimations
-    ? "font-serif text-xl font-semibold text-luxury mb-2 line-clamp-2 min-h-[3.5rem]"
-    : "font-serif text-xl font-semibold text-luxury mb-2 hover:text-gold transition-colors duration-300 line-clamp-2 min-h-[3.5rem]";
+    ? "font-serif text-xl font-semibold text-primary mb-2 line-clamp-2 min-h-[3.5rem]"
+    : "font-serif text-xl font-semibold text-primary mb-2 hover:text-accent transition-colors duration-300 line-clamp-2 min-h-[3.5rem]";
 
   // Podmíněné třídy pro wrapper obrázku - odstraníme bg-muted když disableAnimations
   const imageWrapperClasses = disableAnimations

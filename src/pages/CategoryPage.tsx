@@ -205,7 +205,7 @@ const CategoryPage = () => {
       {/* Category Header */}
       <section className="pb-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 key={`title-${decodedCategory}`} className="fade-in-progressive-1 text-5xl md:text-6xl font-serif font-bold text-luxury mb-6 tracking-wide">
+          <h1 key={`title-${decodedCategory}`} className="fade-in-progressive-1 text-5xl md:text-6xl font-serif font-bold text-primary mb-6 tracking-wide">
             {categoryData.title}
           </h1>
           <p key={`subtitle-${decodedCategory}`} className="fade-in-progressive-2 text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">

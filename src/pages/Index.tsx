@@ -280,7 +280,7 @@ const Index = () => {
       >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 fade-in-up">
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-6 tracking-wide">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-6 tracking-wide">
               Proč si vybrat Fairy Bloom
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
@@ -295,7 +295,7 @@ const Index = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-serif font-semibold text-luxury mb-4">Ruční výroba</h3>
+              <h3 className="text-2xl font-serif font-semibold text-primary mb-4">Ruční výroba</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Každý šperk je pečlivě vytvořen ručně s důrazem na detail a kvalitu
               </p>
@@ -307,7 +307,7 @@ const Index = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-serif font-semibold text-luxury mb-4">Přírodní materiály</h3>
+              <h3 className="text-2xl font-serif font-semibold text-primary mb-4">Přírodní materiály</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Používáme pouze prémiové přírodní materiály a skutečné květiny
               </p>
@@ -319,7 +319,7 @@ const Index = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-serif font-semibold text-luxury mb-4">Česká kvalita</h3>
+              <h3 className="text-2xl font-serif font-semibold text-primary mb-4">Česká kvalita</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Vyrábíme v České republice s garancí nejvyšší kvality a preciznosti
               </p>
@@ -336,14 +336,14 @@ const Index = () => {
       >
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16 fade-in-up">
-            <h2 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-8 tracking-wide">
+            <h2 className="text-5xl md:text-6xl font-serif font-bold text-primary mb-8 tracking-wide">
               Můj příběh
             </h2>
           </div>
           
           <div className="space-y-8 fade-in-up-delayed" style={{ animationDelay: '0.2s' }}>
             <div className="text-center mb-12">
-              <p className="text-2xl md:text-3xl font-serif font-medium text-luxury/90 italic leading-relaxed max-w-3xl mx-auto">
+              <p className="text-2xl md:text-3xl font-serif font-medium text-primary/90 italic leading-relaxed max-w-3xl mx-auto">
                 Každý detail má svůj význam.<br />
                 Každý okamžik si zaslouží být výjimečný.
               </p>
@@ -351,7 +351,7 @@ const Index = () => {
 
             <div className="prose prose-lg max-w-none text-foreground/90 leading-relaxed space-y-6">
               <p className="text-lg md:text-xl leading-relaxed">
-                Jmenuji se <span className="font-semibold text-luxury">Terka</span> a FairyBloom vznikl z touhy tvořit něco víc než jen šperky – chtěla jsem vytvořit zážitek, který lidem připomene krásu jednoduchosti a sílu osobních příběhů.
+                Jmenuji se <span className="font-semibold text-primary">Terka</span> a FairyBloom vznikl z touhy tvořit něco víc než jen šperky – chtěla jsem vytvořit zážitek, který lidem připomene krásu jednoduchosti a sílu osobních příběhů.
               </p>
               
               <p className="text-lg md:text-xl leading-relaxed">
@@ -363,7 +363,7 @@ const Index = () => {
               </p>
               
               <div className="mt-12 pt-8 border-t border-primary/20">
-                <p className="text-xl md:text-2xl font-serif font-semibold text-luxury text-center leading-relaxed">
+                <p className="text-xl md:text-2xl font-serif font-semibold text-primary text-center leading-relaxed">
                   FairyBloom není jen značka.<br />
                   <span className="font-normal italic">Je to filozofie pomalé krásy, která se rodí z klidu, péče a respektu k detailu.</span>
                 </p>
@@ -382,7 +382,7 @@ const Index = () => {
       >
         <div className="max-w-2xl mx-auto text-center">
           <div className="fade-in-up">
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-6 tracking-wide">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-6 tracking-wide">
               Objevte nové kolekce jako první
             </h2>
             <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
@@ -402,7 +402,7 @@ const Index = () => {
               <button 
                 type="submit"
                 disabled={isSubmitting}
-                className="px-8 py-4 bg-luxury text-luxury-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-luxury/25 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium tracking-wide hover:bg-primary/90 hover:shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isSubmitting ? 'Odesílám...' : 'Odebírat'}
               </button>

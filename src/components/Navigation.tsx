@@ -61,12 +61,12 @@ const Navigation = () => {
           });
         }}>
             <img src={logo} alt="Fairy Bloom Logo" className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain flex-shrink-0" />
-            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-luxury tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis">FAIRY BLOOM</h1>
+            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-primary tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis">FAIRY BLOOM</h1>
           </Link>
 
           {/* Category Navigation */}
           <div className="hidden md:flex items-center space-x-8 flex-shrink-0">
-            {categories.map(category => <Link key={category.path} to={category.path} className="text-foreground/80 hover:text-gold transition-colors duration-300 font-medium tracking-wide">
+            {categories.map(category => <Link key={category.path} to={category.path} className="text-primary/80 hover:text-primary transition-colors duration-300 font-medium tracking-wide">
                 {category.name}
               </Link>)}
           </div>
@@ -76,32 +76,32 @@ const Navigation = () => {
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-gold hover:text-gold/80 relative h-9 w-9 sm:h-10 sm:w-10">
+                  <Button variant="ghost" size="icon" className="text-primary/80 hover:text-primary hover:bg-background/50 relative h-9 w-9 sm:h-10 sm:w-10">
                     <UserCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent 
                   align="end" 
-                  className="w-56 bg-background/95 backdrop-blur-xl border-gold/20 shadow-xl mt-2"
+                  className="w-56 bg-background/95 backdrop-blur-xl border-border shadow-xl mt-2"
                   sideOffset={8}
                 >
                   <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-luxury">
+                    <p className="text-sm font-medium text-primary">
                       {user.firstName} {user.lastName}
                     </p>
-                    <p className="text-xs text-foreground/60">{user.email}</p>
+                    <p className="text-xs text-primary/60">{user.email}</p>
                   </div>
-                  <DropdownMenuSeparator className="bg-gold/20" />
+                  <DropdownMenuSeparator className="bg-border" />
                   <DropdownMenuItem asChild>
-                    <Link to="/muj-profil" className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold">
+                    <Link to="/muj-profil" className="flex items-center text-primary/80 hover:bg-background/50 hover:text-primary focus:bg-background/50 focus:text-primary">
                       <Settings className="mr-2 h-4 w-4" />
                       Můj profil
                     </Link>
                   </DropdownMenuItem>
-                   <DropdownMenuSeparator className="bg-gold/20" />
+                   <DropdownMenuSeparator className="bg-border" />
                    <DropdownMenuItem 
                      onClick={handleSignOut}
-                     className="flex items-center text-foreground/80 hover:bg-gold/10 hover:text-gold focus:bg-gold/10 focus:text-gold cursor-pointer"
+                     className="flex items-center text-primary/80 hover:bg-background/50 hover:text-primary focus:bg-background/50 focus:text-primary cursor-pointer"
                    >
                      <LogOut className="mr-2 h-4 w-4" />
                      Odhlásit se
@@ -112,7 +112,7 @@ const Navigation = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="text-foreground/80 hover:text-gold h-9 w-9 sm:h-10 sm:w-10"
+                className="text-primary/80 hover:text-primary hover:bg-background/50 h-9 w-9 sm:h-10 sm:w-10"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <User className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -121,7 +121,7 @@ const Navigation = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-foreground/80 hover:text-gold relative h-9 w-9 sm:h-10 sm:w-10"
+              className="text-primary/80 hover:text-primary hover:bg-background/50 relative h-9 w-9 sm:h-10 sm:w-10"
               onClick={() => setFavoritesSidebarOpen(true)}
             >
               <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -134,7 +134,7 @@ const Navigation = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-foreground/80 hover:text-gold relative h-9 w-9 sm:h-10 sm:w-10"
+              className="text-primary/80 hover:text-primary hover:bg-background/50 relative h-9 w-9 sm:h-10 sm:w-10"
               onClick={() => setMiniCartOpen(true)}
               data-cart-icon
             >

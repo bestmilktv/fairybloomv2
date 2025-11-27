@@ -214,7 +214,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
     return (
       <div className="mt-16 pt-16 pb-16 border-t border-border">
         <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl font-serif font-bold text-luxury mb-8 text-center">
+          <h2 className="text-3xl font-serif font-bold text-primary mb-8 text-center">
             Mohlo by se vám líbit
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -255,7 +255,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                 
                 {/* Content */}
                 <div className="p-6 flex flex-col flex-grow">
-                  <h3 className="font-serif text-xl font-semibold text-luxury mb-4 group-hover:text-gold transition-colors duration-300 line-clamp-2 min-h-[3.5rem]">
+                  <h3 className="font-serif text-xl font-semibold text-primary mb-4 group-hover:text-accent transition-colors duration-300 line-clamp-2 min-h-[3.5rem]">
                     {product.title}
                   </h3>
                   

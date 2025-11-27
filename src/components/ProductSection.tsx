@@ -34,7 +34,7 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16 fade-in-up">
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-4 tracking-wide">
+          <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-4 tracking-wide">
             {title}
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
