@@ -88,12 +88,10 @@ export default function ProfilePage() {
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex flex-col md:flex-row gap-8">
             {/* Sidebar */}
-            <aside className="w-full md:w-[280px] flex-shrink-0">
+            <aside className="w-full md:w-[280px] flex-shrink-0 md:mt-[140px]">
               <div 
                 className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 overflow-hidden"
                 style={{ 
-                  position: 'sticky',
-                  top: '96px',
                   width: '100%',
                   maxWidth: '280px',
                   boxSizing: 'border-box'
