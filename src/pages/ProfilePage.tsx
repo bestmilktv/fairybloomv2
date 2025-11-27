@@ -54,7 +54,7 @@ export default function ProfilePage() {
   if (loading && !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-luxury">Načítám...</div>
+        <div className="animate-pulse text-primary">Načítám...</div>
       </div>
     )
   }
@@ -149,7 +149,7 @@ export default function ProfilePage() {
     window.location.href = '/'
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-luxury">Přesměrovávám...</div>
+        <div className="animate-pulse text-primary">Přesměrovávám...</div>
       </div>
     )
   }
@@ -474,7 +474,7 @@ export default function ProfilePage() {
     <button 
       onClick={() => setEditingSection(section)}
       disabled={editingSection !== null}
-      className="p-2 bg-background rounded-full text-luxury hover:bg-gold hover:text-luxury transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      className="p-2 bg-background rounded-full text-primary hover:bg-accent hover:text-white transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <Pencil className="w-4 h-4" />
     </button>
@@ -484,7 +484,7 @@ export default function ProfilePage() {
     <button
       onClick={onSave}
       disabled={disabled || saving}
-      className="p-2 bg-gold rounded-full text-luxury hover:bg-gold/90 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      className="p-2 bg-accent rounded-full text-white hover:bg-accent/90 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {saving ? (
         <Loader2 className="w-4 h-4 animate-spin" />
@@ -498,7 +498,7 @@ export default function ProfilePage() {
     <button
       onClick={onCancel}
       disabled={saving}
-      className="p-2 bg-muted rounded-full text-muted-foreground hover:bg-muted/80 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      className="p-2 bg-gray-200 rounded-full text-gray-600 hover:bg-gray-300 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <X className="w-4 h-4" />
     </button>
@@ -514,10 +514,10 @@ export default function ProfilePage() {
           
           {/* HLAVNÍ NADPIS */}
           <div className="mb-12 text-center max-w-2xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-4">
+            <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-4">
               Vítejte, {user && user.firstName ? user.firstName : 'Uživateli'}
             </h1>
-            <p className="text-luxury/70 text-lg font-light">
+            <p className="text-primary/70 text-lg font-light">
               Váš osobní prostor pro správu objednávek a přání
             </p>
           </div>
@@ -532,7 +532,7 @@ export default function ProfilePage() {
               
               {/* 3. PŘIDAL JSEM STICKY SEM - na vnitřní kartu */}
               {/* sticky top-32: karta se přilepí k vrchu okna (s odstupem) a pojede dolů v rámci sloupce */}
-              <div className="bg-white rounded-xl shadow-sm border border-luxury/10 overflow-hidden py-2 lg:sticky lg:top-32 transition-all duration-300">
+              <div className="bg-white rounded-xl shadow-sm border border-primary/10 overflow-hidden py-2 lg:sticky lg:top-32 transition-all duration-300">
                 <div className="space-y-1 p-2">
                   {menuItems.map((item) => {
                     const Icon = item.icon;
@@ -545,10 +545,10 @@ export default function ProfilePage() {
                         onClick={() => isLogout ? handleLogout() : setActiveTab(item.id)}
                         className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
                           isActive && !isLogout
-                            ? 'bg-gold text-luxury shadow-md'
+                            ? 'bg-accent text-white shadow-md'
                             : isLogout 
                               ? 'text-red-500 hover:bg-red-50' 
-                              : 'text-luxury/80 hover:bg-background hover:text-luxury'
+                              : 'text-primary/80 hover:bg-background hover:text-primary'
                         }`}
                       >
                         <div className="flex items-center space-x-3">
@@ -571,9 +571,9 @@ export default function ProfilePage() {
                 <div className="space-y-6 fade-in-up">
                   
                   {/* Karta: Osobní údaje */}
-                  <div className="bg-white rounded-xl shadow-sm border border-luxury/10 p-8 hover:shadow-md transition-shadow">
+                  <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-serif font-semibold text-luxury">Osobní údaje</h2>
+                      <h2 className="text-2xl font-serif font-semibold text-primary">Osobní údaje</h2>
                       <div className="flex items-center gap-2">
                         {editingSection === 'personal' ? (
                           <>
@@ -589,37 +589,37 @@ export default function ProfilePage() {
                     {editingSection === 'personal' ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <Label htmlFor="editFirstName" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Jméno</Label>
+                          <Label htmlFor="editFirstName" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Jméno</Label>
                           <Input
                             id="editFirstName"
                             value={editFirstName}
                             onChange={(e) => setEditFirstName(e.target.value)}
                             disabled={saving}
-                            className="text-lg text-luxury"
+                            className="text-lg text-primary"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="editLastName" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Příjmení</Label>
+                          <Label htmlFor="editLastName" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Příjmení</Label>
                           <Input
                             id="editLastName"
                             value={editLastName}
                             onChange={(e) => setEditLastName(e.target.value)}
                             disabled={saving}
-                            className="text-lg text-luxury"
+                            className="text-lg text-primary"
                           />
                         </div>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                          <span className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-1">Jméno</span>
-                          <p className="text-lg text-luxury font-medium border-b border-luxury/10 pb-2">
+                          <span className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-1">Jméno</span>
+                          <p className="text-lg text-primary font-medium border-b border-primary/10 pb-2">
                             {user && user.firstName ? user.firstName : '-'}
                           </p>
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-1">Příjmení</span>
-                          <p className="text-lg text-luxury font-medium border-b border-luxury/10 pb-2">
+                          <span className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-1">Příjmení</span>
+                          <p className="text-lg text-primary font-medium border-b border-primary/10 pb-2">
                             {user && user.lastName ? user.lastName : '-'}
                           </p>
                         </div>
@@ -628,9 +628,9 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Karta: Kontaktní údaje */}
-                  <div className="bg-white rounded-xl shadow-sm border border-luxury/10 p-8 hover:shadow-md transition-shadow">
+                  <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-serif font-semibold text-luxury">Kontaktní údaje</h2>
+                      <h2 className="text-2xl font-serif font-semibold text-primary">Kontaktní údaje</h2>
                       <div className="flex items-center gap-2">
                         {editingSection === 'contact' ? (
                           <>
@@ -645,18 +645,18 @@ export default function ProfilePage() {
                     {editingSection === 'contact' ? (
                       <div className="space-y-4">
                         <div>
-                          <Label htmlFor="editEmail" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Email</Label>
+                          <Label htmlFor="editEmail" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Email</Label>
                           <Input
                             id="editEmail"
                             type="email"
                             value={editEmail}
                             disabled={true}
-                            className="text-lg text-luxury bg-muted"
+                            className="text-lg text-primary bg-gray-100"
                           />
-                          <p className="text-sm text-luxury/60 mt-2">Email nelze změnit. Kontaktujte prosím podporu.</p>
+                          <p className="text-sm text-primary/60 mt-2">Email nelze změnit. Kontaktujte prosím podporu.</p>
                         </div>
                         <div>
-                          <Label htmlFor="editContactPhone" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Telefon (volitelné)</Label>
+                          <Label htmlFor="editContactPhone" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Telefon (volitelné)</Label>
                           <Input
                             id="editContactPhone"
                             type="tel"
@@ -664,21 +664,21 @@ export default function ProfilePage() {
                             onChange={(e) => setEditContactPhone(e.target.value)}
                             disabled={saving}
                             placeholder="Např. +420 123 456 789"
-                            className="text-lg text-luxury"
+                            className="text-lg text-primary"
                           />
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-4">
                         <div>
-                          <span className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-1">Email</span>
-                          <p className="text-lg text-luxury font-medium border-b border-luxury/10 pb-2">
+                          <span className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-1">Email</span>
+                          <p className="text-lg text-primary font-medium border-b border-primary/10 pb-2">
                             {user && user.email ? user.email : '-'}
                           </p>
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-1">Telefon</span>
-                          <p className="text-lg text-luxury font-medium border-b border-luxury/10 pb-2">
+                          <span className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-1">Telefon</span>
+                          <p className="text-lg text-primary font-medium border-b border-primary/10 pb-2">
                             {user?.address?.phone ? user.address.phone : '-'}
                           </p>
                         </div>
@@ -687,9 +687,9 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Karta: Adresa */}
-                  <div className="bg-white rounded-xl shadow-sm border border-luxury/10 p-8 hover:shadow-md transition-shadow">
+                  <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-serif font-semibold text-luxury">Doručovací adresa</h2>
+                      <h2 className="text-2xl font-serif font-semibold text-primary">Doručovací adresa</h2>
                       <div className="flex items-center gap-2">
                         {editingSection === 'address' ? (
                           <>
@@ -704,56 +704,56 @@ export default function ProfilePage() {
                     {editingSection === 'address' ? (
                       <div className="space-y-4">
                         <div>
-                          <Label htmlFor="editAddress1" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Ulice a číslo popisné *</Label>
+                          <Label htmlFor="editAddress1" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Ulice a číslo popisné *</Label>
                           <Input
                             id="editAddress1"
                             value={editAddress1}
                             onChange={(e) => setEditAddress1(e.target.value)}
                             disabled={saving}
-                            className="text-lg text-luxury"
+                            className="text-lg text-primary"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="editAddress2" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Doplňující údaje (volitelné)</Label>
+                          <Label htmlFor="editAddress2" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Doplňující údaje (volitelné)</Label>
                           <Input
                             id="editAddress2"
                             value={editAddress2}
                             onChange={(e) => setEditAddress2(e.target.value)}
                             disabled={saving}
-                            className="text-lg text-luxury"
+                            className="text-lg text-primary"
                           />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="editCity" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Město *</Label>
+                            <Label htmlFor="editCity" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Město *</Label>
                             <Input
                               id="editCity"
                               value={editCity}
                               onChange={(e) => setEditCity(e.target.value)}
                               disabled={saving}
-                              className="text-lg text-luxury"
+                              className="text-lg text-primary"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="editZip" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">PSČ *</Label>
+                            <Label htmlFor="editZip" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">PSČ *</Label>
                             <Input
                               id="editZip"
                               value={editZip}
                               onChange={(e) => setEditZip(e.target.value)}
                               disabled={saving}
-                              className="text-lg text-luxury"
+                              className="text-lg text-primary"
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="editCountry" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Země *</Label>
+                            <Label htmlFor="editCountry" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Země *</Label>
                             <Select
                               value={editCountry}
                               onValueChange={setEditCountry}
                               disabled={saving}
                             >
-                              <SelectTrigger id="editCountry" className="text-lg text-luxury">
+                              <SelectTrigger id="editCountry" className="text-lg text-primary">
                                 <SelectValue>
                                   {editCountry ? (getCountryByCode(editCountry)?.name || editCountry) : 'Vyberte zemi'}
                                 </SelectValue>
@@ -768,14 +768,14 @@ export default function ProfilePage() {
                             </Select>
                           </div>
                           <div>
-                            <Label htmlFor="editPhone" className="text-xs font-bold text-luxury/40 uppercase tracking-wider block mb-2">Telefon (volitelné)</Label>
+                            <Label htmlFor="editPhone" className="text-xs font-bold text-primary/40 uppercase tracking-wider block mb-2">Telefon (volitelné)</Label>
                             <Input
                               id="editPhone"
                               type="tel"
                               value={editPhone}
                               onChange={(e) => setEditPhone(e.target.value)}
                               disabled={saving}
-                              className="text-lg text-luxury"
+                              className="text-lg text-primary"
                             />
                           </div>
                         </div>
@@ -783,14 +783,14 @@ export default function ProfilePage() {
                     ) : (
                       <div>
                         {user?.address && user.address.address1 ? (
-                          <div className="text-lg text-luxury space-y-1">
+                          <div className="text-lg text-primary space-y-1">
                             <p>{user.address.address1}</p>
                             {user.address.address2 && <p>{user.address.address2}</p>}
                             <p>{user.address.city} {user.address.zip}</p>
                             <p>{user.address.country}</p>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center py-8 text-luxury/50 bg-background/50 rounded-lg border border-dashed border-luxury/20">
+                          <div className="flex flex-col items-center justify-center py-8 text-primary/50 bg-background/50 rounded-lg border border-dashed border-primary/20">
                             <p>Adresa není vyplněna</p>
                           </div>
                         )}
@@ -803,15 +803,15 @@ export default function ProfilePage() {
               {/* Sekce: Objednávky */}
               {activeTab === 'orders' && (
                 <div className="space-y-6 fade-in-up">
-                  <div className="bg-white rounded-xl shadow-sm border border-luxury/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
+                  <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
                     <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center mb-6">
-                      <Package className="w-10 h-10 text-luxury/40" />
+                      <Package className="w-10 h-10 text-primary/40" />
                     </div>
-                    <h3 className="text-2xl font-serif text-luxury mb-2">Žádné objednávky</h3>
-                    <p className="text-luxury/60 max-w-md mx-auto">
+                    <h3 className="text-2xl font-serif text-primary mb-2">Žádné objednávky</h3>
+                    <p className="text-primary/60 max-w-md mx-auto">
                       Zatím jste u nás nenakoupili. Objevte naše jedinečné šperky a udělejte si radost.
                     </p>
-                    <button onClick={() => navigate('/nahrdelniky')} className="mt-6 px-6 py-3 bg-luxury text-luxury-foreground rounded-full hover:bg-luxury/90 transition-colors">
+                    <button onClick={() => navigate('/nahrdelniky')} className="mt-6 px-6 py-3 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors">
                       Prohlédnout kolekci
                     </button>
                   </div>
@@ -822,33 +822,33 @@ export default function ProfilePage() {
               {activeTab === 'favorites' && (
                 <div className="space-y-6 fade-in-up">
                   {loadingProducts || favoritesLoading ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-luxury/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-luxury/40 mb-4" />
-                      <p className="text-luxury/60">Načítám oblíbené produkty...</p>
+                    <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary/40 mb-4" />
+                      <p className="text-primary/60">Načítám oblíbené produkty...</p>
                     </div>
                   ) : favoriteProducts.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-luxury/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
+                    <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
                       <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center mb-6">
-                        <Heart className="w-10 h-10 text-luxury/40" />
+                        <Heart className="w-10 h-10 text-primary/40" />
                       </div>
-                      <h3 className="text-2xl font-serif text-luxury mb-2">Seznam přání je prázdný</h3>
-                      <p className="text-luxury/60 max-w-md mx-auto">
+                      <h3 className="text-2xl font-serif text-primary mb-2">Seznam přání je prázdný</h3>
+                      <p className="text-primary/60 max-w-md mx-auto">
                         Označte si produkty srdíčkem, abyste je zde našli.
                       </p>
-                      <button onClick={() => navigate('/')} className="mt-6 px-6 py-3 bg-gold text-luxury rounded-full hover:bg-gold/90 transition-colors shadow-lg shadow-gold/20">
+                      <button onClick={() => navigate('/')} className="mt-6 px-6 py-3 bg-accent text-white rounded-full hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20">
                         Jít nakupovat
                       </button>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-xl shadow-sm border border-luxury/10 p-8">
-                      <h2 className="text-2xl font-serif font-semibold text-luxury mb-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-8">
+                      <h2 className="text-2xl font-serif font-semibold text-primary mb-6">
                         Oblíbené produkty ({favoriteProducts.length})
                       </h2>
                       <div className="space-y-4">
                         {favoriteProducts.map((product, index) => (
                           <div 
                             key={product.id} 
-                            className="flex items-center space-x-4 p-4 rounded-xl bg-gradient-to-r from-background/30 to-background/10 border border-luxury/10 hover:border-gold/30 transition-all duration-300"
+                            className="flex items-center space-x-4 p-4 rounded-xl bg-gradient-to-r from-background/30 to-background/10 border border-primary/10 hover:border-accent/30 transition-all duration-300"
                             style={{ animationDelay: `${index * 0.1}s` }}
                           >
                             <Link
@@ -863,10 +863,10 @@ export default function ProfilePage() {
                                 />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-luxury truncate mb-1">
+                                <h3 className="font-medium text-primary truncate mb-1">
                                   {product.title}
                                 </h3>
-                                <p className="text-sm font-semibold text-gold">
+                                <p className="text-sm font-semibold text-accent">
                                   {product.price}
                                 </p>
                               </div>
@@ -875,7 +875,7 @@ export default function ProfilePage() {
                               <button
                                 onClick={(e) => handleAddToCart(product, e)}
                                 disabled={addingToCart === product.id || !product.variantId}
-                                className="h-8 px-3 rounded-lg border border-luxury/20 hover:bg-gold/10 hover:border-gold disabled:opacity-50 transition-colors flex items-center justify-center"
+                                className="h-8 px-3 rounded-lg border border-primary/20 hover:bg-accent/10 hover:border-accent disabled:opacity-50 transition-colors flex items-center justify-center"
                               >
                                 {addingToCart === product.id ? (
                                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -886,7 +886,7 @@ export default function ProfilePage() {
                               <button
                                 onClick={() => handleRemoveFavorite(product.id)}
                                 disabled={favoritesLoading}
-                                className="h-8 px-3 rounded-lg text-luxury/60 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 flex items-center justify-center"
+                                className="h-8 px-3 rounded-lg text-primary/60 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 flex items-center justify-center"
                               >
                                 <X className="h-3 w-3" />
                               </button>

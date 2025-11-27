@@ -11,70 +11,71 @@ html {
 
 @layer base {
   :root {
-    /* Base colors - Premium color palette: F4F1EA, 582038, E0C36C */
-    /* Background: #F4F1EA - light beige/ivory */
-    --background: 42 31% 94%;
-    --foreground: 326 42% 24%;
+    /* Base colors - Premium color palette from ProfilePage */
+    /* Background: #F4F1EA */
+    --background: 45 31% 94%;
+    /* Foreground: #582038 (secondary color) */
+    --foreground: 340 47% 24%;
 
     /* Card system - subtle warmth */
-    --card: 42 28% 96%;
-    --card-foreground: 326 42% 24%;
+    --card: 45 28% 96%;
+    --card-foreground: 340 47% 24%;
 
     /* Popover system */
-    --popover: 42 28% 96%;
-    --popover-foreground: 326 42% 24%;
+    --popover: 45 28% 96%;
+    --popover-foreground: 340 47% 24%;
 
-    /* Primary - burgundy/maroon #582038 */
-    --primary: 326 42% 24%;
-    --primary-foreground: 42 31% 94%;
+    /* Primary - secondary color #582038 */
+    --primary: 340 47% 24%;
+    --primary-foreground: 45 31% 94%;
 
-    /* Secondary - light beige background */
-    --secondary: 42 25% 92%;
-    --secondary-foreground: 326 42% 24%;
+    /* Secondary - background color #F4F1EA */
+    --secondary: 45 31% 94%;
+    --secondary-foreground: 340 47% 24%;
 
-    /* Muted tones */
-    --muted: 42 20% 90%;
-    --muted-foreground: 326 30% 40%;
+    /* Muted tones - variations of background */
+    --muted: 45 25% 92%;
+    --muted-foreground: 340 30% 45%;
 
-    /* Accent - golden yellow #E0C36C */
+    /* Accent - accent color #E0C36C */
     --accent: 45 65% 65%;
-    --accent-foreground: 326 42% 24%;
+    --accent-foreground: 340 47% 24%;
 
-    /* Luxury gold accent - golden yellow #E0C36C */
+    /* Gold accent - same as accent color */
     --gold: 45 65% 65%;
-    --gold-foreground: 326 42% 24%;
+    --gold-foreground: 340 47% 24%;
 
-    /* Nature green - using accent color for consistency */
-    --nature: 45 50% 60%;
-    --nature-foreground: 42 31% 94%;
+    /* Nature green - subtle variation for nature elements */
+    --nature: 120 25% 45%;
+    --nature-foreground: 45 31% 94%;
 
-    /* Premium variants - burgundy #582038 */
-    --luxury: 326 42% 24%;
-    --luxury-foreground: 42 31% 94%;
+    /* Premium variants - original dark luxury color for footer */
+    --luxury: 30 15% 8%;
+    --luxury-foreground: 35 20% 98%;
 
     /* System colors */
     --destructive: 0 65% 55%;
-    --destructive-foreground: 42 31% 94%;
+    --destructive-foreground: 45 31% 94%;
 
-    --border: 42 20% 85%;
-    --input: 42 20% 90%;
+    --border: 45 20% 88%;
+    --input: 45 20% 88%;
     --ring: 45 65% 65%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 42 31% 94%;
+    --sidebar-background: 45 31% 94%;
 
-    --sidebar-foreground: 326 42% 24%;
+    --sidebar-foreground: 340 47% 24%;
 
-    --sidebar-primary: 326 42% 24%;
+    --sidebar-primary: 340 47% 24%;
 
-    --sidebar-primary-foreground: 42 31% 94%;
+    --sidebar-primary-foreground: 45 31% 94%;
 
-    --sidebar-accent: 45 50% 70%;
+    --sidebar-accent: 45 25% 92%;
 
-    --sidebar-accent-foreground: 326 42% 24%;
+    --sidebar-accent-foreground: 340 47% 24%;
 
-    --sidebar-border: 42 20% 85%;
+    --sidebar-border: 45 20% 88%;
 
     --sidebar-ring: 45 65% 65%;
   }
@@ -329,13 +330,13 @@ html {
   }
   
   .glass-card {
-    background: hsl(var(--card) / 0.9);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     backdrop-filter: blur(10px);
-    border: 1px solid hsl(var(--border) / 0.5);
   }
   
   .bg-gradient-subtle {
-    background: linear-gradient(to bottom, hsl(var(--background)), hsl(var(--secondary) / 0.3));
+    background: linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background) / 0.95));
   }
 }
 
