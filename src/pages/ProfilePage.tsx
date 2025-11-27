@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { useFavorites } from '@/contexts/FavoritesContext' // Přidáno pro počet oblíbených
+import { useFavorites } from '@/contexts/FavoritesContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { User, Package, Heart, LogOut, ChevronRight } from 'lucide-react' // Ikony pro hezčí vzhled
+import { User, Package, Heart, LogOut, ChevronRight, Pencil } from 'lucide-react' // Přidána ikona Pencil
 
 export default function ProfilePage() {
   const { user, loading, refreshUser, setNeedsProfileCompletion, logout } = useAuth()
@@ -59,6 +59,13 @@ export default function ProfilePage() {
     { id: 'logout' as const, label: 'Odhlásit se', icon: LogOut, isLogout: true },
   ]
 
+  // Komponenta pro Editační tlačítko (Tužka)
+  const EditButton = () => (
+    <button className="p-2 bg-[#F4F1EA] rounded-full text-[#502038] hover:bg-[#E0C36C] hover:text-white transition-all duration-300 shadow-sm">
+      <Pencil className="w-4 h-4" />
+    </button>
+  )
+
   return (
     <div className="min-h-screen bg-[#F4F1EA]">
       <Navigation />
@@ -67,7 +74,7 @@ export default function ProfilePage() {
       <div className="pt-32 pb-20">
         <div className="max-w-[1200px] mx-auto px-6">
           
-          {/* 1. HLAVNÍ NADPIS - Vytažený nad grid pro čisté zarovnání */}
+          {/* HLAVNÍ NADPIS */}
           <div className="mb-12 text-center max-w-2xl mx-auto">
             <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#502038] mb-4">
               Vítejte, {user && user.firstName ? user.firstName : 'Uživateli'}
@@ -77,17 +84,18 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          {/* 2. GRID LAYOUT - items-start je klíčové pro sticky sidebar */}
+          {/* GRID LAYOUT */}
+          {/* items-start zajistí, že sloupce začínají nahoře, což je potřeba pro sticky sidebar */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative">
             
-            {/* SIDEBAR */}
-            {/* sticky top-32 = přilepí se 128px od vrchu okna (pod navbarem) */}
-            <aside className="lg:col-span-3 lg:sticky lg:top-32 z-10">
-              <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 overflow-hidden">
-                <div className="p-4 bg-[#502038]/5 border-b border-[#502038]/10">
-                  <span className="text-xs font-bold text-[#502038] uppercase tracking-widest">Menu</span>
-                </div>
-                <div className="p-2 space-y-1">
+            {/* SIDEBAR (Sticky Menu) */}
+            {/* lg:sticky - zapne lepení na velkých obrazovkách */}
+            {/* lg:top-28 - menu se zastaví 112px (28 * 4) od vrchu okna, tedy pod navbarem */}
+            {/* self-start - zajistí, že se element neroztahuje na výšku rodiče, což je nutné pro sticky */}
+            <aside className="lg:col-span-3 lg:sticky lg:top-28 self-start z-10 transition-all duration-300">
+              <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 overflow-hidden py-2">
+                {/* ZDE JSEM ODSTRANIL "MENU" HLAVIČKU - Teď je to čistý seznam */}
+                <div className="space-y-1 p-2">
                   {menuItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -128,9 +136,7 @@ export default function ProfilePage() {
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Osobní údaje</h2>
-                      <div className="p-2 bg-[#F4F1EA] rounded-full text-[#502038]">
-                        <User className="w-5 h-5" />
-                      </div>
+                      <EditButton /> {/* Ikona tužky */}
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -151,7 +157,10 @@ export default function ProfilePage() {
 
                   {/* Karta: Kontaktní údaje */}
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
-                    <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Kontaktní údaje</h2>
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-serif font-semibold text-[#502038]">Kontaktní údaje</h2>
+                      <EditButton /> {/* Ikona tužky */}
+                    </div>
                     <div>
                       <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Email</span>
                       <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
@@ -162,7 +171,10 @@ export default function ProfilePage() {
 
                   {/* Karta: Adresa */}
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
-                    <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Doručovací adresa</h2>
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-serif font-semibold text-[#502038]">Doručovací adresa</h2>
+                      <EditButton /> {/* Ikona tužky */}
+                    </div>
                     <div>
                       {user?.address && user.address.address1 ? (
                         <div className="text-lg text-[#502038] space-y-1">
