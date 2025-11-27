@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { useFavorites } from '@/contexts/FavoritesContext' // Přidáno pro počet oblíbených
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
+import { User, Package, Heart, LogOut, ChevronRight } from 'lucide-react' // Ikony pro hezčí vzhled
 
 export default function ProfilePage() {
   const { user, loading, refreshUser, setNeedsProfileCompletion, logout } = useAuth()
+  const { getFavoriteCount } = useFavorites()
   const location = useLocation()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'favorites' | 'logout'>('overview')
 
-  // Show loading only during initial auth check
+  // Loading state
   if (loading && !user) {
     return (
       <div className="min-h-screen bg-[#F4F1EA] flex items-center justify-center">
@@ -50,10 +53,10 @@ export default function ProfilePage() {
   }
 
   const menuItems = [
-    { id: 'overview' as const, label: 'Přehled účtu' },
-    { id: 'orders' as const, label: 'Moje objednávky' },
-    { id: 'favorites' as const, label: 'Oblíbené produkty' },
-    { id: 'logout' as const, label: 'Odhlásit se', isLogout: true },
+    { id: 'overview' as const, label: 'Přehled účtu', icon: User },
+    { id: 'orders' as const, label: 'Moje objednávky', icon: Package },
+    { id: 'favorites' as const, label: `Oblíbené produkty (${getFavoriteCount()})`, icon: Heart },
+    { id: 'logout' as const, label: 'Odhlásit se', icon: LogOut, isLogout: true },
   ]
 
   return (
@@ -61,107 +64,117 @@ export default function ProfilePage() {
       <Navigation />
       
       {/* Hlavní padding odshora */}
-      <div className="pt-32 pb-12">
+      <div className="pt-32 pb-20">
         <div className="max-w-[1200px] mx-auto px-6">
           
-          {/* HLAVNÍ NADPIS - Vycentrovaný */}
+          {/* 1. HLAVNÍ NADPIS - Vytažený nad grid pro čisté zarovnání */}
           <div className="mb-12 text-center max-w-2xl mx-auto">
-            <h1 className="text-5xl font-serif font-bold text-[#502038] mb-3">
-              Vítejte, {user && user.firstName && user.firstName.trim() ? user.firstName : 'Uživateli'}
+            <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#502038] mb-4">
+              Vítejte, {user && user.firstName ? user.firstName : 'Uživateli'}
             </h1>
-            <p className="text-[#502038]/70 text-lg">
-              Spravujte své údaje a nastavení účtu na jednom místě
+            <p className="text-[#502038]/70 text-lg font-light">
+              Váš osobní prostor pro správu objednávek a přání
             </p>
           </div>
 
-          {/* OPRAVA 1: Odstraněno 'items-start'. 
-             Nyní se sloupce natáhnou na stejnou výšku, což vytvoří "kolejnici" pro sticky element.
-          */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative">
+          {/* 2. GRID LAYOUT - items-start je klíčové pro sticky sidebar */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative">
             
-            {/* OPRAVA 2: <aside> je nyní jen statický kontejner (sloupec), 
-               který drží prostor po celé výšce. Odstraněno 'sticky'.
-            */}
-            <aside className="md:col-span-4 lg:col-span-3">
-              
-              {/* OPRAVA 3: 'sticky' přesunuto SEM, na vnitřní kartu.
-                 Tato karta nyní "plave" uvnitř vysokého <aside> sloupce.
-              */}
-              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 overflow-hidden md:sticky md:top-32 transition-all duration-300">
-                <div className="space-y-2 w-full">
-                  {menuItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => item.isLogout ? handleLogout() : setActiveTab(item.id)}
-                      className={`block w-full text-left px-4 py-3 rounded-md transition-all duration-200 font-serif relative ${
-                        activeTab === item.id && !item.isLogout
-                          ? 'bg-[#E0C36C]/10 text-[#502038] font-semibold'
-                          : 'text-[#502038]/70 hover:text-[#502038] hover:bg-[#F4F1EA]'
-                      }`}
-                    >
-                      {activeTab === item.id && !item.isLogout && (
-                        <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#E0C36C] rounded-l-md"></span>
-                      )}
-                      {item.label}
-                    </button>
-                  ))}
+            {/* SIDEBAR */}
+            {/* sticky top-32 = přilepí se 128px od vrchu okna (pod navbarem) */}
+            <aside className="lg:col-span-3 lg:sticky lg:top-32 z-10">
+              <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 overflow-hidden">
+                <div className="p-4 bg-[#502038]/5 border-b border-[#502038]/10">
+                  <span className="text-xs font-bold text-[#502038] uppercase tracking-widest">Menu</span>
+                </div>
+                <div className="p-2 space-y-1">
+                  {menuItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    const isLogout = item.isLogout;
+
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => isLogout ? handleLogout() : setActiveTab(item.id)}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
+                          isActive && !isLogout
+                            ? 'bg-[#E0C36C] text-white shadow-md'
+                            : isLogout 
+                              ? 'text-red-500 hover:bg-red-50' 
+                              : 'text-[#502038]/80 hover:bg-[#F4F1EA] hover:text-[#502038]'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Icon className={`w-4 h-4 ${isActive && !isLogout ? 'text-white' : ''}`} />
+                          <span className="font-medium">{item.label}</span>
+                        </div>
+                        {!isLogout && isActive && <ChevronRight className="w-4 h-4 text-white" />}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </aside>
 
             {/* MAIN CONTENT */}
-            <main className="md:col-span-8 lg:col-span-9 min-w-0">
+            <main className="lg:col-span-9 min-w-0">
               
               {/* Sekce: Přehled účtu */}
               {activeTab === 'overview' && (
-                <div className="space-y-6">
+                <div className="space-y-6 fade-in-up">
                   
                   {/* Karta: Osobní údaje */}
-                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-8">
-                    <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Osobní údaje</h2>
+                  <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-serif font-semibold text-[#502038]">Osobní údaje</h2>
+                      <div className="p-2 bg-[#F4F1EA] rounded-full text-[#502038]">
+                        <User className="w-5 h-5" />
+                      </div>
+                    </div>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div>
-                        <span className="text-sm font-medium text-[#502038]/60 block mb-2 uppercase tracking-wide">Jméno</span>
-                        <p className="text-lg text-[#502038]">
-                          {user && user.firstName && user.firstName.trim() ? user.firstName : 'Nevyplněno'}
+                        <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Jméno</span>
+                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                          {user && user.firstName ? user.firstName : '-'}
                         </p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-[#502038]/60 block mb-2 uppercase tracking-wide">Příjmení</span>
-                        <p className="text-lg text-[#502038]">
-                          {user && user.lastName && user.lastName.trim() ? user.lastName : 'Nevyplněno'}
+                        <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Příjmení</span>
+                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                          {user && user.lastName ? user.lastName : '-'}
                         </p>
                       </div>
                     </div>
                   </div>
 
                   {/* Karta: Kontaktní údaje */}
-                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-8">
+                  <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Kontaktní údaje</h2>
                     <div>
-                      <span className="text-sm font-medium text-[#502038]/60 block mb-2 uppercase tracking-wide">Email</span>
-                      <p className="text-lg text-[#502038]">
-                        {user && user.email && user.email.trim() ? user.email : 'Nevyplněno'}
+                      <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Email</span>
+                      <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                        {user && user.email ? user.email : '-'}
                       </p>
                     </div>
                   </div>
 
                   {/* Karta: Adresa */}
-                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-8">
-                    <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Adresa</h2>
+                  <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
+                    <h2 className="text-2xl font-serif font-semibold text-[#502038] mb-6">Doručovací adresa</h2>
                     <div>
-                      {user?.address && user.address.address1 && user.address.address1.trim() ? (
-                        <p className="text-lg text-[#502038] leading-relaxed">
-                          {user.address.address1}
-                          {user.address.address2 && user.address.address2.trim() && `, ${user.address.address2}`}
-                          <br />
-                          {user.address.city && user.address.city.trim() && `${user.address.city}`}
-                          {user.address.zip && user.address.zip.trim() && `, ${user.address.zip}`}
-                          <br />
-                          {user.address.country && user.address.country.trim() && `${user.address.country}`}
-                        </p>
+                      {user?.address && user.address.address1 ? (
+                        <div className="text-lg text-[#502038] space-y-1">
+                          <p>{user.address.address1}</p>
+                          {user.address.address2 && <p>{user.address.address2}</p>}
+                          <p>{user.address.city} {user.address.zip}</p>
+                          <p>{user.address.country}</p>
+                        </div>
                       ) : (
-                        <p className="text-lg text-[#502038] italic opacity-60">Adresa není vyplněna</p>
+                        <div className="flex flex-col items-center justify-center py-8 text-[#502038]/50 bg-[#F4F1EA]/50 rounded-lg border border-dashed border-[#502038]/20">
+                          <p>Adresa není vyplněna</p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -170,34 +183,36 @@ export default function ProfilePage() {
 
               {/* Sekce: Objednávky */}
               {activeTab === 'orders' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 bg-[#F4F1EA] rounded-full flex items-center justify-center mb-4">
-                      <svg className="w-8 h-8 text-[#502038]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
+                <div className="space-y-6 fade-in-up">
+                  <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
+                    <div className="w-20 h-20 bg-[#F4F1EA] rounded-full flex items-center justify-center mb-6">
+                      <Package className="w-10 h-10 text-[#502038]/40" />
                     </div>
-                    <h3 className="text-xl font-serif text-[#502038] mb-2">Žádné objednávky</h3>
-                    <p className="text-[#502038]/60">
-                      Zatím jste u nás nenakoupili.
+                    <h3 className="text-2xl font-serif text-[#502038] mb-2">Žádné objednávky</h3>
+                    <p className="text-[#502038]/60 max-w-md mx-auto">
+                      Zatím jste u nás nenakoupili. Objevte naše jedinečné šperky a udělejte si radost.
                     </p>
+                    <button onClick={() => navigate('/nahrdelniky')} className="mt-6 px-6 py-3 bg-[#502038] text-white rounded-full hover:bg-[#502038]/90 transition-colors">
+                      Prohlédnout kolekci
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* Sekce: Oblíbené */}
               {activeTab === 'favorites' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 bg-[#F4F1EA] rounded-full flex items-center justify-center mb-4">
-                      <svg className="w-8 h-8 text-[#502038]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
+                <div className="space-y-6 fade-in-up">
+                  <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
+                    <div className="w-20 h-20 bg-[#F4F1EA] rounded-full flex items-center justify-center mb-6">
+                      <Heart className="w-10 h-10 text-[#502038]/40" />
                     </div>
-                    <h3 className="text-xl font-serif text-[#502038] mb-2">Seznam přání je prázdný</h3>
-                    <p className="text-[#502038]/60">
-                      Zatím jste si neoznačili žádné produkty jako oblíbené.
+                    <h3 className="text-2xl font-serif text-[#502038] mb-2">Seznam přání je prázdný</h3>
+                    <p className="text-[#502038]/60 max-w-md mx-auto">
+                      Označte si produkty srdíčkem, abyste je zde našli.
                     </p>
+                    <button onClick={() => navigate('/')} className="mt-6 px-6 py-3 bg-[#E0C36C] text-white rounded-full hover:bg-[#E0C36C]/90 transition-colors shadow-lg shadow-[#E0C36C]/20">
+                      Jít nakupovat
+                    </button>
                   </div>
                 </div>
               )}
