@@ -5,9 +5,13 @@ import { useFavorites } from '@/contexts/FavoritesContext'
 import { useCart } from '@/contexts/CartContext'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { User, Package, Heart, LogOut, ChevronRight, Pencil, ShoppingCart, X, Loader2 } from 'lucide-react'
+import { User, Package, Heart, LogOut, ChevronRight, Pencil, ShoppingCart, X, Loader2, Check } from 'lucide-react'
 import { getProductById } from '@/lib/shopify'
 import { useToast } from '@/hooks/use-toast'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { COUNTRIES, getCountryByCode } from '@/lib/countries'
 
 interface FavoriteProduct {
   id: string
@@ -19,7 +23,7 @@ interface FavoriteProduct {
 }
 
 export default function ProfilePage() {
-  const { user, loading, refreshUser, setNeedsProfileCompletion, logout } = useAuth()
+  const { user, loading, refreshUser, setNeedsProfileCompletion, logout, updateProfile } = useAuth()
   const { favorites, getFavoriteCount, removeFromFavorites, isLoading: favoritesLoading } = useFavorites()
   const { addToCart } = useCart()
   const { toast } = useToast()
@@ -29,6 +33,21 @@ export default function ProfilePage() {
   const [favoriteProducts, setFavoriteProducts] = useState<FavoriteProduct[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
+
+  // Edit states
+  const [editingSection, setEditingSection] = useState<'personal' | 'contact' | 'address' | null>(null)
+  const [saving, setSaving] = useState(false)
+  
+  // Form states for editing
+  const [editFirstName, setEditFirstName] = useState('')
+  const [editLastName, setEditLastName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editAddress1, setEditAddress1] = useState('')
+  const [editAddress2, setEditAddress2] = useState('')
+  const [editCity, setEditCity] = useState('')
+  const [editZip, setEditZip] = useState('')
+  const [editCountry, setEditCountry] = useState('CZ')
+  const [editPhone, setEditPhone] = useState('')
 
   // Loading state
   if (loading && !user) {
@@ -53,6 +72,25 @@ export default function ProfilePage() {
     }
     refreshData()
   }, [location.pathname, loading])
+
+  // Initialize edit form when entering edit mode
+  useEffect(() => {
+    if (editingSection && user) {
+      if (editingSection === 'personal') {
+        setEditFirstName(user.firstName || '')
+        setEditLastName(user.lastName || '')
+      } else if (editingSection === 'contact') {
+        setEditEmail(user.email || '')
+      } else if (editingSection === 'address') {
+        setEditAddress1(user.address?.address1 || '')
+        setEditAddress2(user.address?.address2 || '')
+        setEditCity(user.address?.city || '')
+        setEditZip(user.address?.zip || '')
+        setEditCountry(user.address?.country || 'CZ')
+        setEditPhone(user.address?.phone || '')
+      }
+    }
+  }, [editingSection, user])
 
   // Fetch favorite products when favorites tab is active
   useEffect(() => {
@@ -178,6 +216,165 @@ export default function ProfilePage() {
     }
   }
 
+  const handleSavePersonal = async () => {
+    if (!editFirstName.trim() || !editLastName.trim()) {
+      toast({
+        title: "Chyba",
+        description: "Jméno a příjmení jsou povinné.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSaving(true)
+    try {
+      const result = await updateProfile({
+        firstName: editFirstName.trim(),
+        lastName: editLastName.trim(),
+      })
+
+      if (!result.success) {
+        toast({
+          title: "Chyba",
+          description: result.error || "Nepodařilo se uložit změny.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Also save to Supabase
+      try {
+        const supabaseResponse = await fetch('/api/customer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            firstName: editFirstName.trim(),
+            lastName: editLastName.trim(),
+            address1: user?.address?.address1 || '',
+            address2: user?.address?.address2 || '',
+            city: user?.address?.city || '',
+            province: user?.address?.province || '',
+            zip: user?.address?.zip || '',
+            country: user?.address?.country || 'CZ',
+            phone: user?.address?.phone || '',
+            acceptsMarketing: false,
+          })
+        })
+
+        if (!supabaseResponse.ok) {
+          console.warn('[ProfilePage] Failed to save to Supabase, but Shopify save succeeded')
+        }
+      } catch (supabaseError) {
+        console.warn('[ProfilePage] Error saving to Supabase:', supabaseError)
+      }
+
+      await refreshUser(true, false)
+      setEditingSection(null)
+      
+      toast({
+        title: "Úspěch",
+        description: "Osobní údaje byly aktualizovány.",
+      })
+    } catch (error) {
+      toast({
+        title: "Chyba",
+        description: "Nastala neočekávaná chyba.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveAddress = async () => {
+    if (!editAddress1.trim() || !editCity.trim() || !editZip.trim() || !editCountry.trim()) {
+      toast({
+        title: "Chyba",
+        description: "Prosím vyplňte všechny povinné údaje o adrese.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSaving(true)
+    try {
+      const addressData = {
+        address1: editAddress1.trim(),
+        address2: editAddress2.trim() || undefined,
+        city: editCity.trim(),
+        province: '',
+        zip: editZip.trim(),
+        country: editCountry.trim(),
+        phone: editPhone.trim() || undefined,
+      }
+
+      const result = await updateProfile({
+        address: addressData,
+      })
+
+      if (!result.success) {
+        toast({
+          title: "Chyba",
+          description: result.error || "Nepodařilo se uložit změny.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Also save to Supabase
+      try {
+        const supabaseResponse = await fetch('/api/customer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            firstName: user?.firstName || '',
+            lastName: user?.lastName || '',
+            address1: addressData.address1,
+            address2: addressData.address2,
+            city: addressData.city,
+            province: addressData.province,
+            zip: addressData.zip,
+            country: addressData.country,
+            phone: addressData.phone,
+            acceptsMarketing: false,
+          })
+        })
+
+        if (!supabaseResponse.ok) {
+          console.warn('[ProfilePage] Failed to save to Supabase, but Shopify save succeeded')
+        }
+      } catch (supabaseError) {
+        console.warn('[ProfilePage] Error saving to Supabase:', supabaseError)
+      }
+
+      await refreshUser(true, false)
+      setEditingSection(null)
+      
+      toast({
+        title: "Úspěch",
+        description: "Adresa byla aktualizována.",
+      })
+    } catch (error) {
+      toast({
+        title: "Chyba",
+        description: "Nastala neočekávaná chyba.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingSection(null)
+  }
+
   const menuItems = [
     { id: 'overview' as const, label: 'Přehled účtu', icon: User },
     { id: 'orders' as const, label: 'Moje objednávky', icon: Package },
@@ -185,9 +382,37 @@ export default function ProfilePage() {
     { id: 'logout' as const, label: 'Odhlásit se', icon: LogOut, isLogout: true },
   ]
 
-  const EditButton = () => (
-    <button className="p-2 bg-[#F4F1EA] rounded-full text-[#502038] hover:bg-[#E0C36C] hover:text-white transition-all duration-300 shadow-sm">
+  const EditButton = ({ section }: { section: 'personal' | 'contact' | 'address' }) => (
+    <button 
+      onClick={() => setEditingSection(section)}
+      disabled={editingSection !== null}
+      className="p-2 bg-[#F4F1EA] rounded-full text-[#502038] hover:bg-[#E0C36C] hover:text-white transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+    >
       <Pencil className="w-4 h-4" />
+    </button>
+  )
+
+  const SaveButton = ({ onSave, disabled }: { onSave: () => void; disabled?: boolean }) => (
+    <button
+      onClick={onSave}
+      disabled={disabled || saving}
+      className="p-2 bg-[#E0C36C] rounded-full text-white hover:bg-[#E0C36C]/90 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {saving ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <Check className="w-4 h-4" />
+      )}
+    </button>
+  )
+
+  const CancelButton = ({ onCancel }: { onCancel: () => void }) => (
+    <button
+      onClick={onCancel}
+      disabled={saving}
+      className="p-2 bg-gray-200 rounded-full text-gray-600 hover:bg-gray-300 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <X className="w-4 h-4" />
     </button>
   )
 
@@ -261,59 +486,213 @@ export default function ProfilePage() {
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Osobní údaje</h2>
-                      <EditButton />
+                      <div className="flex items-center gap-2">
+                        {editingSection === 'personal' ? (
+                          <>
+                            <SaveButton onSave={handleSavePersonal} disabled={saving} />
+                            <CancelButton onCancel={handleCancelEdit} />
+                          </>
+                        ) : (
+                          <EditButton section="personal" />
+                        )}
+                      </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div>
-                        <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Jméno</span>
-                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
-                          {user && user.firstName ? user.firstName : '-'}
-                        </p>
+                    {editingSection === 'personal' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <Label htmlFor="editFirstName" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Jméno</Label>
+                          <Input
+                            id="editFirstName"
+                            value={editFirstName}
+                            onChange={(e) => setEditFirstName(e.target.value)}
+                            disabled={saving}
+                            className="text-lg text-[#502038]"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editLastName" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Příjmení</Label>
+                          <Input
+                            id="editLastName"
+                            value={editLastName}
+                            onChange={(e) => setEditLastName(e.target.value)}
+                            disabled={saving}
+                            className="text-lg text-[#502038]"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Příjmení</span>
-                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
-                          {user && user.lastName ? user.lastName : '-'}
-                        </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                          <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Jméno</span>
+                          <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                            {user && user.firstName ? user.firstName : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Příjmení</span>
+                          <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                            {user && user.lastName ? user.lastName : '-'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Karta: Kontaktní údaje */}
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Kontaktní údaje</h2>
-                      <EditButton />
+                      <div className="flex items-center gap-2">
+                        {editingSection === 'contact' ? (
+                          <>
+                            <SaveButton onSave={() => {
+                              // Email nelze editovat přes API, takže jen zrušíme edit
+                              toast({
+                                title: "Info",
+                                description: "Email nelze změnit. Kontaktujte prosím podporu.",
+                              })
+                              setEditingSection(null)
+                            }} disabled={saving} />
+                            <CancelButton onCancel={handleCancelEdit} />
+                          </>
+                        ) : (
+                          <EditButton section="contact" />
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Email</span>
-                      <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
-                        {user && user.email ? user.email : '-'}
-                      </p>
-                    </div>
+                    {editingSection === 'contact' ? (
+                      <div>
+                        <Label htmlFor="editEmail" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Email</Label>
+                        <Input
+                          id="editEmail"
+                          type="email"
+                          value={editEmail}
+                          disabled={true}
+                          className="text-lg text-[#502038] bg-gray-100"
+                        />
+                        <p className="text-sm text-[#502038]/60 mt-2">Email nelze změnit. Kontaktujte prosím podporu.</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-1">Email</span>
+                        <p className="text-lg text-[#502038] font-medium border-b border-[#502038]/10 pb-2">
+                          {user && user.email ? user.email : '-'}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Karta: Adresa */}
                   <div className="bg-white rounded-xl shadow-sm border border-[#502038]/10 p-8 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-2xl font-serif font-semibold text-[#502038]">Doručovací adresa</h2>
-                      <EditButton />
+                      <div className="flex items-center gap-2">
+                        {editingSection === 'address' ? (
+                          <>
+                            <SaveButton onSave={handleSaveAddress} disabled={saving} />
+                            <CancelButton onCancel={handleCancelEdit} />
+                          </>
+                        ) : (
+                          <EditButton section="address" />
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      {user?.address && user.address.address1 ? (
-                        <div className="text-lg text-[#502038] space-y-1">
-                          <p>{user.address.address1}</p>
-                          {user.address.address2 && <p>{user.address.address2}</p>}
-                          <p>{user.address.city} {user.address.zip}</p>
-                          <p>{user.address.country}</p>
+                    {editingSection === 'address' ? (
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="editAddress1" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Ulice a číslo popisné *</Label>
+                          <Input
+                            id="editAddress1"
+                            value={editAddress1}
+                            onChange={(e) => setEditAddress1(e.target.value)}
+                            disabled={saving}
+                            className="text-lg text-[#502038]"
+                          />
                         </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-[#502038]/50 bg-[#F4F1EA]/50 rounded-lg border border-dashed border-[#502038]/20">
-                          <p>Adresa není vyplněna</p>
+                        <div>
+                          <Label htmlFor="editAddress2" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Doplňující údaje (volitelné)</Label>
+                          <Input
+                            id="editAddress2"
+                            value={editAddress2}
+                            onChange={(e) => setEditAddress2(e.target.value)}
+                            disabled={saving}
+                            className="text-lg text-[#502038]"
+                          />
                         </div>
-                      )}
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="editCity" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Město *</Label>
+                            <Input
+                              id="editCity"
+                              value={editCity}
+                              onChange={(e) => setEditCity(e.target.value)}
+                              disabled={saving}
+                              className="text-lg text-[#502038]"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="editZip" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">PSČ *</Label>
+                            <Input
+                              id="editZip"
+                              value={editZip}
+                              onChange={(e) => setEditZip(e.target.value)}
+                              disabled={saving}
+                              className="text-lg text-[#502038]"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="editCountry" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Země *</Label>
+                            <Select
+                              value={editCountry}
+                              onValueChange={setEditCountry}
+                              disabled={saving}
+                            >
+                              <SelectTrigger id="editCountry" className="text-lg text-[#502038]">
+                                <SelectValue>
+                                  {editCountry ? (getCountryByCode(editCountry)?.name || editCountry) : 'Vyberte zemi'}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[300px]">
+                                {COUNTRIES.map((countryOption) => (
+                                  <SelectItem key={countryOption.code} value={countryOption.code}>
+                                    {countryOption.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="editPhone" className="text-xs font-bold text-[#502038]/40 uppercase tracking-wider block mb-2">Telefon (volitelné)</Label>
+                            <Input
+                              id="editPhone"
+                              type="tel"
+                              value={editPhone}
+                              onChange={(e) => setEditPhone(e.target.value)}
+                              disabled={saving}
+                              className="text-lg text-[#502038]"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {user?.address && user.address.address1 ? (
+                          <div className="text-lg text-[#502038] space-y-1">
+                            <p>{user.address.address1}</p>
+                            {user.address.address2 && <p>{user.address.address2}</p>}
+                            <p>{user.address.city} {user.address.zip}</p>
+                            <p>{user.address.country}</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-8 text-[#502038]/50 bg-[#F4F1EA]/50 rounded-lg border border-dashed border-[#502038]/20">
+                            <p>Adresa není vyplněna</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
