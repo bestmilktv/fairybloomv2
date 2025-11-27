@@ -54,14 +54,14 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-90 transition-all duration-300 flex-shrink-0 min-w-0 group" onClick={() => {
+          <Link to="/" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity duration-300 flex-shrink-0 min-w-0" onClick={() => {
           window.scrollTo({
             top: 0,
             behavior: 'smooth'
           });
         }}>
-            <img src={logo} alt="Fairy Bloom Logo" className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" />
-            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-primary tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-300 group-hover:tracking-[0.2em] sm:group-hover:tracking-[0.25em]">FAIRY BLOOM</h1>
+            <img src={logo} alt="Fairy Bloom Logo" className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain flex-shrink-0" />
+            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-primary tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis">FAIRY BLOOM</h1>
           </Link>
 
           {/* Category Navigation */}
