@@ -74,14 +74,20 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          {/* GRID LAYOUT - Klíčové pro fungující sticky sidebar */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start relative">
+          {/* OPRAVA 1: Odstraněno 'items-start'. 
+             Nyní se sloupce natáhnou na stejnou výšku, což vytvoří "kolejnici" pro sticky element.
+          */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 relative">
             
-            {/* SIDEBAR (Sticky) */}
-            {/* md:col-span-3 (nebo 4) určuje šířku sloupce */}
-            {/* sticky top-32 zajistí přilepení pod navbarem */}
-            <aside className="md:col-span-4 lg:col-span-3 md:sticky md:top-32 z-10">
-              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 overflow-hidden">
+            {/* OPRAVA 2: <aside> je nyní jen statický kontejner (sloupec), 
+               který drží prostor po celé výšce. Odstraněno 'sticky'.
+            */}
+            <aside className="md:col-span-4 lg:col-span-3">
+              
+              {/* OPRAVA 3: 'sticky' přesunuto SEM, na vnitřní kartu.
+                 Tato karta nyní "plave" uvnitř vysokého <aside> sloupce.
+              */}
+              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 overflow-hidden md:sticky md:top-32 transition-all duration-300">
                 <div className="space-y-2 w-full">
                   {menuItems.map((item) => (
                     <button
