@@ -76,7 +76,7 @@ const Navigation = () => {
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-primary/80 hover:text-primary hover:bg-background/50 relative h-9 w-9 sm:h-10 sm:w-10">
+                  <Button variant="ghost" size="icon" className="!text-primary/80 hover:!text-primary hover:!bg-background/70 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-200">
                     <UserCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -112,7 +112,7 @@ const Navigation = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="text-primary/80 hover:text-primary hover:bg-background/50 h-9 w-9 sm:h-10 sm:w-10"
+                className="!text-primary/80 hover:!text-primary hover:!bg-background/70 h-9 w-9 sm:h-10 sm:w-10 transition-all duration-200"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <User className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -121,7 +121,7 @@ const Navigation = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-primary/80 hover:text-primary hover:bg-background/50 relative h-9 w-9 sm:h-10 sm:w-10"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/70 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-200"
               onClick={() => setFavoritesSidebarOpen(true)}
             >
               <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -134,7 +134,7 @@ const Navigation = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-primary/80 hover:text-primary hover:bg-background/50 relative h-9 w-9 sm:h-10 sm:w-10"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/70 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-200"
               onClick={() => setMiniCartOpen(true)}
               data-cart-icon
             >

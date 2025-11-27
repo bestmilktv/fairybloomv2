@@ -508,7 +508,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // JSX
   // ============================================================================
   return (
-    <div ref={wrapperRef} className="relative w-full overflow-hidden select-none group">
+    <div ref={wrapperRef} className="relative w-full select-none group py-4 px-2">
       <style>{`
         .carousel-force-no-animate * {
           animation: none !important;
@@ -532,7 +532,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         style={{
             // pan-y: Prohlížeč ví, že vertikální pohyb je scroll
             touchAction: 'pan-y', 
-            
+            paddingBottom: '16px', // Prostor pro shadow
             maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)'
         }}
@@ -544,7 +544,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 gap: `${GAP}px`,
                 width: 'max-content',
                 willChange: 'transform',
-                backfaceVisibility: 'hidden'
+                backfaceVisibility: 'hidden',
+                paddingTop: '12px', // Prostor pro shadow nahoře
+                paddingBottom: '12px' // Prostor pro shadow dole
             }}
             onTransitionEnd={handleTransitionEnd}
         >
