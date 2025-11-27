@@ -8,7 +8,7 @@ export default function ProfilePage() {
   const { user, loading, refreshUser, setNeedsProfileCompletion, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'favorites' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'favorites' | 'logout'>('overview')
 
   // Show loading only during initial auth check and only if we have no user at all
   if (loading && !user) {
@@ -78,7 +78,7 @@ export default function ProfilePage() {
     { id: 'overview' as const, label: 'Přehled účtu' },
     { id: 'orders' as const, label: 'Moje objednávky' },
     { id: 'favorites' as const, label: 'Oblíbené produkty' },
-    { id: 'settings' as const, label: 'Nastavení' },
+    { id: 'logout' as const, label: 'Odhlásit se', isLogout: true },
   ]
 
   return (
@@ -89,30 +89,25 @@ export default function ProfilePage() {
           <div className="grid grid-cols-12 gap-8">
             {/* Sidebar */}
             <aside className="col-span-12 md:col-span-3">
-              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6 sticky top-24">
+              <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-6">
                 <nav className="space-y-2">
                   {menuItems.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={`w-full text-left px-4 py-3 rounded-md transition-all duration-200 font-serif ${
-                        activeTab === item.id
-                          ? 'bg-[#E0C36C]/10 text-[#502038] border-l-4 border-[#E0C36C] font-semibold'
+                      onClick={() => item.isLogout ? handleLogout() : setActiveTab(item.id)}
+                      className={`w-full text-left px-4 py-3 rounded-md transition-all duration-200 font-serif relative ${
+                        activeTab === item.id && !item.isLogout
+                          ? 'bg-[#E0C36C]/10 text-[#502038] font-semibold'
                           : 'text-[#502038]/70 hover:text-[#502038] hover:bg-[#F4F1EA]'
                       }`}
                     >
+                      {activeTab === item.id && !item.isLogout && (
+                        <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#E0C36C] rounded-l-md"></span>
+                      )}
                       {item.label}
                     </button>
                   ))}
                 </nav>
-                <div className="mt-8 pt-6 border-t border-[#502038]/10">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-3 rounded-md text-[#502038]/70 hover:text-[#502038] hover:bg-[#F4F1EA] transition-all duration-200 font-serif"
-                  >
-                    Odhlásit se
-                  </button>
-                </div>
               </div>
             </aside>
 
@@ -217,21 +212,6 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {activeTab === 'settings' && (
-                <div className="space-y-6">
-                  <div className="mb-8">
-                    <h1 className="text-5xl font-serif font-bold text-[#502038] mb-2">Nastavení</h1>
-                    <p className="text-[#502038]/70 text-lg">
-                      Spravujte nastavení svého účtu
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg shadow-sm border border-[#502038]/10 p-12 text-center">
-                    <p className="text-[#502038]/70 text-lg font-serif">
-                      Nastavení budou brzy k dispozici
-                    </p>
-                  </div>
-                </div>
-              )}
             </main>
           </div>
         </div>
