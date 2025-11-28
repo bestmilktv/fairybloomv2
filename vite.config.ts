@@ -15,4 +15,47 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Chunk splitting pro lepší caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-toast',
+          ],
+          'query-vendor': ['@tanstack/react-query'],
+          // Feature chunks
+          'shopify': ['./src/lib/shopify'],
+          'auth': ['./src/lib/oauth', './src/lib/customerAccountApi'],
+        },
+      },
+    },
+    // Tree shaking
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production',
+      },
+    },
+    // Optimalizace assetů
+    assetsInlineLimit: 4096, // Inline malé obrázky (< 4KB)
+    chunkSizeWarningLimit: 1000,
+    // Source maps pouze pro development
+    sourcemap: mode === 'development',
+  },
+  // Optimalizace pro produkci
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@tanstack/react-query',
+    ],
+  },
 }));

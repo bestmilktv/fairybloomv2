@@ -1,8 +1,10 @@
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { Check } from 'lucide-react';
+import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 
 interface ProductCardProps {
   id: string;
@@ -20,6 +22,32 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
   const isHomepage = location.pathname === '/';
   const { addToCart, items } = useCart();
   const { toast } = useToast();
+  
+  // Lazy loading obrázku pomocí Intersection Observer (pro carousel s disableAnimations)
+  // Pro statické seznamy použijeme loading="lazy"
+  const [imageRef, isImageVisible] = useIntersectionObserver<HTMLDivElement>({
+    threshold: 0.1,
+    rootMargin: '100px',
+    triggerOnce: true
+  });
+  
+  // Pro carousel (disableAnimations) - lazy load, jinak eager nebo lazy podle kontextu
+  const shouldLazyLoad = disableAnimations;
+  const [imageSrc, setImageSrc] = useState<string | null>(shouldLazyLoad ? null : image);
+  
+  // Načíst obrázek když je viditelný (pro carousel s disableAnimations)
+  useEffect(() => {
+    if (shouldLazyLoad) {
+      if (isImageVisible && !imageSrc) {
+        setImageSrc(image);
+      }
+    } else {
+      // Pro statické seznamy - načíst hned
+      if (imageSrc !== image) {
+        setImageSrc(image);
+      }
+    }
+  }, [isImageVisible, shouldLazyLoad, image, imageSrc]);
   
   // Check if product is in cart
   const isInCart = items.some(item => item.id === id);
@@ -104,18 +132,23 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
   return (
     <div className={cardClasses}>
       {/* Image */}
-      <div className={imageWrapperClasses}>
-        <img
-          src={image}
-          alt={title}
-          className={imageClasses}
-          loading="eager"
-          decoding="sync"
-          style={disableAnimations ? {
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden'
-          } : undefined}
-        />
+      <div ref={imageRef} className={imageWrapperClasses}>
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={title}
+            className={imageClasses}
+            loading={shouldLazyLoad ? "eager" : "lazy"}
+            decoding="async"
+            style={disableAnimations ? {
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden'
+            } : undefined}
+          />
+        ) : (
+          // Placeholder při načítání (pouze pro carousel)
+          <div className="w-full h-full bg-muted animate-pulse" />
+        )}
       </div>
       
       {/* Content */}
@@ -173,4 +206,5 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
   );
 };
 
-export default ProductCard;
+// Memoizace pro zabránění zbytečným re-renderům
+export default React.memo(ProductCard);

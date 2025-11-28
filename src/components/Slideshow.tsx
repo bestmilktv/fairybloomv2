@@ -249,13 +249,19 @@ const Slideshow = () => {
   useEffect(() => {
     if (!isTransitionEnabled) {
       // Po vypnutí transition počkáme jeden frame a pak ji znovu zapneme
-      const id = requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      let rafId1: number;
+      let rafId2: number;
+      
+      rafId1 = requestAnimationFrame(() => {
+        rafId2 = requestAnimationFrame(() => {
           setIsTransitionEnabled(true);
         });
       });
 
-      return () => cancelAnimationFrame(id);
+      return () => {
+        if (rafId1) cancelAnimationFrame(rafId1);
+        if (rafId2) cancelAnimationFrame(rafId2);
+      };
     }
   }, [isTransitionEnabled]);
 

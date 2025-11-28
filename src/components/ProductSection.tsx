@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import ProductCarousel from './ProductCarousel';
@@ -25,6 +25,9 @@ interface ProductSectionProps {
 const ProductSection = ({ id, title, subtitle, products, categoryPath }: ProductSectionProps) => {
   const [sectionRef, sectionVisible] = useScrollAnimation();
   
+  // Memoizace produktů pro zabránění zbytečným re-renderům
+  const memoizedProducts = useMemo(() => products, [products]);
+  
   return (
     <section 
       id={id} 
@@ -44,7 +47,7 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
         
         {/* Products Carousel */}
         <div>
-          <ProductCarousel products={products} />
+          <ProductCarousel products={memoizedProducts} />
         </div>
         
         {/* View More Button */}
@@ -60,4 +63,5 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
   );
 };
 
-export default ProductSection;
+// Memoizace pro zabránění zbytečným re-renderům
+export default React.memo(ProductSection);

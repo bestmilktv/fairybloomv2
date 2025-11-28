@@ -110,6 +110,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
   const [layoutMode, setLayoutMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  
+  // Virtualizace - vypočítat viditelné indexy
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 15 });
 
   // ============================================================================
   // RESPONZIVITA
@@ -151,9 +154,40 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const centerOffset = (viewportWidth - cardWidth) / 2;
     return -(index * totalCardWidth) + centerOffset;
   }, [cardWidth, viewportWidth]);
+  
+  // Vypočítat viditelný rozsah pro virtualizaci
+  const calculateVisibleRange = useCallback(() => {
+    if (cardWidth === 0 || allSlides.length === 0) return { start: 0, end: Math.min(15, allSlides.length - 1) };
+    
+    const totalCardWidth = cardWidth + GAP;
+    const buffer = 5; // Buffer pro smooth scrollování
+    const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + buffer * 2;
+    
+    const centerIndex = currentIndexRef.current;
+    const start = Math.max(0, centerIndex - Math.floor(visibleCount / 2));
+    const end = Math.min(allSlides.length - 1, centerIndex + Math.floor(visibleCount / 2));
+    
+    return { start, end };
+  }, [cardWidth, viewportWidth, allSlides.length]);
+  
+  // Aktualizovat viditelný rozsah při změně indexu nebo rozměrů
+  useEffect(() => {
+    if (cardWidth > 0 && allSlides.length > 0) {
+      const newRange = calculateVisibleRange();
+      setVisibleRange(newRange);
+    }
+  }, [currentIndex, cardWidth, viewportWidth, calculateVisibleRange, allSlides.length]);
+  
+  // Vytvořit pouze viditelné slides pro renderování
+  const visibleSlides = useMemo(() => {
+    return allSlides.slice(visibleRange.start, visibleRange.end + 1).map((item, localIndex) => ({
+      ...item,
+      globalIndex: visibleRange.start + localIndex
+    }));
+  }, [allSlides, visibleRange]);
 
   // ============================================================================
-  // VISUAL UPDATE ENGINE
+  // VISUAL UPDATE ENGINE - OPTIMALIZOVANÉ PRO VIRTUALIZACI
   // ============================================================================
   const updateVisuals = useCallback((instant = false, overrideIndex?: number) => {
     if (!trackRef.current || cardWidth === 0) return;
@@ -167,61 +201,93 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const basePos = getPositionForIndex(targetIndex);
     const finalPos = basePos + currentDrag;
     
-    trackRef.current.style.transform = `translate3d(${finalPos}px, 0, 0)`;
-    trackRef.current.style.transition = (isDraggingRef.current || instant) 
-        ? 'none' 
-        : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
-
-    const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
-    const startIndex = Math.max(0, targetIndex - visibleCount);
-    const endIndex = Math.min(allSlides.length - 1, targetIndex + visibleCount);
-
-    for (let i = startIndex; i <= endIndex; i++) {
-        const card = cardRefs.current[i];
-        if (!card) continue;
-
-        const cardTrackPos = finalPos + (i * totalCardWidth); 
-        const cardCenter = cardTrackPos + (cardWidth / 2);
-        const dist = Math.abs(viewportCenter - cardCenter);
-
-        let scale = 1;
-        let opacity = 1;
-
-        if (layoutMode === 'desktop') {
-            const mainZone = totalCardWidth * 1.5; 
-            if (dist > mainZone) {
-                const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
-                scale = 1 - (factor * 0.15);
-                opacity = 1 - (factor * 0.5);
-            }
-        } else {
-            const mainZone = totalCardWidth * 0.5;
-            if (dist > mainZone) {
-                 const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
-                 scale = 1 - (factor * 0.15);
-                 opacity = 1 - (factor * 0.5);
-            }
-        }
-
-        // Optimalizované batch DOM updates - používat jednotlivé properties místo cssText pro lepší kompatibilitu
-        const transitionValue = (isDraggingRef.current || instant) 
-            ? 'none' 
-            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+    // Batch DOM update pomocí requestAnimationFrame
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(() => {
+        if (!trackRef.current) return;
         
-        // Použít jednorázovou manipulaci pro lepší výkon
-        if (card.style.width !== `${cardWidth}px`) card.style.width = `${cardWidth}px`;
-        if (card.style.transform !== `scale(${scale}) translateZ(0)`) card.style.transform = `scale(${scale}) translateZ(0)`;
-        if (card.style.opacity !== `${opacity}`) card.style.opacity = `${opacity}`;
-        if (card.style.transition !== transitionValue) card.style.transition = transitionValue;
+        // Pozice tracku s ohledem na virtualizaci - offset pro viditelné elementy
+        const trackOffset = visibleRange.start * (cardWidth + GAP);
+        trackRef.current.style.transform = `translate3d(${finalPos - trackOffset}px, 0, 0)`;
+        trackRef.current.style.transition = (isDraggingRef.current || instant) 
+            ? 'none' 
+            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+
+        // Měnit jen viditelné elementy (virtualizace)
+        const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 3;
+        const startIndex = Math.max(visibleRange.start, targetIndex - visibleCount);
+        const endIndex = Math.min(visibleRange.end, targetIndex + visibleCount);
+
+        // Batch updates pro lepší výkon
+        const updates: Array<{ card: HTMLElement; scale: number; opacity: number; transition: string }> = [];
+        
+        for (let i = startIndex; i <= endIndex; i++) {
+            const card = cardRefs.current[i];
+            if (!card) continue;
+
+            // Pozice karty vzhledem k viewportu (s ohledem na virtualizaci a track offset)
+            const trackOffset = visibleRange.start * totalCardWidth;
+            const cardGlobalPos = (finalPos - trackOffset) + ((i - visibleRange.start) * totalCardWidth);
+            const cardCenter = cardGlobalPos + (cardWidth / 2);
+            const dist = Math.abs(viewportCenter - cardCenter);
+
+            let scale = 1;
+            let opacity = 1;
+
+            if (layoutMode === 'desktop') {
+                const mainZone = totalCardWidth * 1.5; 
+                if (dist > mainZone) {
+                    const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
+                    scale = 1 - (factor * 0.15);
+                    opacity = 1 - (factor * 0.5);
+                }
+            } else {
+                const mainZone = totalCardWidth * 0.5;
+                if (dist > mainZone) {
+                     const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
+                     scale = 1 - (factor * 0.15);
+                     opacity = 1 - (factor * 0.5);
+                }
+            }
+
+            const transitionValue = (isDraggingRef.current || instant) 
+                ? 'none' 
+                : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+            
+            updates.push({ card, scale, opacity, transition: transitionValue });
+        }
+        
+        // Aplikovat všechny změny najednou
+        updates.forEach(({ card, scale, opacity, transition }) => {
+          card.style.width = `${cardWidth}px`;
+          card.style.transform = `scale(${scale}) translateZ(0)`;
+          card.style.opacity = `${opacity}`;
+          card.style.transition = transition;
+        });
+        
+        rafIdRef.current = null;
+      });
     }
 
-  }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
+  }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, visibleRange]);
 
   useLayoutEffect(() => {
     // Optimalizace: update jen když je potřeba a cardWidth je nastaven
     if (cardWidth > 0 && !isResettingRef.current) {
       updateVisuals(isResettingRef.current);
     }
+    
+    // Cleanup při unmount
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
+    };
   }, [updateVisuals, currentIndex, cardWidth]);
 
   // ============================================================================
@@ -545,22 +611,29 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 width: 'max-content',
                 willChange: 'transform',
                 backfaceVisibility: 'hidden',
-                paddingTop: '12px', // Prostor pro shadow nahoře
-                paddingBottom: '12px' // Prostor pro shadow dole
+                paddingTop: '12px',
+                paddingBottom: '12px'
             }}
             onTransitionEnd={handleTransitionEnd}
         >
-            {allSlides.map((item, i) => {
+            {/* VIRTUALIZACE: Renderovat jen viditelné slides */}
+            {visibleSlides.map((item, localIndex) => {
+                const i = item.globalIndex;
                 const uniqueKey = `${item.isClone ? 'clone' : 'orig'}-${item.product.id}-${i}`;
                 return (
                     <div 
                         key={uniqueKey}
-                        ref={el => cardRefs.current[i] = el}
+                        ref={el => {
+                            // Mapovat globální index
+                            if (el) {
+                                cardRefs.current[i] = el;
+                            }
+                        }}
                         className="flex-shrink-0"
                         style={{
                             width: `${cardWidth}px`,
                             backfaceVisibility: 'hidden',
-                            willChange: 'transform, opacity' // GPU akcelerace pro lepší výkon
+                            willChange: 'transform, opacity'
                         }}
                     >
                         <div className="h-full"> 
