@@ -336,13 +336,13 @@ const Index = () => {
       >
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16 fade-in-up">
-            <h2 className="text-5xl md:text-6xl font-serif font-bold text-primary mb-6 tracking-wide">
+            <h2 className="text-5xl md:text-6xl font-serif font-bold text-primary mb-4 tracking-wide">
               Můj příběh
             </h2>
           </div>
           
           <div className="space-y-8 fade-in-up-delayed" style={{ animationDelay: '0.2s' }}>
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
               <p className="text-2xl md:text-3xl font-serif font-medium text-primary/90 italic leading-relaxed max-w-3xl mx-auto">
                 Každý detail má svůj význam.<br />
                 Každý okamžik si zaslouží být výjimečný.
