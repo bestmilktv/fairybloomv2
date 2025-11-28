@@ -15,47 +15,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  build: {
-    // Enable tree shaking - use esbuild (faster, already included in Vite)
-    minify: 'esbuild',
-    // esbuild automatically removes console.log in production builds
-    // Code splitting - chunk strategy
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': [
-            '@radix-ui/react-accordion',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-select',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-toast',
-          ],
-          'query-vendor': ['@tanstack/react-query'],
-          'shopify-vendor': ['@/lib/shopify'],
-        },
-        // Optimize chunk file names
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js',
-        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
-      },
-    },
-    // Optimize chunk size
-    chunkSizeWarningLimit: 1000,
-    // Enable source maps only in development
-    sourcemap: mode === 'development',
-    // Optimize asset handling
-    assetsInlineLimit: 4096, // Inline assets smaller than 4kb
-  },
-  // Optimize dependencies
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      '@tanstack/react-query',
-    ],
-  },
 }));

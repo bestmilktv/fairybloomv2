@@ -147,17 +147,7 @@ const Index = () => {
     const elements = document.querySelectorAll('.fade-in-up, .fade-in-up-delayed');
     elements.forEach((el) => observer.observe(el));
 
-    return () => {
-      observer.disconnect();
-      // Cleanup - remove observers from all elements
-      elements.forEach((el) => {
-        try {
-          observer.unobserve(el);
-        } catch (e) {
-          // Ignore errors if element is already removed
-        }
-      });
-    };
+    return () => observer.disconnect();
   }, []);
 
   // Handle newsletter subscription

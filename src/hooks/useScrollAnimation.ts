@@ -29,7 +29,6 @@ export const useScrollAnimation = (threshold = 0.1) => {
       if (ref.current) {
         observer.unobserve(ref.current);
       }
-      observer.disconnect();
     };
   }, [threshold]);
 

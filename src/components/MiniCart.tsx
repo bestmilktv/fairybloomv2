@@ -164,8 +164,6 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
                         src={item.image}
                         alt={item.name}
                         className="w-20 h-20 object-cover rounded-lg shadow-sm"
-                        loading="lazy"
-                        decoding="async"
                       />
                       <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                         {item.quantity}

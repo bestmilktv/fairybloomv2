@@ -1,10 +1,8 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { Check } from 'lucide-react';
-import LazyImage from '@/components/LazyImage';
 
 interface ProductCardProps {
   id: string;
@@ -17,7 +15,7 @@ interface ProductCardProps {
   variantId?: string;
 }
 
-const ProductCard = React.memo(({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId }: ProductCardProps) => {
+const ProductCard = ({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId }: ProductCardProps) => {
   const location = useLocation();
   const isHomepage = location.pathname === '/';
   const { addToCart, items } = useCart();
@@ -107,10 +105,12 @@ const ProductCard = React.memo(({ id, title, price, image, description, inventor
     <div className={cardClasses}>
       {/* Image */}
       <div className={imageWrapperClasses}>
-        <LazyImage
+        <img
           src={image}
           alt={title}
           className={imageClasses}
+          loading="eager"
+          decoding="sync"
           style={disableAnimations ? {
             transform: 'translateZ(0)',
             backfaceVisibility: 'hidden'
@@ -171,8 +171,6 @@ const ProductCard = React.memo(({ id, title, price, image, description, inventor
       </div>
     </div>
   );
-});
-
-ProductCard.displayName = 'ProductCard';
+};
 
 export default ProductCard;

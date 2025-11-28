@@ -250,8 +250,6 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                     src={product.image}
                     alt={product.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    loading="lazy"
-                    decoding="async"
                   />
                 </div>
                 

@@ -2,14 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Performance optimizations for animations */
-* {
-  /* Use GPU acceleration for transforms */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
 /* Fix navbar shifting when dropdowns open */
 html {
   overflow-y: scroll;

@@ -375,8 +375,6 @@ const DynamicProductPage = () => {
                   src={displayImages[selectedImage]?.url || fallbackImage}
                   alt={displayImages[selectedImage]?.altText || product.title}
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  loading="lazy"
-                  decoding="async"
                 />
               </div>
               
@@ -397,8 +395,6 @@ const DynamicProductPage = () => {
                         src={image.url}
                         alt={image.altText || `${product.title} ${index + 1}`}
                         className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
                       />
                     </button>
                   ))}

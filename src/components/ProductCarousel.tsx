@@ -116,10 +116,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   useEffect(() => {
     if (!wrapperRef.current) return;
-    
-    let rafId: number | null = null;
-    let timeoutId: NodeJS.Timeout | null = null;
-    
     const updateDimensions = () => {
       if (!wrapperRef.current) return;
       const width = wrapperRef.current.offsetWidth;
@@ -136,33 +132,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         setCardWidth(width - 32);
       }
     };
-    
-    // Throttle resize events using requestAnimationFrame
-    const throttledUpdate = () => {
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(() => {
-        updateDimensions();
-        rafId = null;
-      });
-    };
-    
     updateDimensions();
-    const resizeObserver = new ResizeObserver(throttledUpdate);
+    const resizeObserver = new ResizeObserver(updateDimensions);
     resizeObserver.observe(wrapperRef.current);
-    
     return () => {
       resizeObserver.disconnect();
-      // Cleanup RAF
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
+      // Cleanup RAF při unmount
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
-      }
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
       }
     };
   }, []);

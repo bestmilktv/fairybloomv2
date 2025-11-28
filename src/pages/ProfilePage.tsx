@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFavorites } from '@/contexts/FavoritesContext'
@@ -33,8 +33,6 @@ export default function ProfilePage() {
   const [favoriteProducts, setFavoriteProducts] = useState<FavoriteProduct[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 15
 
   // Edit states
   const [editingSection, setEditingSection] = useState<'personal' | 'contact' | 'address' | null>(null)
@@ -97,28 +95,19 @@ export default function ProfilePage() {
     }
   }, [editingSection, user])
 
-  // Fetch favorite products when favorites tab is active (with pagination)
+  // Fetch favorite products when favorites tab is active
   useEffect(() => {
     if (activeTab === 'favorites') {
       if (favorites.length === 0) {
         setFavoriteProducts([])
-        setCurrentPage(1)
         return
       }
-
-      let isCancelled = false
 
       const fetchFavoriteProducts = async () => {
         setLoadingProducts(true)
         try {
-          // Calculate which products to fetch for current page
-          const startIndex = (currentPage - 1) * itemsPerPage
-          const endIndex = startIndex + itemsPerPage
-          const favoritesToFetch = favorites.slice(startIndex, endIndex)
-
           const products = await Promise.all(
-            favoritesToFetch.map(async (productId) => {
-              if (isCancelled) return null
+            favorites.map(async (productId) => {
               try {
                 const product = await getProductById(productId)
                 if (!product) return null
@@ -143,29 +132,17 @@ export default function ProfilePage() {
             })
           )
 
-          if (!isCancelled) {
-            setFavoriteProducts(products.filter((p) => p !== null) as FavoriteProduct[])
-          }
+          setFavoriteProducts(products.filter((p) => p !== null) as FavoriteProduct[])
         } catch (error) {
-          if (!isCancelled) {
-            console.error('Error fetching favorite products:', error)
-          }
+          console.error('Error fetching favorite products:', error)
         } finally {
-          if (!isCancelled) {
-            setLoadingProducts(false)
-          }
+          setLoadingProducts(false)
         }
       }
 
       fetchFavoriteProducts()
-
-      return () => {
-        isCancelled = true
-      }
-    } else {
-      setCurrentPage(1)
     }
-  }, [activeTab, favorites, currentPage])
+  }, [activeTab, favorites])
 
   // Redirect if no user
   if (!user) {
@@ -182,17 +159,13 @@ export default function ProfilePage() {
     navigate('/')
   }
 
-  const handleRemoveFavorite = useCallback(async (productId: string) => {
+  const handleRemoveFavorite = async (productId: string) => {
     try {
       await removeFromFavorites(productId)
       toast({
         title: "Odebráno z oblíbených",
         description: "Produkt byl odebrán z vašich oblíbených.",
       })
-      // Reset to first page if current page becomes empty
-      if (favoriteProducts.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1)
-      }
     } catch (error) {
       console.error('Error removing favorite:', error)
       toast({
@@ -201,9 +174,9 @@ export default function ProfilePage() {
         variant: "destructive",
       })
     }
-  }, [removeFromFavorites, favoriteProducts.length, currentPage])
+  }
 
-  const handleAddToCart = useCallback(async (product: FavoriteProduct, event: React.MouseEvent) => {
+  const handleAddToCart = async (product: FavoriteProduct, event: React.MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
@@ -244,7 +217,7 @@ export default function ProfilePage() {
     } finally {
       setAddingToCart(null)
     }
-  }, [addToCart, toast])
+  }
 
   const handleSavePersonal = async () => {
     if (!editFirstName.trim() || !editLastName.trim()) {
@@ -853,7 +826,7 @@ export default function ProfilePage() {
                       <Loader2 className="w-8 h-8 animate-spin text-primary/40 mb-4" />
                       <p className="text-primary/60">Načítám oblíbené produkty...</p>
                     </div>
-                  ) : favoriteProducts.length === 0 && favorites.length === 0 ? (
+                  ) : favoriteProducts.length === 0 ? (
                     <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
                       <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center mb-6">
                         <Heart className="w-10 h-10 text-primary/40" />
@@ -869,7 +842,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="bg-white rounded-xl shadow-sm border border-primary/10 p-8">
                       <h2 className="text-2xl font-serif font-semibold text-primary mb-6">
-                        Oblíbené produkty ({favorites.length})
+                        Oblíbené produkty ({favoriteProducts.length})
                       </h2>
                       <div className="space-y-4">
                         {favoriteProducts.map((product, index) => (
@@ -887,8 +860,6 @@ export default function ProfilePage() {
                                   src={product.image || '/placeholder.jpg'}
                                   alt={product.title}
                                   className="w-20 h-20 object-cover rounded-lg shadow-sm"
-                                  loading="lazy"
-                                  decoding="async"
                                 />
                               </div>
                               <div className="flex-1 min-w-0">
@@ -923,29 +894,6 @@ export default function ProfilePage() {
                           </div>
                         ))}
                       </div>
-                      
-                      {/* Pagination */}
-                      {favorites.length > itemsPerPage && (
-                        <div className="mt-6 flex items-center justify-between border-t border-primary/10 pt-6">
-                          <button
-                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1 || loadingProducts}
-                            className="px-4 py-2 rounded-lg border border-primary/20 hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            Předchozí
-                          </button>
-                          <span className="text-sm text-primary/60">
-                            Stránka {currentPage} z {Math.ceil(favorites.length / itemsPerPage)}
-                          </span>
-                          <button
-                            onClick={() => setCurrentPage(prev => Math.min(Math.ceil(favorites.length / itemsPerPage), prev + 1))}
-                            disabled={currentPage >= Math.ceil(favorites.length / itemsPerPage) || loadingProducts}
-                            className="px-4 py-2 rounded-lg border border-primary/20 hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            Další
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

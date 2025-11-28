@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { createCart, addToCart as addToShopifyCart, getCart, updateCartLines, removeCartLines } from '@/lib/shopify'
 
 export interface CartItem {
@@ -106,11 +106,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Refresh cart from Shopify
-  const refreshCart = useCallback(async () => {
+  const refreshCart = async () => {
     if (cartId) {
       await refreshCartFromShopify(cartId)
     }
-  }, [cartId])
+  }
 
   const addToCart = async (newItem: Omit<CartItem, 'quantity'>) => {
     try {
@@ -247,16 +247,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const getTotalPrice = useCallback(() => {
+  const getTotalPrice = () => {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0)
-  }, [items])
+  }
 
-  const getTotalItems = useCallback(() => {
+  const getTotalItems = () => {
     return items.reduce((total, item) => total + item.quantity, 0)
-  }, [items])
+  }
 
-  // Memoize context value to prevent unnecessary re-renders
-  const value = useMemo(() => ({
+  const value = {
     items,
     cartId,
     isLoading,
@@ -267,7 +266,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     getTotalPrice,
     getTotalItems,
     refreshCart,
-  }), [items, cartId, isLoading, addToCart, removeFromCart, updateQuantity, clearCart, getTotalPrice, getTotalItems, refreshCart])
+  }
 
   return (
     <CartContext.Provider value={value}>
