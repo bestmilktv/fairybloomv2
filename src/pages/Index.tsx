@@ -342,7 +342,7 @@ const Index = () => {
           </div>
           
           <div className="space-y-8 fade-in-up-delayed" style={{ animationDelay: '0.2s' }}>
-            <div className="text-center mb-12">
+            <div className="text-center mb-6">
               <p className="text-2xl md:text-3xl font-serif font-medium text-primary/90 italic leading-relaxed max-w-3xl mx-auto">
                 Každý detail má svůj význam.<br />
                 Každý okamžik si zaslouží být výjimečný.
