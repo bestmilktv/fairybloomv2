@@ -84,6 +84,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (shopifyCart) {
         const cartItems = convertShopifyCartToItems(shopifyCart)
         setItems(cartItems)
+        
+        // If cart is empty after refresh, clear checkout URL
+        if (cartItems.length === 0) {
+          sessionStorage.removeItem('fairybloom-checkout-url')
+        }
       }
     } catch (error) {
       console.error('Error fetching cart from Shopify:', error)
@@ -91,6 +96,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCartId(null)
       setItems([])
       localStorage.removeItem('fairybloom-cart-id')
+      sessionStorage.removeItem('fairybloom-checkout-url')
       
       // Show user-friendly error message
       console.warn('Cart not found or expired. Creating new cart on next add to cart action.')
@@ -161,8 +167,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         throw new Error(result.data.cartLinesRemove.userErrors[0].message)
       }
       
+      // Check if cart will be empty after removal
+      const updatedItems = items.filter(i => i.id !== id)
+      
       // Refresh cart from Shopify
       await refreshCartFromShopify(cartId)
+      
+      // If cart is now empty, clear checkout URL
+      if (updatedItems.length === 0) {
+        sessionStorage.removeItem('fairybloom-checkout-url')
+      }
     } catch (error) {
       console.error('Error removing from cart:', error)
       throw error
@@ -206,6 +220,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       if (!cartId) {
         setItems([])
+        // Clear checkout URL if cart is already empty
+        sessionStorage.removeItem('fairybloom-checkout-url')
         return
       }
 
@@ -220,6 +236,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Clear cart ID and items
       setCartId(null)
       setItems([])
+      
+      // Clear checkout URL when cart is cleared
+      sessionStorage.removeItem('fairybloom-checkout-url')
     } catch (error) {
       console.error('Error clearing cart:', error)
       throw error

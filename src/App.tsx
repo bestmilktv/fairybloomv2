@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { useCart } from "@/contexts/CartContext";
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
@@ -43,11 +44,28 @@ const ScrollToTop = () => {
   return null;
 };
 
+// Component to handle checkout URL cleanup when cart is empty
+const CheckoutUrlGuard = () => {
+  const { items } = useCart();
+
+  useEffect(() => {
+    // Check if we have a checkout URL in sessionStorage but cart is empty
+    const checkoutUrl = sessionStorage.getItem('fairybloom-checkout-url');
+    if (checkoutUrl && items.length === 0) {
+      // Clear the checkout URL since cart is empty
+      sessionStorage.removeItem('fairybloom-checkout-url');
+    }
+  }, [items]);
+
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       {/* ScrollToTop component ensures page always starts at top on route changes */}
       <ScrollToTop />
+      <CheckoutUrlGuard />
       <Toaster />
       <Sonner />
       <Routes>

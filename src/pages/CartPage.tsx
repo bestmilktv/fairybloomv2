@@ -71,6 +71,9 @@ const CartPage = () => {
         throw new Error('Checkout URL not available')
       }
       
+      // Store checkout URL in sessionStorage for later cleanup
+      sessionStorage.setItem('fairybloom-checkout-url', checkoutUrl)
+      
       // Show success message
       toast({
         title: "Přesměrování k pokladně",
@@ -87,6 +90,7 @@ const CartPage = () => {
       if (error.message.includes('not found') || error.message.includes('expired')) {
         // Clear invalid cart and ask user to try again
         localStorage.removeItem('fairybloom-cart-id')
+        sessionStorage.removeItem('fairybloom-checkout-url')
         await clearCart()
         
         toast({
