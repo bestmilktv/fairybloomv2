@@ -25,9 +25,16 @@ const Index = () => {
   const [myStoryRef, myStoryVisible] = useScrollAnimation();
   const [newsletterRef, newsletterVisible] = useScrollAnimation();
 
+  // Collection mapping for Shopify - using slugified handles (these are the actual Shopify handles!)
+  const collectionMapping = {
+    'náhrdelníky': 'nahrdelniky',  // Actual Shopify handle (slugified)
+    'náušnice': 'nausnice',        // Actual Shopify handle (slugified)
+    'prsteny': 'prsteny',          // Actual Shopify handle (no diacritics)
+    'náramky': 'naramky'           // Actual Shopify handle (slugified)
+  };
 
-  // Helper function to get fallback image - memoizováno
-  const getFallbackImage = useCallback((category: string) => {
+  // Helper function to get fallback image
+  const getFallbackImage = (category: string) => {
     switch (category) {
       case 'náhrdelníky': return necklaceImage;
       case 'náušnice': return earringsImage;
@@ -35,28 +42,24 @@ const Index = () => {
       case 'náramky': return braceletImage;
       default: return necklaceImage;
     }
-  }, []);
-  
-  // Memoizace collection mapping
-  const collectionMapping = useMemo(() => ({
-    'náhrdelníky': 'nahrdelniky',
-    'náušnice': 'nausnice',
-    'prsteny': 'prsteny',
-    'náramky': 'naramky'
-  }), []);
+  };
 
-  // Fetch products from Shopify - PARALELNÍ NAČÍTÁNÍ
+  // Fetch products from Shopify
   useEffect(() => {
     const fetchShopifyProducts = async () => {
       try {
         setIsLoading(true);
         setHasError(false);
 
+
+
+        // Fetch each collection individually
         const categories = Object.keys(collectionMapping);
-        
-        // Paralelní načítání všech kolekcí současně pomocí Promise.all()
-        const collectionPromises = categories.map(async (czechKey) => {
+        const transformedCategories = [];
+
+        for (const czechKey of categories) {
           const shopifyHandle = collectionMapping[czechKey as keyof typeof collectionMapping];
+          
           
           try {
             const collection = await getProductsByCollection(shopifyHandle, 50);
@@ -80,37 +83,33 @@ const Index = () => {
                 };
               });
 
-              return {
+              transformedCategories.push({
                 id: czechKey,
                 title: collection.title || czechKey,
                 subtitle: collection.description || `Elegantní ${czechKey} z naší kolekce`,
                 products: products
-              };
+              });
             } else {
               // If no products found, create empty category
-              return {
+              transformedCategories.push({
                 id: czechKey,
                 title: czechKey,
                 subtitle: `Elegantní ${czechKey} z naší kolekce`,
                 products: []
-              };
+              });
             }
           } catch (error) {
             console.error(`Error fetching ${czechKey}:`, error);
             // Create empty category on error
-            return {
+            transformedCategories.push({
               id: czechKey,
               title: czechKey,
               subtitle: `Elegantní ${czechKey} z naší kolekce`,
               products: []
-            };
+            });
           }
-        });
+        }
 
-        // Čekáme na všechny kolekce současně
-        const transformedCategories = await Promise.all(collectionPromises);
-        
-        // Progressive rendering - zobrazit produkty jakmile jsou načtené
         setProductCategories(transformedCategories);
       } catch (error) {
         console.error('Error fetching Shopify products:', error);
