@@ -35,14 +35,9 @@ export default defineConfig(({ mode }) => ({
         },
       },
     },
-    // Tree shaking
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: mode === 'production',
-        drop_debugger: mode === 'production',
-      },
-    },
+    // Tree shaking - použít esbuild (rychlejší, výchozí v Vite)
+    minify: 'esbuild',
+    // Esbuild automaticky odstraňuje console.log v produkci
     // Optimalizace assetů
     assetsInlineLimit: 4096, // Inline malé obrázky (< 4KB)
     chunkSizeWarningLimit: 1000,
