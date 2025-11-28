@@ -29,11 +29,11 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
     <section 
       id={id} 
       ref={sectionRef}
-      className={`py-5 px-6 scroll-fade-in ${sectionVisible ? 'visible' : ''}`}
+      className={`pt-10 pb-5 px-6 scroll-fade-in ${sectionVisible ? 'visible' : ''}`}
     >
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-16 fade-in-up">
+        <div className="text-center mb-6 fade-in-up">
           <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-4 tracking-wide">
             {title}
           </h2>
@@ -43,12 +43,12 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
         </div>
         
         {/* Products Carousel */}
-        <div className="mb-12">
+        <div>
           <ProductCarousel products={products} />
         </div>
         
         {/* View More Button */}
-        <div className="text-center fade-in-up">
+        <div className="text-center fade-in-up mt-6">
           <Link to={categoryPath}>
             <Button variant="premium" size="lg">
               Zobrazit více

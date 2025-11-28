@@ -65,14 +65,13 @@ const Navigation = () => {
           </Link>
 
           {/* Category Navigation */}
-          <div className="hidden md:flex items-center space-x-8 flex-shrink-0">
+          <div className="hidden md:flex items-center space-x-4 flex-shrink-0">
             {categories.map(category => <Link 
               key={category.path} 
               to={category.path} 
-              className="text-primary/80 hover:text-primary relative font-medium tracking-wide transition-all duration-300 group"
+              className="text-primary/80 hover:text-primary px-3 py-1.5 rounded-full font-medium tracking-wide transition-all duration-300 hover:bg-background/80 hover:scale-105 hover:shadow-md hover:shadow-primary/5"
             >
-              <span className="relative z-10">{category.name}</span>
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
+              {category.name}
             </Link>)}
           </div>
 
