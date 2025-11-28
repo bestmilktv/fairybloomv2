@@ -210,6 +210,8 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
                           src={product.image || '/placeholder.jpg'}
                           alt={product.title}
                           className="w-20 h-20 object-cover rounded-lg shadow-sm"
+                          loading="lazy"
+                          decoding="async"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
