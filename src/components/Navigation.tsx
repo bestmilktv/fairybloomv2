@@ -69,7 +69,7 @@ const Navigation = () => {
             {categories.map(category => <Link 
               key={category.path} 
               to={category.path} 
-              className="text-primary/80 hover:text-primary px-3 py-1.5 rounded-full font-medium tracking-wide transition-all duration-300 hover:bg-background/80 hover:scale-105 hover:shadow-md hover:shadow-primary/5"
+              className="text-primary/80 hover:text-primary px-3 py-1.5 rounded-full tracking-wide smooth-font-weight hover:bg-background/80 hover:scale-105 hover:shadow-md hover:shadow-primary/5"
             >
               {category.name}
             </Link>)}
@@ -80,7 +80,7 @@ const Navigation = () => {
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full">
+                  <Button variant="ghost" size="icon" className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full smooth-font-weight">
                     <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -116,7 +116,7 @@ const Navigation = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full"
+                className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full smooth-font-weight"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <User className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
@@ -125,7 +125,7 @@ const Navigation = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full group"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full group smooth-font-weight"
               onClick={() => setFavoritesSidebarOpen(true)}
             >
               <Heart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110 group-hover:fill-primary/20" />
@@ -138,7 +138,7 @@ const Navigation = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full group"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 transition-all duration-300 rounded-full group smooth-font-weight"
               onClick={() => setMiniCartOpen(true)}
               data-cart-icon
             >

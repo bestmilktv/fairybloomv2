@@ -297,7 +297,7 @@ const ProductDetailPage = () => {
               Omlouváme se, ale požadovaný produkt nebyl nalezen.
             </p>
             <div className="space-x-4">
-              <Button asChild>
+              <Button asChild className="bg-primary/80 hover:bg-primary/90 text-primary-foreground hover:shadow-md hover:shadow-primary/10">
                 <Link to="/">
                   <ArrowLeft className="h-4 w-4 mr-2" />
             Zpět na hlavní stránku

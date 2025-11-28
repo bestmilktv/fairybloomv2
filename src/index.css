@@ -338,6 +338,16 @@ html {
   .bg-gradient-subtle {
     background: linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background) / 0.95));
   }
+  
+  /* Smooth font-weight transition for navbar elements */
+  .smooth-font-weight {
+    font-weight: 500;
+    transition: font-weight 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .smooth-font-weight:hover {
+    font-weight: 600;
+  }
 }
 
 @keyframes fadeInUp {
