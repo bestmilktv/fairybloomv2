@@ -602,7 +602,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       </button>
 
       {/* Indikátor pozice */}
-      <div className="flex justify-center items-center gap-1.5 mt-6">
+      <div className="flex justify-center items-center gap-1.5 mt-3">
         {products.map((_, index) => (
           <div
             key={index}

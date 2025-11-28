@@ -29,7 +29,7 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
     <section 
       id={id} 
       ref={sectionRef}
-      className={`pt-10 pb-5 px-6 scroll-fade-in ${sectionVisible ? 'visible' : ''}`}
+      className={`pt-[60px] pb-5 px-6 scroll-fade-in ${sectionVisible ? 'visible' : ''}`}
     >
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
