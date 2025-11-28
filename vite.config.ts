@@ -16,14 +16,9 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Enable tree shaking
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: mode === 'production', // Remove console.log in production
-        drop_debugger: true,
-      },
-    },
+    // Enable tree shaking - use esbuild (faster, already included in Vite)
+    minify: 'esbuild',
+    // esbuild automatically removes console.log in production builds
     // Code splitting - chunk strategy
     rollupOptions: {
       output: {
