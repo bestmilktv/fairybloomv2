@@ -71,12 +71,12 @@ const Hero = () => {
         </p>
         
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6" style={{ minHeight: '60px' }}>
-          <Button variant="gold" size="lg" onClick={scrollToProducts} className="w-full md:w-auto">Objevit kolekce</Button>
+          <Button variant="gold" size="default" onClick={scrollToProducts} className="w-full md:w-auto">Objevit kolekce</Button>
           <Button 
             variant="gold" 
-            size="lg" 
+            size="default" 
             onClick={scrollToMyStory} 
-            className="w-full md:w-auto bg-primary text-gold hover:bg-primary/95 rounded-xl font-medium shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
+            className="w-full md:w-auto bg-primary text-gold hover:bg-primary/90 rounded-xl font-medium shadow-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105"
           >
             Můj příběh
           </Button>

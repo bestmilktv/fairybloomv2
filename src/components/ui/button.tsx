@@ -16,7 +16,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground rounded-lg",
         link: "text-primary underline-offset-4 hover:underline",
         luxury: "bg-luxury text-luxury-foreground hover:bg-luxury/90 rounded-xl font-serif tracking-wide",
-        gold: "bg-gold text-gold-foreground hover:bg-gold/95 rounded-xl font-medium shadow-lg hover:shadow-xl hover:shadow-gold/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1",
+        gold: "bg-gold text-gold-foreground hover:bg-gold/90 rounded-xl font-medium shadow-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105",
         nature: "bg-nature text-nature-foreground hover:bg-nature/90 rounded-xl",
         premium: "bg-primary/10 border-2 border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 rounded-xl backdrop-blur-sm shadow-sm hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 font-medium",
       },

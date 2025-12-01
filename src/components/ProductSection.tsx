@@ -50,10 +50,10 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
         <div className="text-center fade-in-up mt-6">
           <Link 
             to={categoryPath}
-            className="inline-flex items-center px-4 py-2 bg-primary/80 hover:bg-primary/90 rounded-lg transition-all duration-200 text-sm font-medium text-primary-foreground hover:shadow-md hover:shadow-primary/10"
+            className="inline-flex items-center px-6 py-3 bg-primary/80 hover:bg-primary/90 rounded-lg transition-all duration-300 transform hover:scale-105 text-base font-medium text-primary-foreground hover:shadow-lg"
           >
             Zobrazit více
-            <ArrowRight className="h-4 w-4 ml-2" />
+            <ArrowRight className="h-5 w-5 ml-2" />
           </Link>
         </div>
       </div>
