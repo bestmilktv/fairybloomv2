@@ -402,7 +402,7 @@ const Index = () => {
               <button 
                 type="submit"
                 disabled={isSubmitting}
-                className="px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium tracking-wide hover:bg-primary/90 hover:shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium tracking-wide hover:bg-primary/90 hover:shadow-lg transition-[background-color,transform,box-shadow,opacity] duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isSubmitting ? 'Odesílám...' : 'Odebírat'}
               </button>

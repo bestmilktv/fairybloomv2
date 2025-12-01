@@ -144,7 +144,7 @@ const ContactPage = () => {
                 
                 <button
                   type="submit"
-                  className="w-full md:w-auto px-8 py-4 bg-luxury text-luxury-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-luxury/25 transition-all duration-300 transform hover:scale-105"
+                  className="w-full md:w-auto px-8 py-4 bg-luxury text-luxury-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-luxury/25 transition-[transform,box-shadow] duration-300 ease-in-out transform hover:scale-105"
                 >
                   Odeslat zprávu
                 </button>

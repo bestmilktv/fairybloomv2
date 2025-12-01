@@ -339,15 +339,10 @@ html {
     background: linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background) / 0.95));
   }
   
-  /* Smooth text-shadow transition for navbar elements (replaces font-weight to prevent layout shift) */
+  /* Smooth transition for navbar text links (no font-weight/text-shadow to prevent layout shift) */
   .smooth-font-weight {
     font-weight: 500;
-    text-shadow: none;
-    transition: text-shadow 300ms ease-in-out, transform 300ms ease-in-out, color 300ms ease-in-out, background-color 300ms ease-in-out, box-shadow 300ms ease-in-out;
-  }
-  
-  .smooth-font-weight:hover {
-    text-shadow: 0 0 0.5px currentColor, 0 0 1px currentColor;
+    transition: transform 300ms ease-in-out, color 300ms ease-in-out, background-color 300ms ease-in-out, box-shadow 300ms ease-in-out;
   }
 }
 
