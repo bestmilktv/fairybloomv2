@@ -463,7 +463,7 @@ const DynamicProductPage = () => {
                     size="lg" 
                     className={`flex-1 ${
                       items.some(item => item.id === product.id)
-                        ? 'bg-slate-800/95 hover:bg-slate-800 border border-gold/40 text-[hsl(45,65%,72%)] shadow-lg shadow-gold/10 hover:shadow-gold/20 hover:border-gold/60 transition-all duration-300'
+                        ? 'bg-primary/80 hover:bg-primary/90 border border-primary/30 text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300'
                         : ''
                     }`}
                     onClick={handleAddToCart}

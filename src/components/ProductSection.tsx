@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 import ProductCarousel from './ProductCarousel';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
@@ -49,10 +48,12 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
         
         {/* View More Button */}
         <div className="text-center fade-in-up mt-6">
-          <Link to={categoryPath}>
-            <Button variant="premium" size="lg">
-              Zobrazit více
-            </Button>
+          <Link 
+            to={categoryPath}
+            className="inline-flex items-center px-4 py-2 bg-primary/80 hover:bg-primary/90 rounded-lg transition-all duration-200 text-sm font-medium text-primary-foreground hover:shadow-md hover:shadow-primary/10"
+          >
+            Zobrazit více
+            <ArrowRight className="h-4 w-4 ml-2" />
           </Link>
         </div>
       </div>
