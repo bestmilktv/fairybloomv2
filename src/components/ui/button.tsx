@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-[background-color,color,transform,font-weight,box-shadow,border-color,opacity,scale] duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -16,9 +16,9 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground rounded-lg",
         link: "text-primary underline-offset-4 hover:underline",
         luxury: "bg-luxury text-luxury-foreground hover:bg-luxury/90 rounded-xl font-serif tracking-wide",
-        gold: "bg-gold text-gold-foreground hover:bg-gold/90 rounded-xl font-medium shadow-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105",
+        gold: "bg-gold text-gold-foreground hover:bg-gold/90 rounded-xl font-medium shadow-lg hover:shadow-lg transform hover:scale-105",
         nature: "bg-nature text-nature-foreground hover:bg-nature/90 rounded-xl",
-        premium: "bg-primary/10 border-2 border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 rounded-xl backdrop-blur-sm shadow-sm hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 font-medium",
+        premium: "bg-primary/10 border-2 border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 rounded-xl backdrop-blur-sm shadow-sm hover:shadow-lg hover:shadow-primary/10 font-medium",
       },
       size: {
         default: "h-12 px-6 py-3 text-sm",
