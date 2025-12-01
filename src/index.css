@@ -342,7 +342,7 @@ html {
   /* Smooth font-weight transition for navbar elements */
   .smooth-font-weight {
     font-weight: 500;
-    transition: font-weight 0.3s ease-in-out, transform 0.3s ease-in-out, color 0.3s ease-in-out, background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    transition: font-weight 300ms ease-in-out, transform 300ms ease-in-out, color 300ms ease-in-out, background-color 300ms ease-in-out, box-shadow 300ms ease-in-out;
   }
   
   .smooth-font-weight:hover {

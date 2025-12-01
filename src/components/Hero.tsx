@@ -76,7 +76,7 @@ const Hero = () => {
             variant="gold" 
             size="lg" 
             onClick={scrollToMyStory} 
-            className="w-full md:w-auto bg-primary text-gold hover:bg-primary/90 rounded-xl font-medium shadow-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+            className="w-full md:w-auto bg-primary text-gold hover:bg-primary rounded-xl font-medium shadow-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105"
           >
             Můj příběh
           </Button>
