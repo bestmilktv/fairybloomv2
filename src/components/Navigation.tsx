@@ -69,7 +69,7 @@ const Navigation = () => {
             {categories.map(category => <Link 
               key={category.path} 
               to={category.path} 
-              className="text-primary/80 hover:text-primary px-3 py-1.5 rounded-full tracking-wide smooth-font-weight hover:bg-background/80 hover:scale-105 hover:shadow-md hover:shadow-primary/5"
+              className="text-primary/80 hover:text-primary px-3 py-1.5 rounded-full tracking-wide smooth-font-weight hover:bg-background/80 hover:scale-105 hover:shadow-md hover:shadow-primary/5 inline-block min-w-fit"
             >
               {category.name}
             </Link>)}
