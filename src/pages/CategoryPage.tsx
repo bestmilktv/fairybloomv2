@@ -217,10 +217,10 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 overflow-visible">
-            <div className="w-56 overflow-visible p-6 -m-6">
+          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 overflow-visible py-6 -my-6">
+            <div className="w-56 overflow-visible" style={{ paddingLeft: '24px', paddingRight: '24px', paddingTop: '24px', paddingBottom: '24px', marginLeft: '-24px', marginRight: '-24px', marginTop: '-24px', marginBottom: '-24px' }}>
               <Select value={sort} onValueChange={(v) => setSort(v)}>
-                <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none !ring-0 focus:!ring-0 focus-visible:!ring-0 data-[state=open]:!ring-0 data-[state=closed]:!ring-0">
+                <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
                   <SelectValue placeholder="Seřadit" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">

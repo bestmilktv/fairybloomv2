@@ -563,10 +563,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                             willChange: 'transform, opacity' // GPU akcelerace pro lepší výkon
                         }}
                     >
-                        <div className="h-full"> 
+                        <div className="h-full group"> 
                             <Link 
                                 to={item.product.handle ? createProductPath(item.product.handle) : `/product-shopify/${item.product.handle}`}
-                                className="block h-full"
+                                className="block h-full group-hover:-translate-y-2 transition-transform duration-300 ease-out"
                                 draggable={false}
                                 onClick={(e) => {
                                     if (isClickBlockedRef.current) {
