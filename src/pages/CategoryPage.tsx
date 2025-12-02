@@ -218,9 +218,9 @@ const CategoryPage = () => {
       <section className="px-6 pb-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
           <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 overflow-visible">
-            <div className="w-56 overflow-visible">
+            <div className="w-56 overflow-visible p-4 -m-4">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
-                <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-2">
+                <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 ring-0">
                   <SelectValue placeholder="Seřadit" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
