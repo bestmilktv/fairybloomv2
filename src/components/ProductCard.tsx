@@ -84,10 +84,9 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
   };
 
   // Podmíněné třídy podle disableAnimations
-  // Using drop-shadow filter instead of box-shadow to prevent clipping when card moves up
   const cardClasses = disableAnimations
     ? "bg-card rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] h-full flex flex-col transition-none"
-    : "bg-card rounded-2xl overflow-hidden h-full flex flex-col transition-all duration-500 transform hover:-translate-y-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)] hover:drop-shadow-[0_10px_25px_rgba(0,0,0,0.15)]";
+    : "bg-card rounded-2xl overflow-visible shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col";
   
   const imageClasses = disableAnimations
     ? "w-full h-full object-cover"
