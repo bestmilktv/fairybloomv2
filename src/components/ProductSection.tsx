@@ -47,7 +47,7 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
         </div>
         
         {/* View More Button */}
-        <div className="text-center fade-in-up mt-6 pb-8 overflow-visible">
+        <div className="text-center fade-in-up mt-6 pt-8 pb-8 overflow-visible">
           <Link 
             to={categoryPath}
             className="inline-flex items-center px-6 py-3 bg-primary/80 hover:bg-primary/90 rounded-lg transition-[background-color,transform,box-shadow] duration-300 ease-in-out transform hover:scale-105 text-base font-medium text-primary-foreground shadow-lg hover:shadow-lg"

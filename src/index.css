@@ -343,19 +343,24 @@ html {
   .smooth-font-weight {
     font-weight: 500;
     transition: transform 300ms ease-in-out, color 300ms ease-in-out, background-color 300ms ease-in-out, box-shadow 300ms ease-in-out;
+    transform-origin: center;
   }
   
   /* Optimize text rendering during scale transforms to prevent flickering */
   button[class*="hover:scale"],
   a[class*="hover:scale"],
   .smooth-font-weight,
-  button:has([class*="hover:scale"]) {
+  button:has([class*="hover:scale"]),
+  /* Specific optimization for navbar links */
+  nav a.smooth-font-weight,
+  nav a[class*="scale"] {
     will-change: transform;
     backface-visibility: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    transform: translateZ(0);
+    transform: translateZ(0) scale(1);
+    transform-style: preserve-3d;
   }
 }
 
