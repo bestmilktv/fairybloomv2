@@ -220,10 +220,10 @@ const CategoryPage = () => {
           <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3">
             <div className="w-56">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
-                <SelectTrigger className="h-11 rounded-full border-muted/60 bg-background/60 backdrop-blur text-sm">
+                <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-2">
                   <SelectValue placeholder="Seřadit" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-muted/60">
+                <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
                   <SelectItem value="nejoblibenejsi">Nejprodávanější</SelectItem>
                   <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
                   <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
