@@ -86,7 +86,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
   // Podmíněné třídy podle disableAnimations
   const cardClasses = disableAnimations
     ? "bg-card rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] h-full flex flex-col transition-none"
-    : "bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col";
+    : "bg-card rounded-2xl overflow-visible shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col";
   
   const imageClasses = disableAnimations
     ? "w-full h-full object-cover"
@@ -98,8 +98,8 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
 
   // Podmíněné třídy pro wrapper obrázku - odstraníme bg-muted když disableAnimations
   const imageWrapperClasses = disableAnimations
-    ? "aspect-square overflow-hidden"
-    : "aspect-square overflow-hidden bg-muted";
+    ? "aspect-square overflow-hidden rounded-t-2xl"
+    : "aspect-square overflow-hidden bg-muted rounded-t-2xl";
 
   return (
     <div className={cardClasses}>
