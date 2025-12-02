@@ -359,8 +359,14 @@ html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    transform: translateZ(0) scale(1);
+    transform: translateZ(0);
     transform-style: preserve-3d;
+  }
+  
+  /* Ensure translateZ(0) stays during hover scale for navbar links */
+  nav a.smooth-font-weight:hover,
+  nav a[class*="scale"]:hover {
+    transform: translateZ(0) scale(1.05) !important;
   }
 }
 
