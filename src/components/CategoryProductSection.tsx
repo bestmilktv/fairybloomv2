@@ -30,7 +30,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          className="fade-in-up overflow-visible" 
+          className="fade-in-up overflow-visible pb-4"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
