@@ -215,9 +215,9 @@ const CategoryPage = () => {
       </section>
 
       {/* Toolbar: Sorting */}
-      <section className="px-6 overflow-visible">
+      <section className="px-6 pb-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 py-2 overflow-visible">
+          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 overflow-visible">
             <div className="w-56 overflow-visible">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-2">
@@ -237,7 +237,7 @@ const CategoryPage = () => {
 
       {/* Products Grid */}
       <section className="pt-8 pb-16 px-6 overflow-visible">
-        <div className="max-w-7xl mx-auto overflow-visible">
+        <div className="max-w-7xl mx-auto overflow-visible -mx-6 px-6">
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 overflow-visible">
               {/* Transparent placeholders matching ProductCard structure */}
