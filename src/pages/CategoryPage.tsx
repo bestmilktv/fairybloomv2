@@ -239,7 +239,7 @@ const CategoryPage = () => {
       <section className="pt-8 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 overflow-visible">
               {/* Transparent placeholders matching ProductCard structure */}
               {Array.from({ length: expectedProductCount }).map((_, i) => (
                 <div 
