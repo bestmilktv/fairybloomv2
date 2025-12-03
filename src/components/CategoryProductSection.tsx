@@ -26,8 +26,8 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // ZMĚNA ZDE: gap-y-1 -> gap-y-12 (zvětšení mezery mezi řadami)
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-12 overflow-visible p-2 -m-2 justify-items-center">
+    // ZMĚNA: gap-y-9 (menší mezera), p-6 -m-6 (prostor pro stíny a zarovnání)
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-9 overflow-visible p-6 -m-6 justify-items-center">
       {products.map((product, index) => (
         <div 
           key={product.id} 
