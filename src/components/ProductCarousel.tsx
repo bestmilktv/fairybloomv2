@@ -563,10 +563,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                             willChange: 'transform, opacity' // GPU akcelerace pro lepší výkon
                         }}
                     >
-                        <div className="h-full group"> 
+                        <div className="h-full"> 
                             <Link 
                                 to={item.product.handle ? createProductPath(item.product.handle) : `/product-shopify/${item.product.handle}`}
-                                className="block h-full group-hover:-translate-y-2 transition-transform duration-300 ease-out"
+                                className="block h-full group"
                                 draggable={false}
                                 onClick={(e) => {
                                     if (isClickBlockedRef.current) {
@@ -575,16 +575,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                     }
                                 }}
                             >
-                                <ProductCard
-                                    id={item.product.id}
-                                    title={item.product.title}
-                                    price={item.product.price}
-                                    image={item.product.image}
-                                    description={item.product.description}
-                                    inventoryQuantity={item.product.inventoryQuantity}
-                                    variantId={item.product.variantId}
-                                    disableAnimations={true}
-                                />
+                                <div className="h-full group-hover:-translate-y-2 transition-transform duration-300 ease-out">
+                                    <ProductCard
+                                        id={item.product.id}
+                                        title={item.product.title}
+                                        price={item.product.price}
+                                        image={item.product.image}
+                                        description={item.product.description}
+                                        inventoryQuantity={item.product.inventoryQuantity}
+                                        variantId={item.product.variantId}
+                                        disableAnimations={true}
+                                    />
+                                </div>
                             </Link>
                         </div>
                     </div>
