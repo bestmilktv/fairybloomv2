@@ -41,9 +41,13 @@ html {
     --accent: 45 65% 65%;
     --accent-foreground: 340 47% 24%;
 
-    /* Gold accent - darker for better visibility */
-    --gold: 45 70% 48%;
+    /* Gold accent - same as accent color */
+    --gold: 45 65% 65%;
     --gold-foreground: 340 47% 24%;
+
+    /* Price gold - darker for better visibility of prices */
+    --price-gold: 45 70% 48%;
+    --price-gold-foreground: 340 47% 24%;
 
     /* Nature green - subtle variation for nature elements */
     --nature: 120 25% 45%;

@@ -240,7 +240,7 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
                         <h3 className="font-medium text-foreground truncate mb-1">
                           {product.title}
                         </h3>
-                        <p className="text-sm font-semibold text-gold">
+                        <p className="text-sm font-semibold text-price-gold">
                           {formatPrice(product.price)}
                         </p>
                       </div>

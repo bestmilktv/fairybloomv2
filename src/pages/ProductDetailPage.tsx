@@ -402,7 +402,7 @@ const ProductDetailPage = () => {
                 <h1 className="text-4xl font-serif font-bold text-luxury mb-4">
                   {product.title}
                 </h1>
-                <p className="text-2xl font-semibold text-gold font-serif">
+                <p className="text-2xl font-semibold text-price-gold font-serif">
                   {product.price}
                 </p>
                 

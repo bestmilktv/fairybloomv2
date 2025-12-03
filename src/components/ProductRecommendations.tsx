@@ -260,7 +260,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
                   </h3>
                   
                   <div className="flex items-center justify-between mt-auto">
-                    <span className="text-2xl font-semibold text-gold font-serif">
+                    <span className="text-2xl font-semibold text-price-gold font-serif">
                       {product.price}
                     </span>
                     <Button 

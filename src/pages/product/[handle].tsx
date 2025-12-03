@@ -410,7 +410,7 @@ const DynamicProductPage = () => {
                   {product.title}
                 </h1>
                 {selectedVariant && (
-                  <p className="text-3xl font-serif font-semibold text-gold">
+                  <p className="text-3xl font-serif font-semibold text-price-gold">
                     {formatPrice(selectedVariant.price)}
                   </p>
                 )}

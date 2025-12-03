@@ -132,7 +132,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
         
         <div className="space-y-2 mt-auto">
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-semibold text-gold font-serif">
+            <span className="text-2xl font-semibold text-price-gold font-serif">
               {price}
             </span>
             {/* Availability status - only show on collection pages, not homepage */}

@@ -176,7 +176,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
                       <p className="text-sm text-muted-foreground mb-2">
                         {formatPrice(item.price)} / ks
                       </p>
-                      <p className="text-sm font-semibold text-gold">
+                      <p className="text-sm font-semibold text-price-gold">
                         {formatPrice(item.price * item.quantity)}
                       </p>
                       
@@ -225,7 +225,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
             <div className="border-t border-border p-6 space-y-4 bg-gradient-to-r from-background to-primary/5">
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-foreground">Celkem:</span>
-                <span className="text-2xl font-serif font-bold text-gold">
+                <span className="text-2xl font-serif font-bold text-price-gold">
                   {formatPrice(getTotalPrice())}
                 </span>
               </div>

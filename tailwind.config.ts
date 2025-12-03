@@ -52,6 +52,10 @@ export default {
           DEFAULT: "hsl(var(--gold))",
           foreground: "hsl(var(--gold-foreground))",
         },
+        "price-gold": {
+          DEFAULT: "hsl(var(--price-gold))",
+          foreground: "hsl(var(--price-gold-foreground))",
+        },
         nature: {
           DEFAULT: "hsl(var(--nature))",
           foreground: "hsl(var(--nature-foreground))",
