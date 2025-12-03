@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, Heart, Loader2, ShoppingCart } from 'lucide-react'
+import { X, Heart, Loader2, ShoppingCart, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useFavorites } from '@/contexts/FavoritesContext'
 import { useCart } from '@/contexts/CartContext'
@@ -23,7 +23,7 @@ interface FavoriteProduct {
 
 export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
   const { favorites, removeFromFavorites, isLoading: favoritesLoading } = useFavorites()
-  const { addToCart } = useCart()
+  const { addToCart, removeFromCart, items } = useCart()
   const { toast } = useToast()
   const [favoriteProducts, setFavoriteProducts] = useState<FavoriteProduct[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
@@ -97,46 +97,70 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
     }
   }
 
-  const handleAddToCart = async (product: FavoriteProduct, event: React.MouseEvent) => {
+  const handleToggleCart = async (product: FavoriteProduct, event: React.MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
-    if (!product.variantId) {
-      toast({
-        title: "Chyba",
-        description: "Produkt nemá dostupné varianty.",
-        variant: "destructive",
-      })
-      return
-    }
+    const isInCart = items.some(item => item.id === product.id)
 
-    try {
-      setAddingToCart(product.id)
-      const priceNumber = parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+    if (isInCart) {
+      // Remove from cart
+      try {
+        setAddingToCart(product.id)
+        await removeFromCart(product.id)
+        toast({
+          title: "Odebráno z košíku",
+          description: `${product.title} byl odebrán z vašeho košíku.`,
+        })
+      } catch (error) {
+        console.error('Error removing from cart:', error)
+        toast({
+          title: "Chyba při odebírání z košíku",
+          description: "Nepodařilo se odebrat produkt z košíku. Zkuste to prosím znovu.",
+          variant: "destructive",
+        })
+      } finally {
+        setAddingToCart(null)
+      }
+    } else {
+      // Add to cart
+      if (!product.variantId) {
+        toast({
+          title: "Chyba",
+          description: "Produkt nemá dostupné varianty.",
+          variant: "destructive",
+        })
+        return
+      }
 
-      await addToCart({
-        id: product.id,
-        name: product.title,
-        price: priceNumber,
-        image: product.image,
-        category: 'Shopify Product',
-        variantId: product.variantId,
-        isShopifyProduct: true,
-      })
+      try {
+        setAddingToCart(product.id)
+        const priceNumber = parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.')) || 0
 
-      toast({
-        title: "Přidáno do košíku",
-        description: `${product.title} byl přidán do vašeho košíku.`,
-      })
-    } catch (error) {
-      console.error('Error adding to cart:', error)
-      toast({
-        title: "Chyba při přidávání do košíku",
-        description: "Nepodařilo se přidat produkt do košíku. Zkuste to prosím znovu.",
-        variant: "destructive",
-      })
-    } finally {
-      setAddingToCart(null)
+        await addToCart({
+          id: product.id,
+          name: product.title,
+          price: priceNumber,
+          image: product.image,
+          category: 'Shopify Product',
+          variantId: product.variantId,
+          isShopifyProduct: true,
+        })
+
+        toast({
+          title: "Přidáno do košíku",
+          description: `${product.title} byl přidán do vašeho košíku.`,
+        })
+      } catch (error) {
+        console.error('Error adding to cart:', error)
+        toast({
+          title: "Chyba při přidávání do košíku",
+          description: "Nepodařilo se přidat produkt do košíku. Zkuste to prosím znovu.",
+          variant: "destructive",
+        })
+      } finally {
+        setAddingToCart(null)
+      }
     }
   }
 
@@ -225,12 +249,18 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={(e) => handleAddToCart(product, e)}
-                        disabled={addingToCart === product.id || !product.variantId}
-                        className="h-8 px-3 hover:bg-gold/10 hover:border-gold disabled:opacity-50"
+                        onClick={(e) => handleToggleCart(product, e)}
+                        disabled={addingToCart === product.id || (!items.some(item => item.id === product.id) && !product.variantId)}
+                        className={`h-8 px-3 disabled:opacity-50 ${
+                          items.some(item => item.id === product.id)
+                            ? 'bg-gold/20 border-gold text-gold hover:bg-gold/30'
+                            : 'hover:bg-gold/10 hover:border-gold'
+                        }`}
                       >
                         {addingToCart === product.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : items.some(item => item.id === product.id) ? (
+                          <Check className="h-3 w-3" />
                         ) : (
                           <ShoppingCart className="h-3 w-3" />
                         )}

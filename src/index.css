@@ -41,8 +41,8 @@ html {
     --accent: 45 65% 65%;
     --accent-foreground: 340 47% 24%;
 
-    /* Gold accent - same as accent color */
-    --gold: 45 65% 65%;
+    /* Gold accent - darker for better visibility */
+    --gold: 45 70% 48%;
     --gold-foreground: 340 47% 24%;
 
     /* Nature green - subtle variation for nature elements */

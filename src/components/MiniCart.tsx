@@ -234,7 +234,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
                 <Button 
                   onClick={handleCheckout}
                   disabled={isCheckingOut || isLoading || !cartId || items.length === 0}
-                  variant="luxury" 
+                  variant="default" 
                   className="w-full h-12 text-lg font-medium"
                 >
                   {isCheckingOut ? (
