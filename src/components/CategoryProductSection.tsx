@@ -26,7 +26,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-1 overflow-visible justify-items-center">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-1 overflow-visible p-2 -m-2 justify-items-center">
       {products.map((product, index) => (
         <div 
           key={product.id} 
