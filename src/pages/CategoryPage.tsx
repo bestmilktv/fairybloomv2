@@ -217,8 +217,8 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-4 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 overflow-visible p-2 -m-2">
-            <div className="w-56">
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-6 overflow-visible p-2 -m-2 justify-items-center fade-in-progressive-3">
+            <div className="w-56 overflow-visible pb-6 -mb-6">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
                   <SelectValue placeholder="Seřadit" />
@@ -239,7 +239,7 @@ const CategoryPage = () => {
       <section className="pt-4 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-6 overflow-visible justify-items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-1 overflow-visible justify-items-center">
                 {/* Transparent placeholders matching ProductCard structure */}
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
                   <div 
