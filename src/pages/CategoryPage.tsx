@@ -215,10 +215,10 @@ const CategoryPage = () => {
       </section>
 
       {/* Toolbar: Sorting */}
-      <section className="px-6 pb-2 overflow-visible">
+      <section className="px-6 pb-4 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 overflow-visible p-2 -m-2">
-            <div className="w-56">
+          <div key={`sort-${decodedCategory}`} className="flex items-center justify-center fade-in-progressive-3 overflow-visible p-2 -m-2">
+            <div className="w-56 flex justify-start">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
                   <SelectValue placeholder="Seřadit" />
@@ -236,31 +236,33 @@ const CategoryPage = () => {
       </section>
 
       {/* Products Grid */}
-      <section className="pt-2 pb-16 px-6 overflow-visible">
+      <section className="pt-4 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-visible">
-              {/* Transparent placeholders matching ProductCard structure */}
-              {Array.from({ length: expectedProductCount }).map((_, i) => (
-                <div 
-                  key={`placeholder-${decodedCategory}-${i}`} 
-                  className="opacity-0 pointer-events-none"
-                >
-                  <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
-                    {/* Aspect-square placeholder matching image area */}
-                    <div className="aspect-square bg-transparent" />
-                    {/* Content area matching ProductCard padding/structure */}
-                    <div className="p-6 flex flex-col flex-grow">
-                      <div className="min-h-[3.5rem] mb-2" />
-                      <div className="flex-grow" />
-                      <div className="space-y-2 mt-auto">
-                        <div className="h-8" />
-                        <div className="h-5" />
+            <div className="flex justify-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-visible">
+                {/* Transparent placeholders matching ProductCard structure */}
+                {Array.from({ length: expectedProductCount }).map((_, i) => (
+                  <div 
+                    key={`placeholder-${decodedCategory}-${i}`} 
+                    className="opacity-0 pointer-events-none"
+                  >
+                    <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
+                      {/* Aspect-square placeholder matching image area */}
+                      <div className="aspect-square bg-transparent" />
+                      {/* Content area matching ProductCard padding/structure */}
+                      <div className="p-6 flex flex-col flex-grow">
+                        <div className="min-h-[3.5rem] mb-2" />
+                        <div className="flex-grow" />
+                        <div className="space-y-2 mt-auto">
+                          <div className="h-8" />
+                          <div className="h-5" />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : hasError ? (
             <div className="text-center py-12">
@@ -279,11 +281,13 @@ const CategoryPage = () => {
               <p className="text-muted-foreground mb-6">V této kategorii zatím nejsou žádné produkty.</p>
             </div>
           ) : (
-            <CategoryProductSection 
-              key={`products-${decodedCategory}`}
-              category={decodedCategory || ''}
-              initialProducts={displayProducts}
-            />
+            <div className="flex justify-center">
+              <CategoryProductSection 
+                key={`products-${decodedCategory}`}
+                category={decodedCategory || ''}
+                initialProducts={displayProducts}
+              />
+            </div>
           )}
         </div>
       </section>
