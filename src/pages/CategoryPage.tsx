@@ -217,7 +217,7 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-2 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-6 overflow-visible p-6 -m-6 justify-items-center fade-in-progressive-3">
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-6 overflow-visible p-2 -m-2 justify-items-center fade-in-progressive-3">
             <div className="w-56 overflow-visible">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
@@ -237,9 +237,9 @@ const CategoryPage = () => {
 
       {/* Products Grid */}
       <section className="pt-2 pb-16 px-6 overflow-visible">
-        <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
+        <div className="max-w-7xl mx-auto overflow-visible">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-1 overflow-visible justify-items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-1 gap-y-1 overflow-visible justify-items-center p-2 -m-2">
                 {/* Transparent placeholders matching ProductCard structure */}
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
                   <div 
@@ -279,13 +279,11 @@ const CategoryPage = () => {
               <p className="text-muted-foreground mb-6">V této kategorii zatím nejsou žádné produkty.</p>
             </div>
           ) : (
-            <div className="flex justify-center">
-              <CategoryProductSection 
-                key={`products-${decodedCategory}`}
-                category={decodedCategory || ''}
-                initialProducts={displayProducts}
-              />
-            </div>
+            <CategoryProductSection 
+              key={`products-${decodedCategory}`}
+              category={decodedCategory || ''}
+              initialProducts={displayProducts}
+            />
           )}
         </div>
       </section>
