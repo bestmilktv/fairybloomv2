@@ -26,17 +26,11 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // GRID: gap-4 (16px) všude - malé mezery
-    // pb-20: Velký spodní padding, aby se stín spodní řady neořízl o patičku
-    // p-4: Boční padding proti ořezu
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center p-4 pb-20 overflow-visible">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-4 overflow-visible pb-20">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          // WRAPPER:
-          // max-w-[260px]: Zmenšená šířka karty
-          // relative z-0 hover:z-50: ZAJISTÍ, ŽE STÍN PŘEKRYJE SOUSEDNÍ ELEMENTY A NEOŘÍZNE SE
-          className="fade-in-up w-full max-w-[260px] relative z-0 hover:z-50 transition-all duration-300 ease-out"
+          className="fade-in-up w-full max-w-[260px] p-2 relative z-0 hover:z-50 transition-all duration-300"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
