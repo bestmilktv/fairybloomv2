@@ -26,22 +26,24 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // OPRAVA: Čistý grid bez hacků.
-    // gap-x-8 (32px) horizontálně
-    // gap-y-12 (48px) vertikálně
-    // p-4 (padding okolo, aby se neořízly stíny krajních karet)
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 p-4 justify-items-center w-full">
+    // GRID: gap-4 (mezery mezi produkty), p-4 (aby krajní stíny nebyly uříznuté oknem)
+    // mt-2: Jemné doladění vertikální pozice
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center p-4 overflow-visible mt-2">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          className="fade-in-up w-full max-w-[320px]" // Omezíme max šířku karty, aby se neroztahovala do nekonečna
+          // WRAPPER KARTY:
+          // 1. max-w-[260px]: Zmenšení produktů (bylo 280px).
+          // 2. p-4: Ochranná zóna pro stín (buffer).
+          // 3. relative z-0 hover:z-50: TOTO OPRAVUJE OŘEZÁNÍ. Při hoveru jde karta nad ostatní.
+          className="fade-in-up w-full max-w-[260px] p-4 relative z-0 hover:z-50 transition-all duration-300 ease-out"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
         >
           <Link 
             to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 
-            className="group cursor-pointer block h-full"
+            className="group cursor-pointer block h-full overflow-visible"
           >
             <ProductCard
               id={product.id}
