@@ -42,9 +42,7 @@ const CategoryPage = () => {
         setHasError(false);
 
         const decodedCategory = category ? decodeURIComponent(category) : null;
-        // Direct mapping from slugified URL to Shopify handle
         const shopifyHandle = decodedCategory;
-        
         
         if (shopifyHandle) {
           const collection = await getProductsByCollection(shopifyHandle, 20);
@@ -56,14 +54,12 @@ const CategoryPage = () => {
                 const firstImage = product.images?.edges?.[0]?.node;
                 const firstVariant = product.variants?.edges?.[0]?.node;
                 
-                // Fetch inventory for the first variant
                 let inventoryQuantity = null;
                 if (firstVariant?.id) {
                   try {
                     inventoryQuantity = await getVariantInventory(firstVariant.id);
                   } catch (error) {
                     console.error('Error fetching inventory for product:', product.title, error);
-                    // Keep inventoryQuantity as null if fetch fails
                   }
                 }
                 
@@ -85,7 +81,6 @@ const CategoryPage = () => {
             );
             
             setShopifyProducts(products);
-            // Update expected count for next time (used for placeholders)
             setExpectedProductCount(products.length || 20);
           } else {
             setHasError(true);
@@ -106,7 +101,6 @@ const CategoryPage = () => {
     }
   }, [category]);
 
-  // Helper function to get fallback image
   const getFallbackImage = (category: string | null) => {
     if (!category) return necklaceImage;
     switch (category) {
@@ -118,7 +112,6 @@ const CategoryPage = () => {
     }
   };
 
-  // Category titles and subtitles
   const categoryInfo = {
     'nahrdelniky': {
       title: 'Náhrdelníky',
@@ -142,7 +135,6 @@ const CategoryPage = () => {
     }
   };
 
-  // URL decode the category name to handle Czech characters properly
   const decodedCategory = category ? decodeURIComponent(category) : null;
   const categoryData = decodedCategory ? categoryInfo[decodedCategory as keyof typeof categoryInfo] : null;
 
@@ -158,7 +150,6 @@ const CategoryPage = () => {
     );
   }
 
-  // Sync sort to URL when changed
   useEffect(() => {
     const current = searchParams.get('razeni') || 'nejoblibenejsi';
     if (current !== sort) {
@@ -166,10 +157,8 @@ const CategoryPage = () => {
       next.set('razeni', sort);
       setSearchParams(next, { replace: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort]);
 
-  // Use Shopify products and apply sorting
   const displayProducts = (() => {
     const products = [...shopifyProducts];
     switch (sort) {
@@ -215,52 +204,54 @@ const CategoryPage = () => {
       </section>
 
       {/* Toolbar: Sorting */}
-      <section className="px-6 pb-6 overflow-visible">
-        <div className="max-w-7xl mx-auto overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 overflow-visible py-6 -my-6">
-            <div className="w-56 overflow-visible" style={{ paddingLeft: '24px', paddingRight: '24px', paddingTop: '24px', paddingBottom: '24px', marginLeft: '-24px', marginRight: '-24px', marginTop: '-24px', marginBottom: '-24px' }}>
-              <Select value={sort} onValueChange={(v) => setSort(v)}>
-                <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
-                  <SelectValue placeholder="Seřadit" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
-                  <SelectItem value="nejoblibenejsi">Nejprodávanější</SelectItem>
-                  <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
-                  <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
-                  <SelectItem value="nejnovejsi">Nejnovější</SelectItem>
-                </SelectContent>
-              </Select>
+      <section className="px-6 pb-2 overflow-visible">
+        <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
+          {/* ZMĚNA: Stejné nastavení gridu jako u produktů (gap-x-8, p-4, justify-items-center) */}
+          {/* w-full je důležité, aby grid zabral celou šířku a centroval sloupce správně */}
+          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 overflow-visible p-4 justify-items-center fade-in-progressive-3">
+            <div className="w-full max-w-[320px] overflow-visible flex justify-start">
+              <div className="w-56">
+                <Select value={sort} onValueChange={(v) => setSort(v)}>
+                  <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
+                    <SelectValue placeholder="Seřadit" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
+                    <SelectItem value="nejoblibenejsi">Nejprodávanější</SelectItem>
+                    <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
+                    <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
+                    <SelectItem value="nejnovejsi">Nejnovější</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Products Grid */}
-      <section className="pt-8 pb-16 px-6 overflow-visible">
-        <div className="max-w-7xl mx-auto overflow-visible">
+      <section className="pt-2 pb-16 px-6 overflow-visible">
+        <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 overflow-visible">
-              {/* Transparent placeholders matching ProductCard structure */}
-              {Array.from({ length: expectedProductCount }).map((_, i) => (
-                <div 
-                  key={`placeholder-${decodedCategory}-${i}`} 
-                  className="opacity-0 pointer-events-none"
-                >
-                  <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
-                    {/* Aspect-square placeholder matching image area */}
-                    <div className="aspect-square bg-transparent" />
-                    {/* Content area matching ProductCard padding/structure */}
-                    <div className="p-6 flex flex-col flex-grow">
-                      <div className="min-h-[3.5rem] mb-2" />
-                      <div className="flex-grow" />
-                      <div className="space-y-2 mt-auto">
-                        <div className="h-8" />
-                        <div className="h-5" />
+            // Placeholder mřížka - aktualizována na nový čistý styl
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 p-4 justify-items-center w-full">
+                {Array.from({ length: expectedProductCount }).map((_, i) => (
+                  <div 
+                    key={`placeholder-${decodedCategory}-${i}`} 
+                    className="opacity-0 pointer-events-none w-full max-w-[320px]"
+                  >
+                    <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
+                      <div className="aspect-square bg-transparent" />
+                      <div className="p-6 flex flex-col flex-grow">
+                        <div className="min-h-[3.5rem] mb-2" />
+                        <div className="flex-grow" />
+                        <div className="space-y-2 mt-auto">
+                          <div className="h-8" />
+                          <div className="h-5" />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           ) : hasError ? (
             <div className="text-center py-12">
@@ -279,11 +270,13 @@ const CategoryPage = () => {
               <p className="text-muted-foreground mb-6">V této kategorii zatím nejsou žádné produkty.</p>
             </div>
           ) : (
-            <CategoryProductSection 
-              key={`products-${decodedCategory}`}
-              category={decodedCategory || ''}
-              initialProducts={displayProducts}
-            />
+            <div className="flex justify-center w-full">
+              <CategoryProductSection 
+                key={`products-${decodedCategory}`}
+                category={decodedCategory || ''}
+                initialProducts={displayProducts}
+              />
+            </div>
           )}
         </div>
       </section>
