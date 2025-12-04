@@ -26,8 +26,11 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // ZMĚNA: gap-4 (16px) pro X i Y. Tím se mezery sjednotí a zmenší na 50% původní šířky.
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-visible p-6 -m-6 justify-items-center">
+    // OPRAVA:
+    // 1. gap-6 (24px) pro X i Y = dokonale stejné mezery.
+    // 2. justify-items-start = zarovná produkty doleva ve sloupci (lícují s tlačítkem).
+    // 3. justify-center = vycentruje celou mřížku na středu obrazovky.
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible p-6 -m-6 justify-items-start justify-center">
       {products.map((product, index) => (
         <div 
           key={product.id} 

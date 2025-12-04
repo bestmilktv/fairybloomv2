@@ -42,9 +42,7 @@ const CategoryPage = () => {
         setHasError(false);
 
         const decodedCategory = category ? decodeURIComponent(category) : null;
-        // Direct mapping from slugified URL to Shopify handle
         const shopifyHandle = decodedCategory;
-        
         
         if (shopifyHandle) {
           const collection = await getProductsByCollection(shopifyHandle, 20);
@@ -56,14 +54,12 @@ const CategoryPage = () => {
                 const firstImage = product.images?.edges?.[0]?.node;
                 const firstVariant = product.variants?.edges?.[0]?.node;
                 
-                // Fetch inventory for the first variant
                 let inventoryQuantity = null;
                 if (firstVariant?.id) {
                   try {
                     inventoryQuantity = await getVariantInventory(firstVariant.id);
                   } catch (error) {
                     console.error('Error fetching inventory for product:', product.title, error);
-                    // Keep inventoryQuantity as null if fetch fails
                   }
                 }
                 
@@ -85,7 +81,6 @@ const CategoryPage = () => {
             );
             
             setShopifyProducts(products);
-            // Update expected count for next time (used for placeholders)
             setExpectedProductCount(products.length || 20);
           } else {
             setHasError(true);
@@ -106,7 +101,6 @@ const CategoryPage = () => {
     }
   }, [category]);
 
-  // Helper function to get fallback image
   const getFallbackImage = (category: string | null) => {
     if (!category) return necklaceImage;
     switch (category) {
@@ -118,7 +112,6 @@ const CategoryPage = () => {
     }
   };
 
-  // Category titles and subtitles
   const categoryInfo = {
     'nahrdelniky': {
       title: 'Náhrdelníky',
@@ -142,7 +135,6 @@ const CategoryPage = () => {
     }
   };
 
-  // URL decode the category name to handle Czech characters properly
   const decodedCategory = category ? decodeURIComponent(category) : null;
   const categoryData = decodedCategory ? categoryInfo[decodedCategory as keyof typeof categoryInfo] : null;
 
@@ -158,7 +150,6 @@ const CategoryPage = () => {
     );
   }
 
-  // Sync sort to URL when changed
   useEffect(() => {
     const current = searchParams.get('razeni') || 'nejoblibenejsi';
     if (current !== sort) {
@@ -166,10 +157,8 @@ const CategoryPage = () => {
       next.set('razeni', sort);
       setSearchParams(next, { replace: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort]);
 
-  // Use Shopify products and apply sorting
   const displayProducts = (() => {
     const products = [...shopifyProducts];
     switch (sort) {
@@ -217,8 +206,12 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-2 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
-          {/* ZMĚNA: Sjednocený gap-4, aby to odpovídalo produktům */}
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-visible p-6 -m-6 justify-items-center fade-in-progressive-3">
+          {/* OPRAVA: 
+              1. gap-6 (stejná mezera jako u produktů)
+              2. justify-items-start (zarovnání doleva, aby lícovalo s produkty)
+              3. justify-center (vycentrování celé mřížky na stránce)
+          */}
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible p-6 -m-6 justify-items-start justify-center fade-in-progressive-3">
             <div className="w-56 overflow-visible">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
@@ -240,8 +233,8 @@ const CategoryPage = () => {
       <section className="pt-2 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            // Placeholder mřížka - aktualizována na gap-4
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-visible justify-items-center">
+            // Placeholder mřížka - aktualizována na stejný styl (gap-6, justify-items-start)
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible justify-items-start justify-center">
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
                   <div 
                     key={`placeholder-${decodedCategory}-${i}`} 
