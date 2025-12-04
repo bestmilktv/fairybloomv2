@@ -205,25 +205,24 @@ const CategoryPage = () => {
 
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-2 overflow-visible">
-        <div className="max-w-7xl mx-auto overflow-visible">
-          {/* OPRAVA: 
-              1. gap-6 (stejná mezera jako u produktů)
-              2. justify-items-start (zarovnání doleva, aby lícovalo s produkty)
-              3. justify-center (vycentrování celé mřížky na stránce)
-          */}
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible p-6 -m-6 justify-items-start justify-center fade-in-progressive-3">
-            <div className="w-56 overflow-visible">
-              <Select value={sort} onValueChange={(v) => setSort(v)}>
-                <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
-                  <SelectValue placeholder="Seřadit" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
-                  <SelectItem value="nejoblibenejsi">Nejprodávanější</SelectItem>
-                  <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
-                  <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
-                  <SelectItem value="nejnovejsi">Nejnovější</SelectItem>
-                </SelectContent>
-              </Select>
+        <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
+          {/* ZMĚNA: Stejné nastavení gridu jako u produktů (gap-x-8, p-4, justify-items-center) */}
+          {/* w-full je důležité, aby grid zabral celou šířku a centroval sloupce správně */}
+          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 overflow-visible p-4 justify-items-center fade-in-progressive-3">
+            <div className="w-full max-w-[320px] overflow-visible flex justify-start">
+              <div className="w-56">
+                <Select value={sort} onValueChange={(v) => setSort(v)}>
+                  <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
+                    <SelectValue placeholder="Seřadit" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
+                    <SelectItem value="nejoblibenejsi">Nejprodávanější</SelectItem>
+                    <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
+                    <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
+                    <SelectItem value="nejnovejsi">Nejnovější</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>
@@ -233,12 +232,12 @@ const CategoryPage = () => {
       <section className="pt-2 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            // Placeholder mřížka - aktualizována na stejný styl (gap-6, justify-items-start)
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible justify-items-start justify-center">
+            // Placeholder mřížka - aktualizována na nový čistý styl
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 p-4 justify-items-center w-full">
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
                   <div 
                     key={`placeholder-${decodedCategory}-${i}`} 
-                    className="opacity-0 pointer-events-none"
+                    className="opacity-0 pointer-events-none w-full max-w-[320px]"
                   >
                     <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
                       <div className="aspect-square bg-transparent" />
@@ -271,7 +270,7 @@ const CategoryPage = () => {
               <p className="text-muted-foreground mb-6">V této kategorii zatím nejsou žádné produkty.</p>
             </div>
           ) : (
-            <div className="flex justify-center">
+            <div className="flex justify-center w-full">
               <CategoryProductSection 
                 key={`products-${decodedCategory}`}
                 category={decodedCategory || ''}

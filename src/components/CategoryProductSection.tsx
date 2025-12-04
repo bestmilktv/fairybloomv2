@@ -26,22 +26,22 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // OPRAVA:
-    // 1. gap-6 (24px) pro X i Y = dokonale stejné mezery.
-    // 2. justify-items-start = zarovná produkty doleva ve sloupci (lícují s tlačítkem).
-    // 3. justify-center = vycentruje celou mřížku na středu obrazovky.
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible p-6 -m-6 justify-items-start justify-center">
+    // OPRAVA: Čistý grid bez hacků.
+    // gap-x-8 (32px) horizontálně
+    // gap-y-12 (48px) vertikálně
+    // p-4 (padding okolo, aby se neořízly stíny krajních karet)
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 p-4 justify-items-center w-full">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          className="fade-in-up overflow-visible p-6 -m-6"
+          className="fade-in-up w-full max-w-[320px]" // Omezíme max šířku karty, aby se neroztahovala do nekonečna
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
         >
           <Link 
             to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 
-            className="group cursor-pointer block overflow-visible"
+            className="group cursor-pointer block h-full"
           >
             <ProductCard
               id={product.id}
