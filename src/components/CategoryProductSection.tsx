@@ -26,16 +26,17 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // OPRAVA MEZER:
-    // gap-3 (12px) horizontálně
-    // gap-y-6 (24px) vertikálně - zmenšeno na polovinu oproti minule
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 gap-y-6 p-4 w-full justify-items-center">
+    // GRID DEFINICE:
+    // gap-4 (16px) = malé mezery
+    // justify-items-center = centruje sloupce na střed stránky
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          // OPRAVA STÍNU:
-          // relative z-0 hover:z-10 -> Toto zajistí, že při najetí myší bude karta NAD ostatními a stín se nepřekryje.
-          className="fade-in-up w-full max-w-[280px] p-3 overflow-visible relative z-0 hover:z-10 transition-all duration-300"
+          // WRAPPER KARTY:
+          // w-full max-w-[280px] = fixní šířka karty (stejná jako u tlačítka nahoře)
+          // p-3 = bezpečný prostor pro stín (aby se neořízl), ale neposouvá layout
+          className="fade-in-up w-full max-w-[280px] p-3 relative z-0 hover:z-10"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
