@@ -193,13 +193,12 @@ const CategoryPage = () => {
       </section>
 
       {/* Toolbar: Sorting */}
-      {/* ZMĚNA: pb-0 (žádný padding dole) pro přitažení k produktům */}
+      {/* ZMĚNA: Odstraněn spodní padding (pb-0) */}
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
-          {/* Grid s gap-4 a p-4 (stejné jako produkty) */}
-          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-visible p-4 justify-items-center fade-in-progressive-3">
-            {/* Wrapper s max-w-[260px] a p-4 (stejné jako produkt pro zarovnání) */}
-            <div className="w-full max-w-[260px] p-4 overflow-visible flex justify-start relative z-20">
+          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 overflow-visible justify-items-center fade-in-progressive-3">
+            {/* ZMĚNA: max-w-[260px] (aby lícovalo s novou velikostí produktů) */}
+            <div className="w-full max-w-[260px] p-2 overflow-visible flex justify-start relative z-20">
               <div className="w-56">
                 <Select value={sort} onValueChange={(v) => setSort(v)}>
                   <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
@@ -219,16 +218,16 @@ const CategoryPage = () => {
       </section>
 
       {/* Products Grid */}
-      {/* ZMĚNA: pt-0 (žádný padding nahoře) */}
+      {/* ZMĚNA: Odstraněn horní padding (pt-0) -> přitaženo k tlačítku */}
       <section className="pt-0 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            // Placeholder mřížka - aktualizována na max-w-[260px] a p-4
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center p-4 mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 w-full justify-items-center pb-12">
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
+                  // Placeholder upraven na max-w-[260px]
                   <div 
                     key={`placeholder-${decodedCategory}-${i}`} 
-                    className="opacity-0 pointer-events-none w-full max-w-[260px] p-4"
+                    className="opacity-0 pointer-events-none w-full max-w-[260px] p-2"
                   >
                     <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
                       <div className="aspect-square bg-transparent" />

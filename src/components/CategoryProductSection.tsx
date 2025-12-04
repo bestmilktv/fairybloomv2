@@ -26,17 +26,13 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // GRID: gap-4 (mezery mezi produkty), p-4 (aby krajní stíny nebyly uříznuté oknem)
-    // mt-2: Jemné doladění vertikální pozice
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center p-4 overflow-visible mt-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 w-full justify-items-center overflow-visible pb-12">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          // WRAPPER KARTY:
-          // 1. max-w-[260px]: Zmenšení produktů (bylo 280px).
-          // 2. p-4: Ochranná zóna pro stín (buffer).
-          // 3. relative z-0 hover:z-50: TOTO OPRAVUJE OŘEZÁNÍ. Při hoveru jde karta nad ostatní.
-          className="fade-in-up w-full max-w-[260px] p-4 relative z-0 hover:z-50 transition-all duration-300 ease-out"
+          // ZMĚNA 1: max-w-[260px] (Zmenšení produktů)
+          // ZMĚNA 2: relative z-0 hover:z-50 (Fix oříznutého stínu - při hoveru jde nad ostatní)
+          className="fade-in-up w-full max-w-[260px] p-2 relative z-0 hover:z-50 transition-all duration-300 ease-out"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
