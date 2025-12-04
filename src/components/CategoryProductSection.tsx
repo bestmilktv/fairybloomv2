@@ -26,26 +26,22 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    /* ZMĚNA: gap-6 (větší mezery mezi buňkami)
-      p-2 (trochu větší padding celého kontejneru)
-    */
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full overflow-visible p-2">
+    // ZMĚNY:
+    // p-3: Zmenšení mezer mezi kartami (přiblížení k sobě)
+    // mt-[-1rem]: Přitažení celé sekce nahoru k tlačítku
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center mt-[-1rem]">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          /* KLÍČOVÁ ZMĚNA: p-6 (24px)
-             - Vytváří velkou bezpečnou zónu, takže stín se NEOŘÍZNE.
-             - Zároveň tím přirozeně ZMENŠÍ vizuální velikost karty uvnitř buňky.
-             - Ponecháváme z-indexy pro jistotu.
-          */
-          className="fade-in-up w-full p-6 relative z-10 hover:z-20 transition-all duration-300 ease-out"
+          // ZMĚNA: p-3 (místo p-5) pro těsnější layout
+          className="fade-in-up w-full max-w-[280px] p-3 relative z-0 hover:z-10 transition-all duration-300 ease-out"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
         >
           <Link 
             to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 
-            className="group cursor-pointer block h-full"
+            className="group cursor-pointer block h-full overflow-visible"
           >
             <ProductCard
               id={product.id}
