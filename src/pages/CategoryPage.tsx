@@ -17,28 +17,34 @@ import braceletImage from '@/assets/bracelet-placeholder.jpg';
 const CategoryPage = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const category = location.pathname.substring(1); 
+  const category = location.pathname.substring(1); // Remove leading slash
   const [shopifyProducts, setShopifyProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [sort, setSort] = useState<string>(() => searchParams.get('razeni') || 'nejoblibenejsi');
-  const [expectedProductCount, setExpectedProductCount] = useState<number>(20);
+  const [expectedProductCount, setExpectedProductCount] = useState<number>(20); // Default to API limit
 
+  // Reset expected product count to default when category changes
   useEffect(() => {
     setExpectedProductCount(20);
   }, [category]);
 
+  // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [category]);
 
+  // Fetch products from Shopify
   useEffect(() => {
     const fetchShopifyProducts = async () => {
       try {
         setIsLoading(true);
         setHasError(false);
+
         const decodedCategory = category ? decodeURIComponent(category) : null;
+        // Direct mapping from slugified URL to Shopify handle
         const shopifyHandle = decodedCategory;
+        
         
         if (shopifyHandle) {
           const collection = await getProductsByCollection(shopifyHandle, 20);
@@ -49,14 +55,18 @@ const CategoryPage = () => {
                 const product = edge.node;
                 const firstImage = product.images?.edges?.[0]?.node;
                 const firstVariant = product.variants?.edges?.[0]?.node;
+                
+                // Fetch inventory for the first variant
                 let inventoryQuantity = null;
                 if (firstVariant?.id) {
                   try {
                     inventoryQuantity = await getVariantInventory(firstVariant.id);
                   } catch (error) {
                     console.error('Error fetching inventory for product:', product.title, error);
+                    // Keep inventoryQuantity as null if fetch fails
                   }
                 }
+                
                 return {
                   id: product.id,
                   title: product.title,
@@ -73,7 +83,9 @@ const CategoryPage = () => {
                 };
               })
             );
+            
             setShopifyProducts(products);
+            // Update expected count for next time (used for placeholders)
             setExpectedProductCount(products.length || 20);
           } else {
             setHasError(true);
@@ -88,11 +100,13 @@ const CategoryPage = () => {
         setIsLoading(false);
       }
     };
+
     if (category) {
       fetchShopifyProducts();
     }
   }, [category]);
 
+  // Helper function to get fallback image
   const getFallbackImage = (category: string | null) => {
     if (!category) return necklaceImage;
     switch (category) {
@@ -104,6 +118,7 @@ const CategoryPage = () => {
     }
   };
 
+  // Category titles and subtitles
   const categoryInfo = {
     'nahrdelniky': {
       title: 'Náhrdelníky',
@@ -127,6 +142,7 @@ const CategoryPage = () => {
     }
   };
 
+  // URL decode the category name to handle Czech characters properly
   const decodedCategory = category ? decodeURIComponent(category) : null;
   const categoryData = decodedCategory ? categoryInfo[decodedCategory as keyof typeof categoryInfo] : null;
 
@@ -142,6 +158,7 @@ const CategoryPage = () => {
     );
   }
 
+  // Sync sort to URL when changed
   useEffect(() => {
     const current = searchParams.get('razeni') || 'nejoblibenejsi';
     if (current !== sort) {
@@ -149,8 +166,10 @@ const CategoryPage = () => {
       next.set('razeni', sort);
       setSearchParams(next, { replace: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort]);
 
+  // Use Shopify products and apply sorting
   const displayProducts = (() => {
     const products = [...shopifyProducts];
     switch (sort) {
@@ -166,7 +185,7 @@ const CategoryPage = () => {
         });
       case 'nejoblibenejsi':
       default:
-        return products; 
+        return products; // Keep original API order
     }
   })();
 
@@ -174,6 +193,7 @@ const CategoryPage = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       
+      {/* Back to Homepage Button */}
       <div className="pt-24 px-6 py-6">
         <div className="max-w-7xl mx-auto">
           <div key={`back-button-${decodedCategory}`} className="fade-in-progressive-0">
@@ -182,7 +202,8 @@ const CategoryPage = () => {
         </div>
       </div>
       
-      <section className="pb-12 px-6">
+      {/* Category Header */}
+      <section className="pb-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <h1 key={`title-${decodedCategory}`} className="fade-in-progressive-1 text-5xl md:text-6xl font-serif font-bold text-primary mb-6 tracking-wide">
             {categoryData.title}
@@ -195,24 +216,20 @@ const CategoryPage = () => {
 
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-0 overflow-visible">
-        <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
-          {/* ZMĚNA: gap-x-4 gap-y-8 (identické s produkty) */}
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center p-4 overflow-visible fade-in-progressive-3">
-            {/* ZMĚNA: p-2 (identické s produktem pro lícování) */}
-            <div className="w-full max-w-[280px] p-2 relative z-20">
-              <div className="w-56">
-                <Select value={sort} onValueChange={(v) => setSort(v)}>
-                  <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
-                    <SelectValue placeholder="Seřadit" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
-                    <SelectItem value="nejoblibenejsi">Nejprodávanější</SelectItem>
-                    <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
-                    <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
-                    <SelectItem value="nejnovejsi">Nejnovější</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="max-w-7xl mx-auto overflow-visible">
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center overflow-visible fade-in-progressive-3">
+            <div className="relative z-0 hover:z-50 w-full max-w-[280px] p-2 transition-all duration-300">
+              <Select value={sort} onValueChange={(v) => setSort(v)}>
+                <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
+                  <SelectValue placeholder="Seřadit" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
+                  <SelectItem value="nejoblibenejsi">Nejprodávanější</SelectItem>
+                  <SelectItem value="nejlevnejsi">Nejlevnější</SelectItem>
+                  <SelectItem value="nejdrazsi">Nejdražší</SelectItem>
+                  <SelectItem value="nejnovejsi">Nejnovější</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -220,29 +237,30 @@ const CategoryPage = () => {
 
       {/* Products Grid */}
       <section className="pt-0 pb-16 px-6 overflow-visible">
-        <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
+        <div className="max-w-7xl mx-auto overflow-visible">
           {isLoading ? (
-            // Placeholder grid: gap-x-4, gap-y-8
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 p-4 w-full justify-items-center">
-                {Array.from({ length: expectedProductCount }).map((_, i) => (
-                  // Placeholder wrapper: p-2
-                  <div 
-                    key={`placeholder-${decodedCategory}-${i}`} 
-                    className="opacity-0 pointer-events-none w-full max-w-[280px] p-2"
-                  >
-                    <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
-                      <div className="aspect-square bg-transparent" />
-                      <div className="p-6 flex flex-col flex-grow">
-                        <div className="min-h-[3.5rem] mb-2" />
-                        <div className="flex-grow" />
-                        <div className="space-y-2 mt-auto">
-                          <div className="h-8" />
-                          <div className="h-5" />
-                        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center overflow-visible">
+              {/* Transparent placeholders matching ProductCard structure */}
+              {Array.from({ length: expectedProductCount }).map((_, i) => (
+                <div 
+                  key={`placeholder-${decodedCategory}-${i}`} 
+                  className="opacity-0 pointer-events-none"
+                >
+                  <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
+                    {/* Aspect-square placeholder matching image area */}
+                    <div className="aspect-square bg-transparent" />
+                    {/* Content area matching ProductCard padding/structure */}
+                    <div className="p-6 flex flex-col flex-grow">
+                      <div className="min-h-[3.5rem] mb-2" />
+                      <div className="flex-grow" />
+                      <div className="space-y-2 mt-auto">
+                        <div className="h-8" />
+                        <div className="h-5" />
                       </div>
                     </div>
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           ) : hasError ? (
             <div className="text-center py-12">
@@ -261,13 +279,11 @@ const CategoryPage = () => {
               <p className="text-muted-foreground mb-6">V této kategorii zatím nejsou žádné produkty.</p>
             </div>
           ) : (
-            <div className="flex justify-center w-full">
-              <CategoryProductSection 
-                key={`products-${decodedCategory}`}
-                category={decodedCategory || ''}
-                initialProducts={displayProducts}
-              />
-            </div>
+            <CategoryProductSection 
+              key={`products-${decodedCategory}`}
+              category={decodedCategory || ''}
+              initialProducts={displayProducts}
+            />
           )}
         </div>
       </section>

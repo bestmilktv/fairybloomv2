@@ -26,25 +26,18 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // GRID: gap-x-4 (16px), gap-y-8 (32px) - kompaktní, ale vzdušné
-    // p-4 na gridu zajišťuje, že krajní stíny nebudou uříznuté okrajem obrazovky
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center p-4 overflow-visible">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center overflow-visible">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          // WRAPPER: 
-          // max-w-[280px]: Fixní šířka karty.
-          // p-2: Minimální padding.
-          // hover:z-50: TOTO JE TEN FIX. Při hoveru karta vystoupí nad všechny ostatní -> stín se neořízne.
-          // relative: Nutné pro z-index.
-          className="fade-in-up w-full max-w-[280px] p-2 relative z-0 hover:z-50 transition-all duration-300 ease-out"
+          className="relative z-0 hover:z-50 w-full max-w-[280px] p-2 transition-all duration-300 overflow-visible fade-in-up"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
         >
           <Link 
             to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 
-            className="group cursor-pointer block h-full overflow-visible"
+            className="group cursor-pointer block overflow-visible"
           >
             <ProductCard
               id={product.id}
