@@ -26,20 +26,19 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    /* NOVÝ PŘÍSTUP:
-      1. gap-5 (20px) = menší, symetrické mezery.
-      2. overflow-visible = nutné pro stíny.
-      3. p-1 = malý padding kontejneru.
+    /* ZMĚNA: gap-6 (větší mezery mezi buňkami)
+      p-2 (trochu větší padding celého kontejneru)
     */
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 w-full overflow-visible p-1">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full overflow-visible p-2">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          /* OCHRANA STÍNU:
-            p-2: Dáváme kartě 8px neviditelný rámeček, do kterého se vykreslí stín.
-            relative z-10 hover:z-20: Při hoveru karta "vyskočí" nad ostatní, aby stín nebyl překryt.
+          /* KLÍČOVÁ ZMĚNA: p-6 (24px)
+             - Vytváří velkou bezpečnou zónu, takže stín se NEOŘÍZNE.
+             - Zároveň tím přirozeně ZMENŠÍ vizuální velikost karty uvnitř buňky.
+             - Ponecháváme z-indexy pro jistotu.
           */
-          className="fade-in-up w-full p-2 relative z-10 hover:z-20 transition-all duration-300 ease-out"
+          className="fade-in-up w-full p-6 relative z-10 hover:z-20 transition-all duration-300 ease-out"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
