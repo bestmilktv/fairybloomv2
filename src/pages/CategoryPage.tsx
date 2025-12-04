@@ -217,8 +217,10 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-2 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
-          {/* ZMĚNY ZDE: gap-6, justify-items-start, justify-center (aby to lícovalo s produkty) */}
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible p-6 -m-6 justify-items-start justify-center fade-in-progressive-3">
+          {/* ZMĚNA: Zvětšil jsem padding na p-4 (pro stín) a použil stejný grid gap-x-8 jako u produktů.
+             justify-items-center zajistí, že tlačítko bude uprostřed "sloupce", stejně jako produkty pod ním.
+          */}
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 overflow-visible p-4 -m-4 justify-items-center fade-in-progressive-3">
             <div className="w-56 overflow-visible">
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
@@ -240,8 +242,9 @@ const CategoryPage = () => {
       <section className="pt-2 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            // Placeholder mřížka - aktualizována na stejný styl jako produkty
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible justify-items-start justify-center">
+            // Placeholder mřížka - musí kopírovat nastavení CategoryProductSection (gap-x-8 gap-y-12)
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 overflow-visible justify-items-center">
+                {/* Transparent placeholders matching ProductCard structure */}
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
                   <div 
                     key={`placeholder-${decodedCategory}-${i}`} 

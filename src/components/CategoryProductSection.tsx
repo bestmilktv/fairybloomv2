@@ -26,11 +26,11 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // ZMĚNY:
-    // 1. gap-6 (24px) - sjednocená a menší mezera pro X i Y
-    // 2. justify-items-start - zarovná produkty doleva (aby lícovaly s tlačítkem)
-    // 3. justify-center - vycentruje celou mřížku na stránce
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-visible p-6 -m-6 justify-items-start justify-center">
+    // VRACÍME VĚTŠÍ MEZERY:
+    // gap-y-12 = 48px (původní velká mezera mezi řadami)
+    // gap-x-8 = 32px (původní mezera mezi sloupci)
+    // p-2 -m-2 = původní hack pro stíny
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 overflow-visible p-2 -m-2 justify-items-center">
       {products.map((product, index) => (
         <div 
           key={product.id} 
