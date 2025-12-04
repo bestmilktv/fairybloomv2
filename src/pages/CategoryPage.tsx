@@ -197,9 +197,9 @@ const CategoryPage = () => {
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {/* ZMĚNA: gap-x-4 gap-y-8 (identické s produkty) */}
-          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 overflow-visible p-4 justify-items-center fade-in-progressive-3">
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center p-4 overflow-visible fade-in-progressive-3">
             {/* ZMĚNA: p-2 (identické s produktem pro lícování) */}
-            <div className="w-full max-w-[280px] p-2 overflow-visible flex justify-start relative z-20">
+            <div className="w-full max-w-[280px] p-2 relative z-20">
               <div className="w-56">
                 <Select value={sort} onValueChange={(v) => setSort(v)}>
                   <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
