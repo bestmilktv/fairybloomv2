@@ -26,7 +26,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    <>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-4 overflow-visible pb-20">
       {products.map((product, index) => (
         <div 
           key={product.id} 
@@ -51,7 +51,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
           </Link>
         </div>
       ))}
-    </>
+    </div>
   );
 };
 
