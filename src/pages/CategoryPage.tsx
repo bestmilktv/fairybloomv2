@@ -194,12 +194,11 @@ const CategoryPage = () => {
       </section>
 
       {/* Toolbar: Sorting */}
-      {/* ZMĚNA: Odstraněn pb (padding-bottom) pro přitažení k produktům */}
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
-          {/* ZMĚNA: gap-0 (místo gap-x-4) pro absolutní kontrolu přes paddingy */}
-          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0 overflow-visible justify-items-center fade-in-progressive-3">
-            {/* ZMĚNA: p-2 (8px) - Identické s produktem, aby to lícovalo */}
+          {/* ZMĚNA: gap-x-4 gap-y-8 (identické s produkty) */}
+          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 overflow-visible p-4 justify-items-center fade-in-progressive-3">
+            {/* ZMĚNA: p-2 (identické s produktem pro lícování) */}
             <div className="w-full max-w-[280px] p-2 overflow-visible flex justify-start relative z-20">
               <div className="w-56">
                 <Select value={sort} onValueChange={(v) => setSort(v)}>
@@ -223,9 +222,10 @@ const CategoryPage = () => {
       <section className="pt-0 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            // Placeholder mřížka - aktualizována na gap-0, p-2
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0 w-full justify-items-center">
+            // Placeholder grid: gap-x-4, gap-y-8
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 p-4 w-full justify-items-center">
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
+                  // Placeholder wrapper: p-2
                   <div 
                     key={`placeholder-${decodedCategory}-${i}`} 
                     className="opacity-0 pointer-events-none w-full max-w-[280px] p-2"
