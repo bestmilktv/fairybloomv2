@@ -174,16 +174,8 @@ const CategoryPage = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <div className="pt-24 px-6 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div key={`back-button-${decodedCategory}`} className="fade-in-progressive-0">
-            <BackToHomepageButton />
-          </div>
-        </div>
-      </div>
-      
-      <section className="pb-12 px-6">
-        <div className="max-w-7xl mx-auto text-center">
+      <section className="pt-24 pb-12 px-6">
+        <div className="max-w-7xl mx-auto px-6 text-center">
           <h1 key={`title-${decodedCategory}`} className="fade-in-progressive-1 text-5xl md:text-6xl font-serif font-bold text-primary mb-6 tracking-wide">
             {categoryData.title}
           </h1>
@@ -255,11 +247,16 @@ const CategoryPage = () => {
               <p className="text-muted-foreground mb-6">V této kategorii zatím nejsou žádné produkty.</p>
             </div>
           ) : (
-            <CategoryProductSection 
-              key={`products-${decodedCategory}`}
-              category={decodedCategory || ''}
-              initialProducts={displayProducts}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-4 overflow-visible pb-20">
+              <div key={`back-button-${decodedCategory}`} className="w-full max-w-[260px] p-2 fade-in-progressive-0">
+                <BackToHomepageButton />
+              </div>
+              <CategoryProductSection 
+                key={`products-${decodedCategory}`}
+                category={decodedCategory || ''}
+                initialProducts={displayProducts}
+              />
+            </div>
           )}
         </div>
       </section>
