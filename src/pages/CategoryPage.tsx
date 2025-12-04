@@ -8,7 +8,6 @@ import BackToHomepageButton from '@/components/BackToHomepageButton';
 import { createCollectionHandle } from '@/lib/slugify';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Import product images
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
 import earringsImage from '@/assets/earrings-placeholder.jpg';
 import ringImage from '@/assets/ring-placeholder.jpg';
@@ -195,9 +194,10 @@ const CategoryPage = () => {
 
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
-          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-visible justify-items-center fade-in-progressive-3">
-            {/* ZMĚNA: p-3 (aby to lícovalo s produkty) */}
-            <div className="w-full max-w-[280px] p-3 overflow-visible flex justify-start relative z-20">
+          {/* SYMETRIE: Grid stejný jako u produktů (gap-x-4) */}
+          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 overflow-visible justify-items-center fade-in-progressive-3">
+            {/* WRAPPER: p-2 (aby lícoval s produkty) */}
+            <div className="w-full max-w-[280px] p-2 overflow-visible flex justify-start relative z-20">
               <div className="w-56">
                 <Select value={sort} onValueChange={(v) => setSort(v)}>
                   <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
@@ -219,13 +219,12 @@ const CategoryPage = () => {
       <section className="pt-0 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            // ZMĚNA: mt-[-1rem] pro přitažení gridu nahoru
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center mt-[-1rem]">
+            // Placeholder mřížka: gap-x-4, p-2
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center">
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
-                  // ZMĚNA: p-3 pro placeholdery
                   <div 
                     key={`placeholder-${decodedCategory}-${i}`} 
-                    className="opacity-0 pointer-events-none w-full max-w-[280px] p-3"
+                    className="opacity-0 pointer-events-none w-full max-w-[280px] p-2"
                   >
                     <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
                       <div className="aspect-square bg-transparent" />
