@@ -26,13 +26,14 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // ZMĚNA: gap-4 (16px) - zmenšeno o 50% oproti gap-8
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 p-4 justify-items-center w-full">
+    // ZMĚNA 1: gap-2 (8px) a gap-y-4 (16px) - další 50% zmenšení mezer.
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 gap-y-4 p-4 justify-items-center w-full">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          // ZMĚNA: overflow-visible je klíčové pro stíny!
-          className="fade-in-up w-full max-w-[280px] p-4 overflow-visible"
+          // ZMĚNA 2: relative z-0 hover:z-10
+          // Zajistí, že při hoveru bude karta NAD sousedními buňkami a stín se neořízne.
+          className="fade-in-up w-full max-w-[280px] p-4 overflow-visible relative z-0 hover:z-10"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}

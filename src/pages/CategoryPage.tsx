@@ -215,14 +215,15 @@ const CategoryPage = () => {
       </section>
 
       {/* Toolbar: Sorting */}
-      <section className="px-6 pb-2 overflow-visible">
+      {/* ZMĚNA: pb-2 -> pb-0 (odstranění spodní mezery sekce) */}
+      <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
-          {/* ZMĚNA: gap-4 gap-y-8 (sjednoceno s produkty) */}
-          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 overflow-visible p-4 justify-items-center fade-in-progressive-3">
+          {/* ZMĚNA: gap-2 gap-y-4 (sjednoceno s produkty) */}
+          <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 gap-y-4 overflow-visible p-4 justify-items-center fade-in-progressive-3">
             <div className="w-full max-w-[280px] p-4 overflow-visible flex justify-start">
               <div className="w-56">
                 <Select value={sort} onValueChange={(v) => setSort(v)}>
-                  <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
+                  <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm">
                     <SelectValue placeholder="Seřadit" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
@@ -239,11 +240,12 @@ const CategoryPage = () => {
       </section>
 
       {/* Products Grid */}
-      <section className="pt-2 pb-16 px-6 overflow-visible">
+      {/* ZMĚNA: pt-2 -> pt-0 (odstranění horní mezery sekce) */}
+      <section className="pt-0 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            // Placeholder mřížka - aktualizována na gap-4 gap-y-8
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 p-4 justify-items-center w-full">
+            // Placeholder mřížka - aktualizována na gap-2 gap-y-4
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 gap-y-4 p-4 justify-items-center w-full">
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
                   <div 
                     key={`placeholder-${decodedCategory}-${i}`} 
