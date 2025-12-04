@@ -26,19 +26,17 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    // OPRAVA:
-    // gap-4 gap-y-8: Tvoje požadované mezery.
-    // p-4: Ochranný okraj kolem gridu, aby se stín neořízl o kraj okna.
-    // relative z-10: Celý grid je v nižší vrstvě než navbar (který má z-999).
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 w-full justify-items-center p-4 overflow-visible relative z-10">
+    // GRID: gap-4 (16px) všude - malé mezery
+    // pb-20: Velký spodní padding, aby se stín spodní řady neořízl o patičku
+    // p-4: Boční padding proti ořezu
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center p-4 pb-20 overflow-visible">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          // OPRAVA PROTÍNÁNÍ NAVBARU A VELIKOSTI:
-          // max-w-[260px]: Jemné zmenšení produktu.
-          // hover:z-20: Při hoveru se karta zvedne NAD ostatní karty, ale zůstane POD navbarem (z-999).
-          // relative: Nutné pro funkčnost z-indexu.
-          className="fade-in-up w-full max-w-[260px] relative z-0 hover:z-20 transition-all duration-300 ease-out"
+          // WRAPPER:
+          // max-w-[260px]: Zmenšená šířka karty
+          // relative z-0 hover:z-50: ZAJISTÍ, ŽE STÍN PŘEKRYJE SOUSEDNÍ ELEMENTY A NEOŘÍZNE SE
+          className="fade-in-up w-full max-w-[260px] relative z-0 hover:z-50 transition-all duration-300 ease-out"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
