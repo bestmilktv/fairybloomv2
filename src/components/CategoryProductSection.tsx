@@ -26,13 +26,19 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 w-full justify-items-center overflow-visible pb-12 py-10 -mt-10">
+    // OPRAVA:
+    // gap-4 gap-y-8: Tvoje požadované mezery.
+    // p-4: Ochranný okraj kolem gridu, aby se stín neořízl o kraj okna.
+    // relative z-10: Celý grid je v nižší vrstvě než navbar (který má z-999).
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 w-full justify-items-center p-4 overflow-visible relative z-10">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          // ZMĚNA 1: max-w-[240px] (Zmenšení produktů)
-          // ZMĚNA 2: relative z-0 hover:z-50 (Fix oříznutého stínu - při hoveru jde nad ostatní)
-          className="fade-in-up w-full max-w-[240px] p-2 relative z-0 hover:z-50 transition-all duration-300 ease-out"
+          // OPRAVA PROTÍNÁNÍ NAVBARU A VELIKOSTI:
+          // max-w-[260px]: Jemné zmenšení produktu.
+          // hover:z-20: Při hoveru se karta zvedne NAD ostatní karty, ale zůstane POD navbarem (z-999).
+          // relative: Nutné pro funkčnost z-indexu.
+          className="fade-in-up w-full max-w-[260px] relative z-0 hover:z-20 transition-all duration-300 ease-out"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
