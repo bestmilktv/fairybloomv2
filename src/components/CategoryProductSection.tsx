@@ -26,11 +26,11 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   }, [initialProducts]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center overflow-visible">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 overflow-visible">
       {products.map((product, index) => (
         <div 
           key={product.id} 
-          className="relative z-0 hover:z-50 w-full max-w-[280px] p-2 transition-all duration-300 overflow-visible fade-in-up"
+          className="fade-in-up overflow-visible p-6 -m-6"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}

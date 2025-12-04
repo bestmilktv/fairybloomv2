@@ -215,10 +215,10 @@ const CategoryPage = () => {
       </section>
 
       {/* Toolbar: Sorting */}
-      <section className="px-6 pb-0 overflow-visible">
+      <section className="px-6 pb-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center overflow-visible fade-in-progressive-3">
-            <div className="relative z-0 hover:z-50 w-full max-w-[280px] p-2 transition-all duration-300">
+          <div key={`sort-${decodedCategory}`} className="flex items-center justify-start fade-in-progressive-3 overflow-visible py-6 -my-6">
+            <div className="w-56 overflow-visible" style={{ paddingLeft: '24px', paddingRight: '24px', paddingTop: '24px', paddingBottom: '24px', marginLeft: '-24px', marginRight: '-24px', marginTop: '-24px', marginBottom: '-24px' }}>
               <Select value={sort} onValueChange={(v) => setSort(v)}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-md hover:shadow-lg hover:border-primary/50 transition-all duration-300 text-sm">
                   <SelectValue placeholder="Seřadit" />
@@ -236,10 +236,10 @@ const CategoryPage = () => {
       </section>
 
       {/* Products Grid */}
-      <section className="pt-0 pb-16 px-6 overflow-visible">
+      <section className="pt-8 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 w-full justify-items-center overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 overflow-visible">
               {/* Transparent placeholders matching ProductCard structure */}
               {Array.from({ length: expectedProductCount }).map((_, i) => (
                 <div 
