@@ -193,22 +193,16 @@ const CategoryPage = () => {
         </div>
       </section>
 
-      {/* SEKCE FILTRU: Odstraněn padding mezi sekcemi (pb-0) */}
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
-          {/* STEJNÝ GRID JAKO U PRODUKTŮ: gap-4 */}
           <div key={`sort-${decodedCategory}`} className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-visible justify-items-center fade-in-progressive-3">
             
-            {/* WRAPPER TLAČÍTKA:
-                - w-full max-w-[280px]: Přesně stejná šířka jako karta produktu
-                - p-3: Přesně stejný padding jako karta produktu
-                - flex justify-start: Zarovná tlačítko DOLEVA uvnitř tohoto boxu
-                Tím pádem levá hrana tlačítka bude na pixel přesně lícovat s levou hranou obsahu karty pod ním.
-            */}
-            <div className="w-full max-w-[280px] p-3 overflow-visible flex justify-start relative z-20">
+            {/* ZMĚNA PRO ZAROVNÁNÍ: p-5, aby odpovídalo produktům */}
+            <div className="w-full max-w-[280px] p-5 overflow-visible flex justify-start relative z-20">
               <div className="w-56">
                 <Select value={sort} onValueChange={(v) => setSort(v)}>
-                  <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm">
+                  {/* OPRAVA RINGU: Přidány třídy focus:outline-none focus:ring-0 focus-visible:ring-0 */}
+                  <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
                     <SelectValue placeholder="Seřadit" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-2 border-primary/20 bg-card shadow-xl">
@@ -224,16 +218,15 @@ const CategoryPage = () => {
         </div>
       </section>
 
-      {/* SEKCE PRODUKTŮ: Odstraněn horní padding (pt-0) */}
       <section className="pt-0 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto overflow-visible flex justify-center">
           {isLoading ? (
-            // Placeholder mřížka - musí být IDENTICKÁ s CategoryProductSection
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full justify-items-center">
                 {Array.from({ length: expectedProductCount }).map((_, i) => (
+                  // Placeholder aktualizován na p-5
                   <div 
                     key={`placeholder-${decodedCategory}-${i}`} 
-                    className="opacity-0 pointer-events-none w-full max-w-[280px] p-3"
+                    className="opacity-0 pointer-events-none w-full max-w-[280px] p-5"
                   >
                     <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
                       <div className="aspect-square bg-transparent" />
