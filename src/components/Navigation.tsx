@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -10,9 +10,18 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { CompleteProfileModal } from '@/components/auth/CompleteProfileModal';
 import { MiniCart } from '@/components/MiniCart';
 import { FavoritesSidebar } from '@/components/FavoritesSidebar';
-import { createCollectionPath } from '@/lib/slugify';
 import logo from '@/assets/logo.png';
-const Navigation = () => {
+
+// OPTIMALIZACE: Statická data mimo komponentu - nevytváří se při každém renderu
+const CATEGORIES = [
+  { name: 'Náhrdelníky', path: '/nahrdelniky' },
+  { name: 'Náušnice', path: '/nausnice' },
+  { name: 'Prsteny', path: '/prsteny' },
+  { name: 'Náramky', path: '/naramky' }
+];
+
+// OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props/state
+const Navigation = memo(() => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [miniCartOpen, setMiniCartOpen] = useState(false);
@@ -20,59 +29,87 @@ const Navigation = () => {
   const { user, logout, isAuthenticated, needsProfileCompletion, setNeedsProfileCompletion } = useAuth();
   const { getTotalItems } = useCart();
   const { getFavoriteCount } = useFavorites();
+
+  // OPTIMALIZACE: Throttled scroll handler pomocí requestAnimationFrame
   useEffect(() => {
+    let ticking = false;
+    
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    
+    // passive: true pro lepší scroll performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  const categories = [{
-    name: 'Náhrdelníky',
-    path: createCollectionPath('Náhrdelníky')
-  }, {
-    name: 'Náušnice',
-    path: createCollectionPath('Náušnice')
-  }, {
-    name: 'Prsteny',
-    path: createCollectionPath('Prsteny')
-  }, {
-    name: 'Náramky',
-    path: createCollectionPath('Náramky')
-  }];
 
-  const handleSignOut = () => {
-    console.log('Navigation: handleSignOut called');
+  // OPTIMALIZACE: Memoizovaný callback
+  const handleSignOut = useCallback(() => {
     try {
       logout();
-      console.log('Navigation: Sign out successful');
     } catch (error) {
-      console.error('Navigation: Unexpected sign out error:', error);
+      console.error('Navigation: Sign out error:', error);
     }
-  };
-  return <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'glass-effect shadow-lg' : 'bg-transparent'}`}>
+  }, [logout]);
+
+  // OPTIMALIZACE: Memoizované callbacky pro otevírání modalů
+  const openAuthModal = useCallback(() => setAuthModalOpen(true), []);
+  const closeAuthModal = useCallback(() => setAuthModalOpen(false), []);
+  const openMiniCart = useCallback(() => setMiniCartOpen(true), []);
+  const closeMiniCart = useCallback(() => setMiniCartOpen(false), []);
+  const openFavorites = useCallback(() => setFavoritesSidebarOpen(true), []);
+  const closeFavorites = useCallback(() => setFavoritesSidebarOpen(false), []);
+  const completeProfile = useCallback(() => setNeedsProfileCompletion(false), [setNeedsProfileCompletion]);
+
+  const handleLogoClick = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  return (
+    <nav 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'glass-effect shadow-lg' : 'bg-transparent'}`}
+      role="navigation"
+      aria-label="Hlavní navigace"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity duration-300 flex-shrink-0 min-w-0" onClick={() => {
-          window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-          });
-        }}>
-            <img src={logo} alt="Fairy Bloom Logo" className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain flex-shrink-0" />
-            <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-primary tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis">FAIRY BLOOM</h1>
+          {/* Logo - změněno h1 na span pro správnou heading strukturu */}
+          <Link 
+            to="/" 
+            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity duration-300 flex-shrink-0 min-w-0" 
+            onClick={handleLogoClick}
+            aria-label="Fairy Bloom - domovská stránka"
+          >
+            <img 
+              src={logo} 
+              alt="" 
+              className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain flex-shrink-0"
+              width={48}
+              height={48}
+              aria-hidden="true"
+            />
+            <span className="text-base sm:text-xl md:text-2xl lg:text-3xl font-light text-primary tracking-[0.15em] sm:tracking-[0.2em] font-serif whitespace-nowrap overflow-hidden text-ellipsis">
+              FAIRY BLOOM
+            </span>
           </Link>
 
           {/* Category Navigation */}
           <div className="hidden md:flex items-center space-x-4 flex-shrink-0">
-            {categories.map(category => <Link 
-              key={category.path} 
-              to={category.path} 
-              className="text-primary/80 hover:text-primary px-3 py-1.5 rounded-full tracking-wide smooth-font-weight hover:bg-background/80 hover:scale-105 hover:shadow-md hover:shadow-primary/5 inline-block min-w-fit"
-            >
-              {category.name}
-            </Link>)}
+            {CATEGORIES.map(category => (
+              <Link 
+                key={category.path} 
+                to={category.path} 
+                className="text-primary/80 hover:text-primary px-3 py-1.5 rounded-full tracking-wide smooth-font-weight hover:bg-background/80 hover:scale-105 hover:shadow-md hover:shadow-primary/5 inline-block min-w-fit"
+              >
+                {category.name}
+              </Link>
+            ))}
           </div>
 
           {/* Account, Favorites & Cart */}
@@ -80,7 +117,12 @@ const Navigation = () => {
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full"
+                    aria-label="Uživatelský účet"
+                  >
                     <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -102,14 +144,14 @@ const Navigation = () => {
                       Můj profil
                     </Link>
                   </DropdownMenuItem>
-                   <DropdownMenuSeparator className="bg-border" />
-                   <DropdownMenuItem 
-                     onClick={handleSignOut}
-                     className="flex items-center text-primary/80 hover:bg-red-50/50 hover:text-red-600 focus:bg-red-50/50 focus:text-red-600 cursor-pointer transition-all duration-200 rounded-md px-2 py-1.5 group/item"
-                   >
-                     <LogOut className="mr-2 h-4 w-4 transition-transform duration-200 group-hover/item:translate-x-1" />
-                     Odhlásit se
-                   </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem 
+                    onClick={handleSignOut}
+                    className="flex items-center text-primary/80 hover:bg-red-50/50 hover:text-red-600 focus:bg-red-50/50 focus:text-red-600 cursor-pointer transition-all duration-200 rounded-md px-2 py-1.5 group/item"
+                  >
+                    <LogOut className="mr-2 h-4 w-4 transition-transform duration-200 group-hover/item:translate-x-1" />
+                    Odhlásit se
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -117,7 +159,8 @@ const Navigation = () => {
                 variant="ghost" 
                 size="icon" 
                 className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 h-9 w-9 sm:h-10 sm:w-10 rounded-full"
-                onClick={() => setAuthModalOpen(true)}
+                onClick={openAuthModal}
+                aria-label="Přihlášení"
               >
                 <User className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
               </Button>
@@ -126,11 +169,12 @@ const Navigation = () => {
               variant="ghost" 
               size="icon" 
               className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group"
-              onClick={() => setFavoritesSidebarOpen(true)}
+              onClick={openFavorites}
+              aria-label={`Oblíbené${getFavoriteCount() > 0 ? ` (${getFavoriteCount()})` : ''}`}
             >
               <Heart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110 group-hover:fill-primary/20" />
               {getFavoriteCount() > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md">
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" aria-hidden="true">
                   {getFavoriteCount()}
                 </span>
               )}
@@ -139,12 +183,13 @@ const Navigation = () => {
               variant="ghost" 
               size="icon" 
               className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group"
-              onClick={() => setMiniCartOpen(true)}
+              onClick={openMiniCart}
               data-cart-icon
+              aria-label={`Košík${getTotalItems() > 0 ? ` (${getTotalItems()})` : ''}`}
             >
               <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
               {getTotalItems() > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md">
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" aria-hidden="true">
                   {getTotalItems()}
                 </span>
               )}
@@ -155,23 +200,27 @@ const Navigation = () => {
       
       <AuthModal 
         isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)} 
+        onClose={closeAuthModal} 
       />
       
       <CompleteProfileModal
         isOpen={needsProfileCompletion}
-        onComplete={() => setNeedsProfileCompletion(false)}
+        onComplete={completeProfile}
       />
       
       <MiniCart 
         isOpen={miniCartOpen}
-        onClose={() => setMiniCartOpen(false)}
+        onClose={closeMiniCart}
       />
       
       <FavoritesSidebar 
         isOpen={favoritesSidebarOpen}
-        onClose={() => setFavoritesSidebarOpen(false)}
+        onClose={closeFavorites}
       />
-    </nav>;
-};
+    </nav>
+  );
+});
+
+Navigation.displayName = 'Navigation';
+
 export default Navigation;

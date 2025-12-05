@@ -1,11 +1,10 @@
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Navigation from '@/components/Navigation';
 import CategoryProductSection from '@/components/CategoryProductSection';
 import Footer from '@/components/Footer';
 import { getProductsByCollection, getVariantInventory } from '@/lib/shopify';
 import BackToHomepageButton from '@/components/BackToHomepageButton';
-import { createCollectionHandle } from '@/lib/slugify';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Import product images
@@ -13,6 +12,41 @@ import necklaceImage from '@/assets/necklace-placeholder.jpg';
 import earringsImage from '@/assets/earrings-placeholder.jpg';
 import ringImage from '@/assets/ring-placeholder.jpg';
 import braceletImage from '@/assets/bracelet-placeholder.jpg';
+
+// OPTIMALIZACE: Statická data mimo komponentu
+const CATEGORY_INFO = {
+  'nahrdelniky': {
+    title: 'Náhrdelníky',
+    subtitle: 'Elegantní náhrdelníky s květinami zachycenými v čase',
+    image: necklaceImage
+  },
+  'nausnice': {
+    title: 'Náušnice',
+    subtitle: 'Jemné náušnice pro každodenní eleganci',
+    image: earringsImage
+  },
+  'prsteny': {
+    title: 'Prsteny',
+    subtitle: 'Jedinečné prsteny pro výjimečné okamžiky',
+    image: ringImage
+  },
+  'naramky': {
+    title: 'Náramky',
+    subtitle: 'Stylové náramky plné přírodní krásy',
+    image: braceletImage
+  }
+} as const;
+
+const getFallbackImage = (category: string | null) => {
+  if (!category) return necklaceImage;
+  switch (category) {
+    case 'nahrdelniky': return necklaceImage;
+    case 'nausnice': return earringsImage;
+    case 'prsteny': return ringImage;
+    case 'naramky': return braceletImage;
+    default: return necklaceImage;
+  }
+};
 
 const CategoryPage = () => {
   const location = useLocation();
@@ -44,35 +78,43 @@ const CategoryPage = () => {
           const collection = await getProductsByCollection(shopifyHandle, 20);
           
           if (collection && collection.products?.edges) {
-            const products = await Promise.all(
-              collection.products.edges.map(async (edge) => {
-                const product = edge.node;
-                const firstImage = product.images?.edges?.[0]?.node;
-                const firstVariant = product.variants?.edges?.[0]?.node;
-                let inventoryQuantity = null;
-                if (firstVariant?.id) {
-                  try {
-                    inventoryQuantity = await getVariantInventory(firstVariant.id);
-                  } catch (error) {
-                    console.error('Error fetching inventory for product:', product.title, error);
-                  }
-                }
-                return {
-                  id: product.id,
-                  title: product.title,
-                  price: firstVariant?.price ? 
-                    `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
-                    'Cena na vyžádání',
-                  priceAmount: firstVariant?.price ? parseFloat(firstVariant.price.amount) : null,
-                  image: firstImage?.url || getFallbackImage(decodedCategory),
-                  description: product.description || 'Elegantní šperk z naší kolekce',
-                  handle: product.handle,
-                  inventoryQuantity,
-                  createdAt: product.createdAt || null,
-                  variantId: firstVariant?.id
-                };
-              })
+            // OPTIMALIZACE: Krok 1 - Získat všechny produkty bez inventory (rychlé)
+            const productsBasic = collection.products.edges.map((edge) => {
+              const product = edge.node;
+              const firstImage = product.images?.edges?.[0]?.node;
+              const firstVariant = product.variants?.edges?.[0]?.node;
+              
+              return {
+                id: product.id,
+                title: product.title,
+                price: firstVariant?.price ? 
+                  `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
+                  'Cena na vyžádání',
+                priceAmount: firstVariant?.price ? parseFloat(firstVariant.price.amount) : null,
+                image: firstImage?.url || getFallbackImage(decodedCategory),
+                description: product.description || 'Elegantní šperk z naší kolekce',
+                handle: product.handle,
+                inventoryQuantity: null as number | null,
+                createdAt: product.createdAt || null,
+                variantId: firstVariant?.id
+              };
+            });
+
+            // OPTIMALIZACE: Krok 2 - Paralelní fetch všech inventory najednou
+            const inventoryPromises = productsBasic.map(p => 
+              p.variantId 
+                ? getVariantInventory(p.variantId).catch(() => null)
+                : Promise.resolve(null)
             );
+            
+            const inventories = await Promise.all(inventoryPromises);
+
+            // Krok 3 - Merge výsledků
+            const products = productsBasic.map((p, i) => ({
+              ...p,
+              inventoryQuantity: inventories[i]
+            }));
+
             setShopifyProducts(products);
             setExpectedProductCount(products.length || 20);
           } else {
@@ -93,54 +135,11 @@ const CategoryPage = () => {
     }
   }, [category]);
 
-  const getFallbackImage = (category: string | null) => {
-    if (!category) return necklaceImage;
-    switch (category) {
-      case 'nahrdelniky': return necklaceImage;
-      case 'nausnice': return earringsImage;
-      case 'prsteny': return ringImage;
-      case 'naramky': return braceletImage;
-      default: return necklaceImage;
-    }
-  };
-
-  const categoryInfo = {
-    'nahrdelniky': {
-      title: 'Náhrdelníky',
-      subtitle: 'Elegantní náhrdelníky s květinami zachycenými v čase',
-      image: necklaceImage
-    },
-    'nausnice': {
-      title: 'Náušnice',
-      subtitle: 'Jemné náušnice pro každodenní eleganci',
-      image: earringsImage
-    },
-    'prsteny': {
-      title: 'Prsteny',
-      subtitle: 'Jedinečné prsteny pro výjimečné okamžiky',
-      image: ringImage
-    },
-    'naramky': {
-      title: 'Náramky',
-      subtitle: 'Stylové náramky plné přírodní krásy',
-      image: braceletImage
-    }
-  };
-
   const decodedCategory = category ? decodeURIComponent(category) : null;
-  const categoryData = decodedCategory ? categoryInfo[decodedCategory as keyof typeof categoryInfo] : null;
+  const categoryData = decodedCategory ? CATEGORY_INFO[decodedCategory as keyof typeof CATEGORY_INFO] : null;
 
-  if (!categoryData) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="pt-24 text-center">
-          <h1 className="text-4xl font-serif text-luxury">Kategorie nenalezena</h1>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  // OPTIMALIZACE: Memoizovaný callback pro změnu řazení
+  const handleSortChange = useCallback((v: string) => setSort(v), []);
 
   useEffect(() => {
     const current = searchParams.get('razeni') || 'nejoblibenejsi';
@@ -149,9 +148,10 @@ const CategoryPage = () => {
       next.set('razeni', sort);
       setSearchParams(next, { replace: true });
     }
-  }, [sort]);
+  }, [sort, searchParams, setSearchParams]);
 
-  const displayProducts = (() => {
+  // OPTIMALIZACE: Memoizované řazení produktů
+  const displayProducts = useMemo(() => {
     const products = [...shopifyProducts];
     switch (sort) {
       case 'nejlevnejsi':
@@ -168,7 +168,19 @@ const CategoryPage = () => {
       default:
         return products; 
     }
-  })();
+  }, [shopifyProducts, sort]);
+
+  if (!categoryData) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="pt-24 text-center">
+          <h1 className="text-4xl font-serif text-luxury">Kategorie nenalezena</h1>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -197,7 +209,7 @@ const CategoryPage = () => {
         <div className="max-w-7xl mx-auto px-6 overflow-visible">
           <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-4 overflow-visible fade-in-progressive-3">
             <div className="w-full max-w-[260px] p-2">
-              <Select value={sort} onValueChange={(v) => setSort(v)}>
+              <Select value={sort} onValueChange={handleSortChange}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
                   <SelectValue placeholder="Seřadit" />
                 </SelectTrigger>

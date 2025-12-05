@@ -53,18 +53,32 @@ const Hero = () => {
       });
     }
   };
-  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-secondary/30 to-accent/20">
-      {/* Background Image */}
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{
-      backgroundImage: `linear-gradient(rgba(35, 25, 15, 0.3), rgba(35, 25, 15, 0.2)), url(${heroImage})`
-    }} />
+
+  return (
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Hero Image - optimalizováno pro LCP (Largest Contentful Paint) */}
+      <img
+        src={heroImage}
+        alt="Fairy Bloom - ručně vyráběné šperky s květinami"
+        className="absolute inset-0 w-full h-full object-cover"
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
+      />
+      
+      {/* Gradient Overlay */}
+      <div 
+        className="absolute inset-0 bg-gradient-to-b from-[rgba(35,25,15,0.3)] to-[rgba(35,25,15,0.2)]" 
+        aria-hidden="true"
+      />
       
       {/* Content */}
       <div className="relative z-10 text-center max-w-4xl mx-auto px-6" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <h2 className="text-5xl md:text-7xl font-serif font-bold text-luxury-foreground mb-6 tracking-wide leading-tight" style={{ lineHeight: '1.1' }}>
+        {/* ACCESSIBILITY: h1 jako hlavní nadpis stránky */}
+        <h1 className="text-5xl md:text-7xl font-serif font-bold text-luxury-foreground mb-6 tracking-wide leading-tight" style={{ lineHeight: '1.1' }}>
           Přírodní krása<br />
           <span className="block mt-2">zachycená v čase</span>
-        </h2>
+        </h1>
         
         <p className="text-xl md:text-2xl text-luxury-foreground/90 mb-8 leading-relaxed max-w-2xl mx-auto" style={{ minHeight: '80px' }}>
           Objevte naši jedinečnou kolekci šperků s opravdovými květinami z českých luk a lesů. Každý kousek je vytvořen ručně s láskou k detailu a nese v sobě kouzlo přírody.
@@ -84,9 +98,11 @@ const Hero = () => {
       </div>
       
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce" aria-hidden="true">
         
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default Hero;

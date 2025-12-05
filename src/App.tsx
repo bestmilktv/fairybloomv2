@@ -6,6 +6,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import { useEffect, lazy, Suspense } from "react";
 import { useCart } from "@/contexts/CartContext";
 import Navigation from "@/components/Navigation";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // OPTIMALIZACE: Lazy loading stránek - snižuje initial bundle size
 // Homepage a NotFound zůstávají statické (kritické pro UX)
@@ -84,16 +85,32 @@ const CheckoutUrlGuard = () => {
   return null;
 };
 
+// ACCESSIBILITY: Skip to content link pro klávesnicovou navigaci
+const SkipToContent = () => (
+  <a 
+    href="#main-content" 
+    className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:shadow-lg focus:outline-none"
+  >
+    Přeskočit na obsah
+  </a>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      {/* ACCESSIBILITY: Skip link pro přeskočení navigace */}
+      <SkipToContent />
       {/* ScrollToTop component ensures page always starts at top on route changes */}
       <ScrollToTop />
       <CheckoutUrlGuard />
       <Toaster />
       <Sonner />
-      <Suspense fallback={<PageLoadingFallback />}>
-        <Routes>
+      {/* Error Boundary pro graceful error handling */}
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoadingFallback />}>
+          {/* ACCESSIBILITY: Main content wrapper s id pro skip link */}
+          <main id="main-content">
+          <Routes>
           {/* Homepage - statický import pro okamžité načtení */}
           <Route path="/" element={<Index />} />
           {/* Lazy loaded routes */}
@@ -112,8 +129,10 @@ const App = () => (
           <Route path="/kontakt" element={<ContactPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+          </Routes>
+          </main>
+        </Suspense>
+      </ErrorBoundary>
     </TooltipProvider>
   </QueryClientProvider>
 );

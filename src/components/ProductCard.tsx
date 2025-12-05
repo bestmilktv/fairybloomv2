@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
+import { memo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +16,8 @@ interface ProductCardProps {
   variantId?: string;
 }
 
-const ProductCard = ({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId }: ProductCardProps) => {
+// OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props
+const ProductCard = memo(({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId }: ProductCardProps) => {
   const location = useLocation();
   const isHomepage = location.pathname === '/';
   const { addToCart, items } = useCart();
@@ -32,7 +34,8 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
 
   const availabilityStatus = getAvailabilityStatus();
   
-  const handleAddToCart = async (e: React.MouseEvent) => {
+  // OPTIMALIZACE: Memoizovaný callback
+  const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -63,7 +66,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
         variant: "destructive",
       });
     }
-  };
+  }, [isInCart, variantId, price, addToCart, id, title, image, toast]);
 
   const truncateDescription = (text: string) => {
     if (!text) return '';
@@ -73,11 +76,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  // OPRAVA: Třídy jsou nyní jednotné. Hover efekty jsou aktivní VŽDY.
-  // - group: Nutné pro hover efekt na obrázku.
-  // - hover:shadow-lg: Kratší stín (jak jsi chtěl).
-  // - hover:-translate-y-2: Jemný posun nahoru.
-  // - overflow-visible: Aby se stín neořízl.
+  // Třídy jsou nyní jednotné. Hover efekty jsou aktivní VŽDY.
   const cardClasses = `
     bg-card 
     rounded-2xl 
@@ -118,17 +117,18 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
     group-hover:text-accent
   `;
 
-  // Zde necháváme overflow-hidden jen pro obrázek (aby se zakulatily rohy),
-  // ale hlavní karta má overflow-visible pro stín.
   // bg-muted slouží jako placeholder při lazy loading obrázků
   const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
 
   return (
     <div className={cardClasses}>
       <div className={imageWrapperClasses}>
+        {/* OPTIMALIZACE: width a height atributy pro prevenci CLS (Cumulative Layout Shift) */}
         <img
           src={image}
           alt={title}
+          width={300}
+          height={300}
           className={imageClasses}
           loading="lazy"
           decoding="async"
@@ -191,6 +191,8 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
       </div>
     </div>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;
