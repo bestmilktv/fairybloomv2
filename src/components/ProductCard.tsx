@@ -177,6 +177,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
                 ? 'bg-primary/80 hover:bg-primary/90 border border-primary/30 text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300' 
                 : 'bg-gold text-primary transition-transform duration-300 hover:scale-[1.02] active:scale-95'
             }`}
+            style={{ opacity: 1, isolation: 'isolate' }}
           >
             {isInCart ? (
               <>
