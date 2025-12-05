@@ -21,20 +21,17 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
   const { addToCart, items } = useCart();
   const { toast } = useToast();
   
-  // Check if product is in cart
   const isInCart = items.some(item => item.id === id);
   
-  // Determine availability status
   const getAvailabilityStatus = () => {
     if (inventoryQuantity === null || inventoryQuantity === undefined) {
-      return null; // Don't show anything if inventory is unknown
+      return null;
     }
     return inventoryQuantity > 0 ? 'Skladem' : 'Není skladem';
   };
 
   const availabilityStatus = getAvailabilityStatus();
   
-  // Handle add to cart
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -68,43 +65,67 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
     }
   };
 
-  // Function to truncate description to 3 lines
   const truncateDescription = (text: string) => {
     if (!text) return '';
-    
-    // Split text into words
     const words = text.split(' ');
-    const maxWords = 20; // Approximate words for 3 lines
-    
-    if (words.length <= maxWords) {
-      return text;
-    }
-    
+    const maxWords = 20;
+    if (words.length <= maxWords) return text;
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  // Podmíněné třídy podle disableAnimations
-  // ZMĚNA: Změnil jsem pouze 'hover:shadow-xl' na 'hover:shadow-lg'
-  const cardClasses = disableAnimations
-    ? "bg-card rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] h-full flex flex-col transition-none"
-    : "bg-card rounded-2xl overflow-visible shadow-sm hover:shadow-lg transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col";
+  // OPRAVA: Třídy jsou nyní jednotné. Hover efekty jsou aktivní VŽDY.
+  // - group: Nutné pro hover efekt na obrázku.
+  // - hover:shadow-lg: Kratší stín (jak jsi chtěl).
+  // - hover:-translate-y-2: Jemný posun nahoru.
+  // - overflow-visible: Aby se stín neořízl.
+  const cardClasses = `
+    bg-card 
+    rounded-2xl 
+    overflow-visible 
+    h-full 
+    flex 
+    flex-col 
+    relative 
+    group 
+    shadow-sm 
+    hover:shadow-lg 
+    hover:-translate-y-2 
+    transition-all 
+    duration-500 
+    ease-out
+  `;
   
-  const imageClasses = disableAnimations
-    ? "w-full h-full object-cover"
-    : "w-full h-full object-cover transition-transform duration-700 hover:scale-110";
+  const imageClasses = `
+    w-full 
+    h-full 
+    object-cover 
+    transition-transform 
+    duration-700 
+    ease-in-out 
+    group-hover:scale-110
+  `;
   
-  const titleClasses = disableAnimations
-    ? "font-serif text-xl font-semibold text-primary mb-2 line-clamp-2 min-h-[3.5rem]"
-    : "font-serif text-xl font-semibold text-primary mb-2 hover:text-accent transition-colors duration-300 line-clamp-2 min-h-[3.5rem]";
+  const titleClasses = `
+    font-serif 
+    text-xl 
+    font-semibold 
+    text-primary 
+    mb-2 
+    line-clamp-2 
+    min-h-[3.5rem] 
+    transition-colors 
+    duration-300 
+    group-hover:text-accent
+  `;
 
-  // Podmíněné třídy pro wrapper obrázku - odstraníme bg-muted když disableAnimations
+  // Zde necháváme overflow-hidden jen pro obrázek (aby se zakulatily rohy),
+  // ale hlavní karta má overflow-visible pro stín.
   const imageWrapperClasses = disableAnimations
     ? "aspect-square overflow-hidden rounded-t-2xl"
     : "aspect-square overflow-hidden bg-muted rounded-t-2xl";
 
   return (
     <div className={cardClasses}>
-      {/* Image */}
       <div className={imageWrapperClasses}>
         <img
           src={image}
@@ -119,7 +140,6 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
         />
       </div>
       
-      {/* Content */}
       <div className="p-6 flex flex-col flex-grow">
         <h3 className={titleClasses}>
           {title}
@@ -136,7 +156,6 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
             <span className="text-2xl font-semibold text-price-gold font-serif">
               {price}
             </span>
-            {/* Availability status - only show on collection pages, not homepage */}
             {!isHomepage && availabilityStatus && (
               <p className={`text-sm ${
                 availabilityStatus === 'Skladem' 
@@ -156,7 +175,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
             className={`w-full ${
               isInCart 
                 ? 'bg-primary/80 hover:bg-primary/90 border border-primary/30 text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300' 
-                : ''
+                : 'transition-transform duration-300 hover:scale-[1.02] active:scale-95'
             }`}
           >
             {isInCart ? (
