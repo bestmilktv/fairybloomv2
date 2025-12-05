@@ -21,17 +21,20 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
   const { addToCart, items } = useCart();
   const { toast } = useToast();
   
+  // Check if product is in cart
   const isInCart = items.some(item => item.id === id);
   
+  // Determine availability status
   const getAvailabilityStatus = () => {
     if (inventoryQuantity === null || inventoryQuantity === undefined) {
-      return null;
+      return null; // Don't show anything if inventory is unknown
     }
     return inventoryQuantity > 0 ? 'Skladem' : 'Není skladem';
   };
 
   const availabilityStatus = getAvailabilityStatus();
   
+  // Handle add to cart
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -65,84 +68,58 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
     }
   };
 
+  // Function to truncate description to 3 lines
   const truncateDescription = (text: string) => {
     if (!text) return '';
+    
+    // Split text into words
     const words = text.split(' ');
-    const maxWords = 20;
-    if (words.length <= maxWords) return text;
+    const maxWords = 20; // Approximate words for 3 lines
+    
+    if (words.length <= maxWords) {
+      return text;
+    }
+    
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  // =================================================================================
-  // TADY JE TA ZMĚNA PRO HOVER EFEKT V CAROUSELU:
-  // =================================================================================
-  // I když je disableAnimations zapnuto (v carouselu), 
-  // PONECHÁME transition a hover efekty, jen odstraníme případné vstupní animace.
-  // 1. transition-all duration-300: Zajišťuje plynulost
-  // 2. hover:-translate-y-2: Při najetí se karta posune nahoru
-  // 3. hover:shadow-xl: Při najetí se zvětší stín
-  // 4. group: Umožňuje ovlivňovat potomky (obrázek) při hoveru na rodiče
+  // Podmíněné třídy podle disableAnimations
+  // ZMĚNA: Změnil jsem pouze 'hover:shadow-xl' na 'hover:shadow-lg'
+  const cardClasses = disableAnimations
+    ? "bg-card rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] h-full flex flex-col transition-none"
+    : "bg-card rounded-2xl overflow-visible shadow-sm hover:shadow-lg transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col";
   
-  const cardClasses = `
-    bg-card 
-    rounded-2xl 
-    overflow-hidden 
-    h-full 
-    flex 
-    flex-col 
-    relative
-    group
-    transition-all 
-    duration-300 
-    ease-out
-    ${disableAnimations ? 'shadow-sm' : 'shadow-sm'}
-    hover:shadow-xl 
-    hover:-translate-y-2
-  `;
+  const imageClasses = disableAnimations
+    ? "w-full h-full object-cover"
+    : "w-full h-full object-cover transition-transform duration-700 hover:scale-110";
   
-  const imageClasses = `
-    w-full 
-    h-full 
-    object-cover 
-    transition-transform 
-    duration-700 
-    ease-in-out
-    group-hover:scale-110
-  `;
-  
-  const titleClasses = `
-    font-serif 
-    text-xl 
-    font-semibold 
-    text-primary 
-    mb-2 
-    line-clamp-2 
-    min-h-[3.5rem]
-    transition-colors
-    duration-300
-    group-hover:text-accent
-  `;
+  const titleClasses = disableAnimations
+    ? "font-serif text-xl font-semibold text-primary mb-2 line-clamp-2 min-h-[3.5rem]"
+    : "font-serif text-xl font-semibold text-primary mb-2 hover:text-accent transition-colors duration-300 line-clamp-2 min-h-[3.5rem]";
 
-  const imageWrapperClasses = "aspect-square overflow-hidden rounded-t-2xl relative";
-  // Pokud bys chtěl vrátit bg-muted, přidej ho sem, ale minule jsme ho dali pryč kvůli blikání.
+  // Podmíněné třídy pro wrapper obrázku - odstraníme bg-muted když disableAnimations
+  const imageWrapperClasses = disableAnimations
+    ? "aspect-square overflow-hidden rounded-t-2xl"
+    : "aspect-square overflow-hidden bg-muted rounded-t-2xl";
 
   return (
     <div className={cardClasses}>
+      {/* Image */}
       <div className={imageWrapperClasses}>
         <img
           src={image}
           alt={title}
           className={imageClasses}
-          // Tyto atributy jsou kritické pro plynulost carouselu (nechat!)
           loading="eager"
           decoding="sync"
           style={disableAnimations ? {
-            transform: 'translateZ(0)', // GPU akcelerace
+            transform: 'translateZ(0)',
             backfaceVisibility: 'hidden'
           } : undefined}
         />
       </div>
       
+      {/* Content */}
       <div className="p-6 flex flex-col flex-grow">
         <h3 className={titleClasses}>
           {title}
@@ -159,6 +136,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
             <span className="text-2xl font-semibold text-price-gold font-serif">
               {price}
             </span>
+            {/* Availability status - only show on collection pages, not homepage */}
             {!isHomepage && availabilityStatus && (
               <p className={`text-sm ${
                 availabilityStatus === 'Skladem' 
@@ -178,7 +156,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
             className={`w-full ${
               isInCart 
                 ? 'bg-primary/80 hover:bg-primary/90 border border-primary/30 text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300' 
-                : 'transition-transform duration-300 hover:scale-[1.02] active:scale-95'
+                : ''
             }`}
           >
             {isInCart ? (
