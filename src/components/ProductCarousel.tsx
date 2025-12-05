@@ -53,11 +53,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const LOCK_DURATION = 400;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  // OPTIMALIZACE: Drastické snížení počtu klonů pro lepší výkon na mobilech
-  // Mobile: 1 klon set = cca 3× méně DOM elementů
-  // Desktop: 2 klon sety pro plynulejší scrollování
-  const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
-  const BUFFER_SETS = isMobileDevice ? 1 : (products.length < 5 ? 2 : 1);
+  // OPTIMALIZACE: Vyvážený počet klonů pro plynulý infinite loop
+  // S lazy loading sekcí (LazyProductSection) je v DOM max 1-2 karusely najednou
+  // BUFFER_SETS = 2 zajistí plynulý scroll bez viditelného "skoku" při teleportaci
+  // Celkem: 8 klonů vlevo + 4 originály + 8 klonů vpravo = 20 karet na karusel
+  const BUFFER_SETS = 2;
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
   const allSlides = useMemo(() => {
