@@ -11,6 +11,7 @@ interface Product {
   description: string;
   handle: string;
   inventoryQuantity?: number | null;
+  variantId?: string;
 }
 
 interface ProductCarouselProps {
@@ -37,6 +38,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 image={product.image}
                 description={product.description}
                 inventoryQuantity={product.inventoryQuantity}
+                variantId={product.variantId}
               />
             </Link>
           </div>
@@ -53,11 +55,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const LOCK_DURATION = 400;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  // OPTIMALIZACE: Vyvážený počet klonů pro plynulý infinite loop
-  // S lazy loading sekcí (LazyProductSection) je v DOM max 1-2 karusely najednou
-  // BUFFER_SETS = 2 zajistí plynulý scroll bez viditelného "skoku" při teleportaci
-  // Celkem: 8 klonů vlevo + 4 originály + 8 klonů vpravo = 20 karet na karusel
-  const BUFFER_SETS = 2;
+  // OPTIMALIZACE: Dynamický počet klonů podle zařízení
+  // Mobile (<640px): scroll o 1 produkt → stačí 1 klon set (méně DOM elementů)
+  // Tablet (640-1024px): scroll o 1-2 produkty → 1 klon set
+  // Desktop (>1024px): scroll o 3 produkty → 2 klon sety pro plynulý infinite loop
+  const getBufferSets = () => {
+    if (typeof window === 'undefined') return 2; // SSR fallback
+    const width = window.innerWidth;
+    if (width < 640) return 1;      // Mobile: 4 + 4 + 4 = 12 karet
+    if (width < 1024) return 1;     // Tablet: 4 + 4 + 4 = 12 karet
+    return 2;                        // Desktop: 8 + 4 + 8 = 20 karet
+  };
+  const BUFFER_SETS = getBufferSets();
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
   const allSlides = useMemo(() => {
@@ -156,6 +165,26 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const productIndex = getCurrentProductIndex(currentIndex);
     setCurrentProductIndex(productIndex);
   }, [currentIndex, getCurrentProductIndex]);
+
+  // ============================================================================
+  // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
+  // ============================================================================
+  useEffect(() => {
+    // Přednahrát obrázky pro následující karty (na pozadí)
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    const prefetchCount = isMobile ? 2 : 4; // Méně prefetch na mobilu
+    
+    for (let i = 1; i <= prefetchCount; i++) {
+      const nextIdx = currentIndex + i;
+      if (nextIdx < allSlides.length) {
+        const slide = allSlides[nextIdx];
+        if (slide?.product?.image) {
+          const img = new Image();
+          img.src = slide.product.image;
+        }
+      }
+    }
+  }, [currentIndex, allSlides]);
 
   // ============================================================================
   // VISUAL UPDATE ENGINE
@@ -456,6 +485,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                     image={item.product.image}
                                     description={item.product.description}
                                     inventoryQuantity={item.product.inventoryQuantity}
+                                    variantId={item.product.variantId}
                                     disableAnimations={true}
                                 />
                             </Link>
