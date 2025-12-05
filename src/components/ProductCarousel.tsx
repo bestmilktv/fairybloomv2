@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
-import ProductCard from './ProductCard';
+import ProductCardLight from './ProductCardLight';
 import { createProductPath } from '@/lib/slugify';
 
 interface Product {
@@ -31,14 +31,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
               className="group cursor-pointer fade-in-up block"
             >
-              <ProductCard
+              <ProductCardLight
                 id={product.id}
                 title={product.title}
                 price={product.price}
                 image={product.image}
                 description={product.description}
-                inventoryQuantity={product.inventoryQuantity}
-                variantId={product.variantId}
               />
             </Link>
           </div>
@@ -55,18 +53,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const LOCK_DURATION = 400;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  // OPTIMALIZACE: Dynamický počet klonů podle zařízení
-  // Mobile (<640px): scroll o 1 produkt → stačí 1 klon set (méně DOM elementů)
-  // Tablet (640-1024px): scroll o 1-2 produkty → 1 klon set
-  // Desktop (>1024px): scroll o 3 produkty → 2 klon sety pro plynulý infinite loop
-  const getBufferSets = () => {
-    if (typeof window === 'undefined') return 2; // SSR fallback
-    const width = window.innerWidth;
-    if (width < 640) return 1;      // Mobile: 4 + 4 + 4 = 12 karet
-    if (width < 1024) return 1;     // Tablet: 4 + 4 + 4 = 12 karet
-    return 2;                        // Desktop: 8 + 4 + 8 = 20 karet
-  };
-  const BUFFER_SETS = getBufferSets();
+  // BUFFER_SETS = 2 pro všechna zařízení - zajišťuje funkční infinite loop
+  // S ProductCardLight (bez context hooks) je 20 karet OK i pro mobily
+  const BUFFER_SETS = 2;
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
   const allSlides = useMemo(() => {
@@ -478,14 +467,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                     }
                                 }}
                             >
-                                <ProductCard
+                                <ProductCardLight
                                     id={item.product.id}
                                     title={item.product.title}
                                     price={item.product.price}
                                     image={item.product.image}
                                     description={item.product.description}
-                                    inventoryQuantity={item.product.inventoryQuantity}
-                                    variantId={item.product.variantId}
                                     disableAnimations={true}
                                 />
                             </Link>
