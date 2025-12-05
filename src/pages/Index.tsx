@@ -51,64 +51,61 @@ const Index = () => {
         setIsLoading(true);
         setHasError(false);
 
-
-
-        // Fetch each collection individually
         const categories = Object.keys(collectionMapping);
-        const transformedCategories = [];
-
-        for (const czechKey of categories) {
+        
+        // OPTIMALIZACE: Paralelní fetch všech kolekcí najednou (místo sekvenčního)
+        // Použití Promise.allSettled zachovává i selhané requesty
+        const fetchPromises = categories.map(async (czechKey) => {
           const shopifyHandle = collectionMapping[czechKey as keyof typeof collectionMapping];
-          
-          
           try {
-            const collection = await getProductsByCollection(shopifyHandle, 50);
-            
-            if (collection && collection.products?.edges) {
-              const products = collection.products.edges.map(edge => {
-                const product = edge.node;
-                const firstImage = product.images?.edges?.[0]?.node;
-                const firstVariant = product.variants?.edges?.[0]?.node;
-                
-                return {
-                  id: product.id,
-                  title: product.title,
-                  price: firstVariant?.price ? 
-                    `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
-                    'Cena na vyžádání',
-                  image: firstImage?.url || getFallbackImage(czechKey),
-                  description: product.description || 'Elegantní šperk z naší kolekce',
-                  handle: product.handle,
-                  variantId: firstVariant?.id
-                };
-              });
-
-              transformedCategories.push({
-                id: czechKey,
-                title: collection.title || czechKey,
-                subtitle: collection.description || `Elegantní ${czechKey} z naší kolekce`,
-                products: products
-              });
-            } else {
-              // If no products found, create empty category
-              transformedCategories.push({
-                id: czechKey,
-                title: czechKey,
-                subtitle: `Elegantní ${czechKey} z naší kolekce`,
-                products: []
-              });
-            }
+            // OPTIMALIZACE: 20 produktů, 1 obrázek, 1 varianta - pro homepage stačí minimum dat
+            const collection = await getProductsByCollection(shopifyHandle, 20, 1, 1);
+            return { czechKey, collection, error: null };
           } catch (error) {
             console.error(`Error fetching ${czechKey}:`, error);
-            // Create empty category on error
-            transformedCategories.push({
+            return { czechKey, collection: null, error };
+          }
+        });
+
+        const results = await Promise.all(fetchPromises);
+
+        // Zpracování výsledků ve správném pořadí
+        const transformedCategories = results.map(({ czechKey, collection }) => {
+          if (collection && collection.products?.edges) {
+            const products = collection.products.edges.map(edge => {
+              const product = edge.node;
+              const firstImage = product.images?.edges?.[0]?.node;
+              const firstVariant = product.variants?.edges?.[0]?.node;
+              
+              return {
+                id: product.id,
+                title: product.title,
+                price: firstVariant?.price ? 
+                  `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
+                  'Cena na vyžádání',
+                image: firstImage?.url || getFallbackImage(czechKey),
+                description: product.description || 'Elegantní šperk z naší kolekce',
+                handle: product.handle,
+                variantId: firstVariant?.id
+              };
+            });
+
+            return {
+              id: czechKey,
+              title: collection.title || czechKey,
+              subtitle: collection.description || `Elegantní ${czechKey} z naší kolekce`,
+              products: products
+            };
+          } else {
+            // Fallback pro prázdnou nebo chybnou kolekci
+            return {
               id: czechKey,
               title: czechKey,
               subtitle: `Elegantní ${czechKey} z naší kolekce`,
               products: []
-            });
+            };
           }
-        }
+        });
 
         setProductCategories(transformedCategories);
       } catch (error) {

@@ -120,9 +120,8 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
 
   // Zde necháváme overflow-hidden jen pro obrázek (aby se zakulatily rohy),
   // ale hlavní karta má overflow-visible pro stín.
-  const imageWrapperClasses = disableAnimations
-    ? "aspect-square overflow-hidden rounded-t-2xl"
-    : "aspect-square overflow-hidden bg-muted rounded-t-2xl";
+  // bg-muted slouží jako placeholder při lazy loading obrázků
+  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
 
   return (
     <div className={cardClasses}>
@@ -131,8 +130,8 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
           src={image}
           alt={title}
           className={imageClasses}
-          loading="eager"
-          decoding="sync"
+          loading="lazy"
+          decoding="async"
           style={disableAnimations ? {
             transform: 'translateZ(0)',
             backfaceVisibility: 'hidden'

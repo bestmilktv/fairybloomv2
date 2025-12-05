@@ -3,20 +3,44 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { useCart } from "@/contexts/CartContext";
+import Navigation from "@/components/Navigation";
+
+// OPTIMALIZACE: Lazy loading stránek - snižuje initial bundle size
+// Homepage a NotFound zůstávají statické (kritické pro UX)
 import Index from "./pages/Index";
-import CategoryPage from "./pages/CategoryPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import DynamicProductPage from "./pages/product/[handle]";
-import ProfilePage from "./pages/ProfilePage";
-import CartPage from "./pages/CartPage";
-import AdminPage from "./pages/AdminPage";
-import AboutPage from "./pages/AboutPage";
-import JewelryCarePage from "./pages/JewelryCarePage";
-import ShippingPage from "./pages/ShippingPage";
-import ContactPage from "./pages/ContactPage";
 import NotFound from "./pages/NotFound";
+
+// Lazy loaded pages - načtou se až při navigaci
+const CategoryPage = lazy(() => import("./pages/CategoryPage"));
+const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
+const DynamicProductPage = lazy(() => import("./pages/product/[handle]"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const CartPage = lazy(() => import("./pages/CartPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
+const JewelryCarePage = lazy(() => import("./pages/JewelryCarePage"));
+const ShippingPage = lazy(() => import("./pages/ShippingPage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
+
+// Loading skeleton pro lazy loaded stránky
+const PageLoadingFallback = () => (
+  <div className="min-h-screen bg-background">
+    <Navigation />
+    <div className="pt-24 px-6 max-w-7xl mx-auto">
+      <div className="animate-pulse space-y-6">
+        <div className="h-10 bg-muted rounded-lg w-1/3" />
+        <div className="h-5 bg-muted rounded-lg w-2/3" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-muted rounded-2xl h-80" />
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -68,24 +92,28 @@ const App = () => (
       <CheckoutUrlGuard />
       <Toaster />
       <Sonner />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/nahrdelniky" element={<CategoryPage />} />
-        <Route path="/nausnice" element={<CategoryPage />} />
-        <Route path="/prsteny" element={<CategoryPage />} />
-        <Route path="/naramky" element={<CategoryPage />} />
-        <Route path="/produkt/:handle" element={<ProductDetailPage />} />
-        <Route path="/product-shopify/:handle" element={<DynamicProductPage />} />
-        <Route path="/muj-profil" element={<ProfilePage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/o-nas" element={<AboutPage />} />
-        <Route path="/pece-o-sperky" element={<JewelryCarePage />} />
-        <Route path="/doprava" element={<ShippingPage />} />
-        <Route path="/kontakt" element={<ContactPage />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<PageLoadingFallback />}>
+        <Routes>
+          {/* Homepage - statický import pro okamžité načtení */}
+          <Route path="/" element={<Index />} />
+          {/* Lazy loaded routes */}
+          <Route path="/nahrdelniky" element={<CategoryPage />} />
+          <Route path="/nausnice" element={<CategoryPage />} />
+          <Route path="/prsteny" element={<CategoryPage />} />
+          <Route path="/naramky" element={<CategoryPage />} />
+          <Route path="/produkt/:handle" element={<ProductDetailPage />} />
+          <Route path="/product-shopify/:handle" element={<DynamicProductPage />} />
+          <Route path="/muj-profil" element={<ProfilePage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/o-nas" element={<AboutPage />} />
+          <Route path="/pece-o-sperky" element={<JewelryCarePage />} />
+          <Route path="/doprava" element={<ShippingPage />} />
+          <Route path="/kontakt" element={<ContactPage />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </TooltipProvider>
   </QueryClientProvider>
 );

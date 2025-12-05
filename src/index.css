@@ -253,11 +253,11 @@ html {
   }
   
   /* Base fade-in-up animation with GPU acceleration */
+  /* OPTIMALIZACE: Odstraněn will-change - translate3d už zajišťuje GPU akceleraci */
   .fade-in-up {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     opacity: 0;
     transform: translate3d(0, 24px, 0);
-    will-change: opacity, transform;
     contain: layout style paint;
   }
   
@@ -265,7 +265,6 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
     opacity: 0;
     transform: translate3d(0, 24px, 0);
-    will-change: opacity, transform;
     contain: layout style paint;
   }
 
@@ -274,7 +273,6 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    will-change: opacity, transform;
     contain: layout style paint;
   }
 
@@ -282,7 +280,6 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    will-change: opacity, transform;
     contain: layout style paint;
   }
 
@@ -290,7 +287,6 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    will-change: opacity, transform;
     contain: layout style paint;
   }
 
@@ -298,7 +294,6 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    will-change: opacity, transform;
     contain: layout style paint;
   }
 
@@ -307,7 +302,6 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    will-change: opacity, transform;
     contain: layout style paint;
   }
 
@@ -315,13 +309,11 @@ html {
     opacity: 0;
     transform: translate3d(0, 40px, 0);
     transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: opacity, transform;
   }
 
   .scroll-fade-in.visible {
     opacity: 1;
     transform: translate3d(0, 0, 0);
-    will-change: auto;
   }
   
   .smooth-scroll {

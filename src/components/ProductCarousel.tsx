@@ -53,7 +53,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const LOCK_DURATION = 400;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  const BUFFER_SETS = products.length < 5 ? 10 : 4;
+  // OPTIMALIZACE: Snížení počtu klonů pro lepší výkon na mobilech
+  // Původně 10/4, nyní 3/2 - stále dostatečné pro plynulé scrollování
+  const BUFFER_SETS = products.length < 5 ? 3 : 2;
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
   const allSlides = useMemo(() => {

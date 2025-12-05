@@ -126,12 +126,20 @@ export async function fetchShopify<T>(
  * Get products from a specific collection by handle
  * @param handle - The collection handle (e.g., "nahrdelniky", "nausnice")
  * @param first - Number of products to fetch (default: 20)
+ * @param imageCount - Number of images per product (default: 5, use 1 for homepage)
+ * @param variantCount - Number of variants per product (default: 5, use 1 for homepage)
  * @returns Promise with collection data including products
  */
 
-export async function getProductsByCollection(handle: string, first: number = 20) {
+export async function getProductsByCollection(
+  handle: string, 
+  first: number = 20,
+  imageCount: number = 5,
+  variantCount: number = 5
+) {
+  // OPTIMALIZACE: Dynamický počet obrázků a variant pro snížení velikosti response
   const query = `
-    query GetProducts($handle: String!, $first: Int!) {
+    query GetProducts($handle: String!, $first: Int!, $imageCount: Int!, $variantCount: Int!) {
       collectionByHandle(handle: $handle) {
         title
         description
@@ -144,7 +152,7 @@ export async function getProductsByCollection(handle: string, first: number = 20
               handle
               createdAt
               tags
-              images(first: 5) {
+              images(first: $imageCount) {
                 edges {
                   node {
                     url
@@ -152,7 +160,7 @@ export async function getProductsByCollection(handle: string, first: number = 20
                   }
                 }
               }
-              variants(first: 5) {
+              variants(first: $variantCount) {
                 edges {
                   node {
                     id
@@ -175,6 +183,8 @@ export async function getProductsByCollection(handle: string, first: number = 20
     const response = await fetchShopify<{ collectionByHandle: ShopifyCollection | null }>(query, {
       handle,
       first,
+      imageCount,
+      variantCount,
     });
 
     return response.data.collectionByHandle;
