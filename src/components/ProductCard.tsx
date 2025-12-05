@@ -73,22 +73,58 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  // ZMĚNA: hover:shadow-lg (místo xl) - kratší stín
-  const cardClasses = disableAnimations
-    ? "bg-card rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] h-full flex flex-col transition-none"
-    : "bg-card rounded-2xl overflow-visible shadow-sm hover:shadow-lg transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col";
+  // =================================================================================
+  // TADY JE TA ZMĚNA PRO HOVER EFEKT V CAROUSELU:
+  // =================================================================================
+  // I když je disableAnimations zapnuto (v carouselu), 
+  // PONECHÁME transition a hover efekty, jen odstraníme případné vstupní animace.
+  // 1. transition-all duration-300: Zajišťuje plynulost
+  // 2. hover:-translate-y-2: Při najetí se karta posune nahoru
+  // 3. hover:shadow-xl: Při najetí se zvětší stín
+  // 4. group: Umožňuje ovlivňovat potomky (obrázek) při hoveru na rodiče
   
-  const imageClasses = disableAnimations
-    ? "w-full h-full object-cover"
-    : "w-full h-full object-cover transition-transform duration-700 hover:scale-110";
+  const cardClasses = `
+    bg-card 
+    rounded-2xl 
+    overflow-hidden 
+    h-full 
+    flex 
+    flex-col 
+    relative
+    group
+    transition-all 
+    duration-300 
+    ease-out
+    ${disableAnimations ? 'shadow-sm' : 'shadow-sm'}
+    hover:shadow-xl 
+    hover:-translate-y-2
+  `;
   
-  const titleClasses = disableAnimations
-    ? "font-serif text-xl font-semibold text-primary mb-2 line-clamp-2 min-h-[3.5rem]"
-    : "font-serif text-xl font-semibold text-primary mb-2 hover:text-accent transition-colors duration-300 line-clamp-2 min-h-[3.5rem]";
+  const imageClasses = `
+    w-full 
+    h-full 
+    object-cover 
+    transition-transform 
+    duration-700 
+    ease-in-out
+    group-hover:scale-110
+  `;
+  
+  const titleClasses = `
+    font-serif 
+    text-xl 
+    font-semibold 
+    text-primary 
+    mb-2 
+    line-clamp-2 
+    min-h-[3.5rem]
+    transition-colors
+    duration-300
+    group-hover:text-accent
+  `;
 
-  const imageWrapperClasses = disableAnimations
-    ? "aspect-square overflow-hidden rounded-t-2xl"
-    : "aspect-square overflow-hidden bg-muted rounded-t-2xl";
+  const imageWrapperClasses = "aspect-square overflow-hidden rounded-t-2xl relative";
+  // Pokud bys chtěl vrátit bg-muted, přidej ho sem, ale minule jsme ho dali pryč kvůli blikání.
 
   return (
     <div className={cardClasses}>
@@ -97,10 +133,11 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
           src={image}
           alt={title}
           className={imageClasses}
+          // Tyto atributy jsou kritické pro plynulost carouselu (nechat!)
           loading="eager"
           decoding="sync"
           style={disableAnimations ? {
-            transform: 'translateZ(0)',
+            transform: 'translateZ(0)', // GPU akcelerace
             backfaceVisibility: 'hidden'
           } : undefined}
         />
@@ -141,7 +178,7 @@ const ProductCard = ({ id, title, price, image, description, inventoryQuantity, 
             className={`w-full ${
               isInCart 
                 ? 'bg-primary/80 hover:bg-primary/90 border border-primary/30 text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300' 
-                : ''
+                : 'transition-transform duration-300 hover:scale-[1.02] active:scale-95'
             }`}
           >
             {isInCart ? (
