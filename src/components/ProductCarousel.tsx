@@ -53,9 +53,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const LOCK_DURATION = 400;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  // OPTIMALIZACE: Snížení počtu klonů pro lepší výkon na mobilech
-  // Původně 10/4, nyní 3/2 - stále dostatečné pro plynulé scrollování
-  const BUFFER_SETS = products.length < 5 ? 3 : 2;
+  // OPTIMALIZACE: Drastické snížení počtu klonů pro lepší výkon na mobilech
+  // Mobile: 1 klon set = cca 3× méně DOM elementů
+  // Desktop: 2 klon sety pro plynulejší scrollování
+  const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+  const BUFFER_SETS = isMobileDevice ? 1 : (products.length < 5 ? 2 : 1);
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
   const allSlides = useMemo(() => {
@@ -206,21 +208,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             }
         }
 
-        card.style.width = `${cardWidth}px`;
-        card.style.transform = `scale(${scale}) translateZ(0)`;
-        
-        // Apply opacity only to image wrapper, not the entire card
-        const imageWrapper = card.querySelector('img')?.parentElement;
-        if (imageWrapper) {
-            imageWrapper.style.opacity = `${opacity}`;
-            imageWrapper.style.transition = (isDraggingRef.current || instant) 
-                ? 'none' 
-                : `opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
-        }
-        
-        card.style.transition = (isDraggingRef.current || instant) 
+        // OPTIMALIZACE: Aplikace stylů přímo na kartu bez querySelector
+        // Odstraněn querySelector('img') z loopu - velký performance gain
+        const transitionStyle = (isDraggingRef.current || instant) 
             ? 'none' 
-            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        
+        card.style.cssText = `
+          width: ${cardWidth}px;
+          transform: scale(${scale}) translateZ(0);
+          opacity: ${opacity};
+          transition: ${transitionStyle};
+          flex-shrink: 0;
+          backface-visibility: hidden;
+        `;
     }
 
   }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
@@ -429,11 +430,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                     <div 
                         key={uniqueKey}
                         ref={el => cardRefs.current[i] = el}
-                        className="flex-shrink-0"
-                        style={{
-                            width: `${cardWidth}px`,
-                            backfaceVisibility: 'hidden'
-                        }}
                     >
                         <div className="h-full"> 
                             <Link 

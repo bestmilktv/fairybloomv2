@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Navigation from '@/components/Navigation';
 import Hero from '@/components/Hero';
 import ProductSection from '@/components/ProductSection';
+import LazyProductSection from '@/components/LazyProductSection';
 import Slideshow from '@/components/Slideshow';
 import Footer from '@/components/Footer';
 import { getProductsByCollection } from '@/lib/shopify';
@@ -243,15 +244,28 @@ const Index = () => {
           </div>
         </div>
       ) : (
-        productCategories.map((category) => (
-          <ProductSection
-            key={category.id}
-            id={category.id}
-            title={category.title}
-            subtitle={category.subtitle}
-            products={category.products}
-            categoryPath={createCollectionPath(category.id)}
-          />
+        // OPTIMALIZACE: První sekce eager (pro LCP), ostatní lazy loaded
+        // Snižuje počáteční DOM elementy a obrázky k načtení
+        productCategories.map((category, index) => (
+          index === 0 ? (
+            <ProductSection
+              key={category.id}
+              id={category.id}
+              title={category.title}
+              subtitle={category.subtitle}
+              products={category.products}
+              categoryPath={createCollectionPath(category.id)}
+            />
+          ) : (
+            <LazyProductSection
+              key={category.id}
+              id={category.id}
+              title={category.title}
+              subtitle={category.subtitle}
+              products={category.products}
+              categoryPath={createCollectionPath(category.id)}
+            />
+          )
         ))
       )}
 
