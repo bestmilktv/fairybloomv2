@@ -208,20 +208,21 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             }
         }
 
-        // OPTIMALIZACE: Aplikace stylů přímo na kartu bez querySelector
-        // Odstraněn querySelector('img') z loopu - velký performance gain
-        const transitionStyle = (isDraggingRef.current || instant) 
-            ? 'none' 
-            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        card.style.width = `${cardWidth}px`;
+        card.style.transform = `scale(${scale}) translateZ(0)`;
         
-        card.style.cssText = `
-          width: ${cardWidth}px;
-          transform: scale(${scale}) translateZ(0);
-          opacity: ${opacity};
-          transition: ${transitionStyle};
-          flex-shrink: 0;
-          backface-visibility: hidden;
-        `;
+        // Apply opacity only to image wrapper, not the entire card
+        const imageWrapper = card.querySelector('img')?.parentElement;
+        if (imageWrapper) {
+            imageWrapper.style.opacity = `${opacity}`;
+            imageWrapper.style.transition = (isDraggingRef.current || instant) 
+                ? 'none' 
+                : `opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        }
+        
+        card.style.transition = (isDraggingRef.current || instant) 
+            ? 'none' 
+            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
     }
 
   }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
@@ -430,6 +431,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                     <div 
                         key={uniqueKey}
                         ref={el => cardRefs.current[i] = el}
+                        className="flex-shrink-0"
+                        style={{
+                            width: `${cardWidth}px`,
+                            backfaceVisibility: 'hidden'
+                        }}
                     >
                         <div className="h-full"> 
                             <Link 
