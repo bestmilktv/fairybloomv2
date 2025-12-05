@@ -206,10 +206,19 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
         card.style.width = `${cardWidth}px`;
         card.style.transform = `scale(${scale}) translateZ(0)`;
-        card.style.opacity = `${opacity}`;
+        
+        // Apply opacity only to image wrapper, not the entire card
+        const imageWrapper = card.querySelector('img')?.parentElement;
+        if (imageWrapper) {
+            imageWrapper.style.opacity = `${opacity}`;
+            imageWrapper.style.transition = (isDraggingRef.current || instant) 
+                ? 'none' 
+                : `opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        }
+        
         card.style.transition = (isDraggingRef.current || instant) 
             ? 'none' 
-            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
     }
 
   }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
