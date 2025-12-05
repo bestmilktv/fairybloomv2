@@ -80,17 +80,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // STATE & REFS
   // ============================================================================
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
-  const [currentProductIndex, setCurrentProductIndex] = useState(0); // State pro indikátor
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   
   // Refs
   const dragStartX = useRef(0);
-  const dragStartY = useRef(0);
   const isDraggingRef = useRef(false); 
   const dragOffsetRef = useRef(0);
   const currentIndexRef = useRef(START_INDEX);
   const isClickBlockedRef = useRef(false);
+  
+  // Pointer ID pro capture (řeší dotyky i myš konzistentně)
+  const activePointerId = useRef<number | null>(null);
   
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -136,20 +137,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const centerOffset = (viewportWidth - cardWidth) / 2;
     return -(index * totalCardWidth) + centerOffset;
   }, [cardWidth, viewportWidth]);
-
-  // ============================================================================
-  // TRACKING INDICATOR (INFOGRAFIKA)
-  // ============================================================================
-  const getCurrentProductIndex = useCallback((index: number): number => {
-    const slideData = allSlides[index];
-    if (!slideData) return 0;
-    return slideData.originalIndex;
-  }, [allSlides]);
-
-  useEffect(() => {
-    const productIndex = getCurrentProductIndex(currentIndex);
-    setCurrentProductIndex(productIndex);
-  }, [currentIndex, getCurrentProductIndex]);
 
   // ============================================================================
   // VISUAL UPDATE ENGINE
@@ -217,61 +204,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [updateVisuals, currentIndex]); 
 
   // ============================================================================
-  // GLOBAL LISTENERS
+  // POINTER EVENTS (MYŠ I DOTYK SPOLEHLIVĚ)
   // ============================================================================
-  useEffect(() => {
-    const handleGlobalMove = (e: MouseEvent | TouchEvent) => {
-        if (!isDraggingRef.current) return;
-
-        const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-        const diffX = clientX - dragStartX.current;
-
-        if (e.cancelable) {
-            e.preventDefault();
-        }
-
-        dragOffsetRef.current = diffX;
-        setDragOffset(diffX);
-        
-        if (Math.abs(diffX) > 5) {
-            isClickBlockedRef.current = true;
-        }
-        
-        updateVisuals(true); 
-    };
-
-    const handleGlobalUp = () => {
-        if (!isDraggingRef.current) return;
-        stopDrag();
-    };
-
-    if (isDragging) {
-        window.addEventListener('mousemove', handleGlobalMove);
-        window.addEventListener('touchmove', handleGlobalMove, { passive: false });
-        window.addEventListener('mouseup', handleGlobalUp);
-        window.addEventListener('touchend', handleGlobalUp);
-    }
-    return () => {
-        window.removeEventListener('mousemove', handleGlobalMove);
-        window.removeEventListener('touchmove', handleGlobalMove);
-        window.removeEventListener('mouseup', handleGlobalUp);
-        window.removeEventListener('touchend', handleGlobalUp);
-    };
-  }, [isDragging, updateVisuals]);
-
-  // ============================================================================
-  // LOGIKA DRAG & TELEPORT
-  // ============================================================================
+  
   const checkBoundsAndTeleport = () => {
       const current = currentIndexRef.current;
       if (current < SAFE_ZONE_START || current > SAFE_ZONE_END) {
           const slideData = allSlides[current];
           if (!slideData) return;
-
           const targetIndex = START_INDEX + slideData.originalIndex;
           currentIndexRef.current = targetIndex;
           setCurrentIndex(targetIndex);
-          
           if (trackRef.current) {
               trackRef.current.style.transition = 'none';
               const newPos = getPositionForIndex(targetIndex);
@@ -282,94 +225,89 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       }
   };
 
-  // === MYŠ (Desktop) ===
-  const handleMouseDown = (e: React.MouseEvent) => {
-      e.preventDefault();
+  const handlePointerDown = (e: React.PointerEvent) => {
+      // Ignorovat pravé tlačítko
+      if (e.button !== 0 || activePointerId.current !== null) return;
+
+      // Uložit ID
+      activePointerId.current = e.pointerId;
+
       if (isResettingRef.current) return;
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-      
+
       checkBoundsAndTeleport();
+
       dragStartX.current = e.clientX;
       dragOffsetRef.current = 0;
-      setDragOffset(0);
       isClickBlockedRef.current = false;
-      
-      setIsDragging(true);
-      isDraggingRef.current = true;
+      isDraggingRef.current = false;
       setIsTransitioning(false);
       
       if (trackRef.current) {
           trackRef.current.style.transition = 'none';
       }
-      updateVisuals(true);
-  };
 
-  // === DOTYK (Mobil - Native Handling) ===
-  const handleTouchStart = (e: React.TouchEvent) => {
-      if (isResettingRef.current) return;
-      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-      
-      checkBoundsAndTeleport();
-      
-      dragStartX.current = e.touches[0].clientX;
-      dragStartY.current = e.touches[0].clientY;
-      dragOffsetRef.current = 0;
-      setDragOffset(0);
-      
-      isClickBlockedRef.current = false;
-      setIsTransitioning(false);
-      
-      // NEAKTIVUJEME DRAG HNED, ČEKÁME NA MOVE
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-      // Pokud už dragujeme, pokračujeme v dragu
-      if (isDraggingRef.current) {
-          if (e.cancelable) e.preventDefault(); // Zablokovat scroll
-          
-          const x = e.touches[0].clientX;
-          const diffX = x - dragStartX.current;
-          dragOffsetRef.current = diffX;
-          
-          if (Math.abs(diffX) > 5) isClickBlockedRef.current = true;
-          updateVisuals(true);
-          return;
-      }
-
-      // ROZHODOVÁNÍ SCROLL vs SWIPE
-      const x = e.touches[0].clientX;
-      const y = e.touches[0].clientY;
-      const diffX = x - dragStartX.current;
-      const diffY = y - dragStartY.current;
-
-      if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) return; // Deadzone
-
-      if (Math.abs(diffY) > Math.abs(diffX)) {
-          // Scroll stránky - nic neděláme, necháme prohlížeč
-          return;
-      } else {
-          // Swipe carouselu - aktivujeme drag
+      // Pokud je to MYŠ, aktivujeme drag HNED (na desktopu se nescrolluje tažením)
+      if (e.pointerType === 'mouse') {
+          e.preventDefault(); // Zabrání výběru textu/obrázků
           isDraggingRef.current = true;
           setIsDragging(true);
-          if (e.cancelable) e.preventDefault();
+          // Capture ihned
+          const element = e.target as HTMLElement;
+          element.setPointerCapture(e.pointerId);
+      }
+      // U dotyku čekáme na pohyb (aby fungoval scroll)
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+      if (activePointerId.current !== e.pointerId) return;
+
+      const diffX = e.clientX - dragStartX.current;
+
+      // Pokud ještě nedragujeme (u dotyku)
+      if (!isDraggingRef.current && e.pointerType !== 'mouse') {
+          // Deadzone
+          if (Math.abs(diffX) < 10) return;
           
-          if (trackRef.current) {
-              trackRef.current.style.transition = 'none';
-          }
+          // Pokud se pohnul víc horizontálně, bereme to jako swipe
+          // Prohlížeč díky 'touch-action: pan-y' už sám vyřešil, jestli scrollovat.
+          // Pokud nám poslal tento event i po 10px pohybu, znamená to, že nescrolluje.
+          isDraggingRef.current = true;
+          setIsDragging(true);
+          const element = e.target as HTMLElement;
+          element.setPointerCapture(e.pointerId);
+      }
+
+      // Pokud dragujeme
+      if (isDraggingRef.current) {
+          // Blokovat defaultní akce (scroll, výběr)
+          if (e.cancelable && e.pointerType !== 'mouse') e.preventDefault();
+          
+          dragOffsetRef.current = diffX;
+          if (Math.abs(diffX) > 5) isClickBlockedRef.current = true;
           updateVisuals(true);
       }
   };
 
-  const handleTouchEnd = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
+      if (activePointerId.current !== e.pointerId) return;
+      
       if (isDraggingRef.current) {
+          const element = e.target as HTMLElement;
+          try {
+            if (element.hasPointerCapture(e.pointerId)) {
+                element.releasePointerCapture(e.pointerId);
+            }
+          } catch(err) { /* ignore */ }
           stopDrag();
       }
+      
+      activePointerId.current = null;
+      isDraggingRef.current = false;
+      if (!isClickBlockedRef.current) setIsDragging(false);
   };
 
   const stopDrag = () => {
-    setIsDragging(false);
-    isDraggingRef.current = false;
-
     const currentOffset = dragOffsetRef.current;
     const totalCardWidth = cardWidth + GAP;
     const movedCards = -currentOffset / totalCardWidth;
@@ -381,10 +319,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }
 
     const newIndex = currentIndexRef.current + indexDiff;
-    
     setIsTransitioning(true);
     dragOffsetRef.current = 0; 
-
     setCurrentIndex(newIndex);
     currentIndexRef.current = newIndex;
 
@@ -396,12 +332,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     transitionTimeoutRef.current = setTimeout(() => {
         if (isResettingRef.current) return;
         setIsTransitioning(false);
+        setIsDragging(false);
     }, LOCK_DURATION);
   };
 
-  // ============================================================================
-  // RESET LOGIC
-  // ============================================================================
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDraggingRef.current) return;
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
@@ -410,16 +344,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   const moveSlide = (direction: number) => {
       if (isTransitioning) return;
-      
       checkBoundsAndTeleport();
-      
       requestAnimationFrame(() => {
           setIsTransitioning(true);
           const step = layoutMode === 'desktop' ? 3 : 1;
           currentIndexRef.current += (direction * step);
           setCurrentIndex(currentIndexRef.current);
           updateVisuals(false); 
-          
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
           transitionTimeoutRef.current = setTimeout(() => {
               setIsTransitioning(false);
@@ -431,7 +362,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // JSX
   // ============================================================================
   return (
-    <div ref={wrapperRef} className="relative w-full overflow-hidden select-none touch-none group">
+    // ZMĚNA: Odstraněna třída 'group', aby hover na wrapperu neovlivňoval karty
+    <div ref={wrapperRef} className="relative w-full select-none">
       <style>{`
         .carousel-force-no-animate * {
           animation: none !important;
@@ -439,20 +371,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         .carousel-force-no-animate img {
           transform: translateZ(0) !important;
           backface-visibility: hidden;
+          pointer-events: none; /* Důležité pro drag na PC! */
         }
       `}</style>
 
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
-        // Myš
-        onMouseDown={handleMouseDown}
-        // Dotyk
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerLeave={handlePointerUp}
         
         style={{
+            // ZMĚNA: touch-action: pan-y je zpět, aby fungoval scroll
             touchAction: 'pan-y',
             maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)'
@@ -465,7 +397,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 gap: `${GAP}px`,
                 width: 'max-content',
                 willChange: 'transform',
-                backfaceVisibility: 'hidden'
+                backfaceVisibility: 'hidden',
+                // ZMĚNA: Padding pro stíny (aby nebyly oříznuté)
+                paddingTop: '40px', 
+                paddingBottom: '40px',
+                marginTop: '-20px', // Kompenzace paddingu
+                marginBottom: '-20px'
             }}
             onTransitionEnd={handleTransitionEnd}
         >
@@ -517,20 +454,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       <button onClick={() => moveSlide(1)} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
-
-      {/* Indikátor pozice (Infografika) */}
-      <div className="flex justify-center items-center gap-1.5 mt-4 relative z-20">
-        {products.map((_, index) => (
-          <div
-            key={index}
-            className={`transition-all duration-500 ease-out ${
-              index === currentProductIndex
-                ? 'w-6 h-1 bg-[#502038] rounded-full'
-                : 'w-1.5 h-1.5 bg-[#502038]/20 rounded-full'
-            }`}
-          />
-        ))}
-      </div>
     </div>
   );
 };
