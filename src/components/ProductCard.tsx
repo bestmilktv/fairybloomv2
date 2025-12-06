@@ -1,5 +1,4 @@
-import { memo, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
@@ -14,10 +13,21 @@ interface ProductCardProps {
   inventoryQuantity?: number | null;
   disableAnimations?: boolean;
   variantId?: string;
+  // Nová prop pro optimalizaci výkonu (aby se mobil nesekal)
+  priority?: boolean;
 }
 
-// OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props
-const ProductCard = memo(({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId }: ProductCardProps) => {
+const ProductCard = ({ 
+  id, 
+  title, 
+  price, 
+  image, 
+  description, 
+  inventoryQuantity, 
+  disableAnimations = false, 
+  variantId,
+  priority = false 
+}: ProductCardProps) => {
   const location = useLocation();
   const isHomepage = location.pathname === '/';
   const { addToCart, items } = useCart();
@@ -34,8 +44,7 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
 
   const availabilityStatus = getAvailabilityStatus();
   
-  // OPTIMALIZACE: Memoizovaný callback
-  const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -66,7 +75,7 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
         variant: "destructive",
       });
     }
-  }, [isInCart, variantId, price, addToCart, id, title, image, toast]);
+  };
 
   const truncateDescription = (text: string) => {
     if (!text) return '';
@@ -76,62 +85,34 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  // Třídy jsou nyní jednotné. Hover efekty jsou aktivní VŽDY.
-  const cardClasses = `
-    bg-card 
-    rounded-2xl 
-    overflow-visible 
-    h-full 
-    flex 
-    flex-col 
-    relative 
-    group 
-    shadow-sm 
-    hover:shadow-lg 
-    hover:-translate-y-2 
-    transition-all 
-    duration-500 
-    ease-out
-  `;
+  // Karta: hover:shadow-lg (kratší stín), overflow-visible (aby stín mohl ven)
+  const cardClasses = disableAnimations
+    ? "bg-card rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] h-full flex flex-col transition-none"
+    : "bg-card rounded-2xl overflow-visible shadow-sm hover:shadow-lg transition-all duration-500 transform hover:-translate-y-2 h-full flex flex-col group";
   
-  const imageClasses = `
-    w-full 
-    h-full 
-    object-cover 
-    transition-transform 
-    duration-700 
-    ease-in-out 
-    group-hover:scale-110
-  `;
+  const imageClasses = disableAnimations
+    ? "w-full h-full object-cover"
+    : "w-full h-full object-cover transition-transform duration-700 hover:scale-110 group-hover:scale-110";
   
-  const titleClasses = `
-    font-serif 
-    text-xl 
-    font-semibold 
-    text-primary 
-    mb-2 
-    line-clamp-2 
-    min-h-[3.5rem] 
-    transition-colors 
-    duration-300 
-    group-hover:text-accent
-  `;
+  const titleClasses = disableAnimations
+    ? "font-serif text-xl font-semibold text-primary mb-2 line-clamp-2 min-h-[3.5rem]"
+    : "font-serif text-xl font-semibold text-primary mb-2 hover:text-accent transition-colors duration-300 line-clamp-2 min-h-[3.5rem] group-hover:text-accent";
 
-  // bg-muted slouží jako placeholder při lazy loading obrázků
-  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
+  // Obrázek: musí mít overflow-hidden pro zakulacené rohy nahoře
+  const imageWrapperClasses = disableAnimations
+    ? "aspect-square overflow-hidden rounded-t-2xl"
+    : "aspect-square overflow-hidden bg-muted rounded-t-2xl relative";
 
   return (
     <div className={cardClasses}>
       <div className={imageWrapperClasses}>
-        {/* OPTIMALIZACE: width a height atributy pro prevenci CLS (Cumulative Layout Shift) */}
         <img
           src={image}
           alt={title}
-          width={300}
-          height={300}
           className={imageClasses}
-          loading="lazy"
-          decoding="async"
+          // Optimalizace načítání: První produkty hned, zbytek lazy
+          loading={priority ? "eager" : "lazy"}
+          decoding={priority ? "sync" : "async"}
           style={disableAnimations ? {
             transform: 'translateZ(0)',
             backfaceVisibility: 'hidden'
@@ -174,9 +155,8 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
             className={`w-full ${
               isInCart 
                 ? 'bg-primary/80 hover:bg-primary/90 border border-primary/30 text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300' 
-                : 'bg-gold text-primary transition-transform duration-300 hover:scale-[1.02] active:scale-95'
+                : 'transition-transform duration-300 hover:scale-[1.02] active:scale-95'
             }`}
-            style={!isInCart ? { opacity: 1, isolation: 'isolate' } : undefined}
           >
             {isInCart ? (
               <>
@@ -191,8 +171,6 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
       </div>
     </div>
   );
-});
-
-ProductCard.displayName = 'ProductCard';
+};
 
 export default ProductCard;
