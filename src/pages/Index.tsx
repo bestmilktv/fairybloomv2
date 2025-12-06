@@ -59,8 +59,7 @@ const Index = () => {
         const fetchPromises = categories.map(async (czechKey) => {
           const shopifyHandle = collectionMapping[czechKey as keyof typeof collectionMapping];
           try {
-            // OPTIMALIZACE: 10 produktů pro homepage karusel (méně = rychlejší načítání)
-            // 1 obrázek, 1 varianta - minimum dat
+            // OPTIMALIZACE: 10 produktů pro homepage (méně = rychlejší načtení)
             const collection = await getProductsByCollection(shopifyHandle, 10, 1, 1);
             return { czechKey, collection, error: null };
           } catch (error) {
@@ -79,10 +78,10 @@ const Index = () => {
               const firstImage = product.images?.edges?.[0]?.node;
               const firstVariant = product.variants?.edges?.[0]?.node;
               
-              // OPTIMALIZACE: Shopify CDN - zmenšení obrázků na 400px pro karusel
-              // Původní obrázky mohou mít 2000px+, což způsobuje crashe na mobilech
+              // OPTIMALIZACE: Přidán ?width=400 pro menší obrázky (400px místo 2000px+)
+              // Dramaticky snižuje velikost dat k načtení
               const optimizedImageUrl = firstImage?.url 
-                ? `${firstImage.url}?width=400&height=400&crop=center`
+                ? `${firstImage.url}${firstImage.url.includes('?') ? '&' : '?'}width=400`
                 : getFallbackImage(czechKey);
               
               return {

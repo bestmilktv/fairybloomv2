@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
-import ProductCard from './ProductCard';
+import ProductCardLight from './ProductCardLight';
 import { createProductPath } from '@/lib/slugify';
 
 interface Product {
@@ -31,14 +31,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               to={product.handle ? createProductPath(product.handle) : `/product-shopify/${product.handle}`} 
               className="group cursor-pointer fade-in-up block"
             >
-              <ProductCard
+              <ProductCardLight
                 id={product.id}
                 title={product.title}
                 price={product.price}
                 image={product.image}
                 description={product.description}
-                inventoryQuantity={product.inventoryQuantity}
-                variantId={product.variantId}
               />
             </Link>
           </div>
@@ -55,8 +53,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const LOCK_DURATION = 400;
   const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  // Optimalizace: 4 sady klonů pro plynulý nekonečný efekt
-  const BUFFER_SETS = 4;
+  // BUFFER_SETS = 2 pro všechna zařízení - zajišťuje funkční infinite loop
+  // S ProductCardLight (bez context hooks) je 20 karet OK i pro mobily
+  const BUFFER_SETS = 2;
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
   const allSlides = useMemo(() => {
@@ -83,15 +82,19 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // STATE & REFS
   // ============================================================================
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
-  const [currentProductIndex, setCurrentProductIndex] = useState(0);
+  const [currentProductIndex, setCurrentProductIndex] = useState(0); // State pro indikátor
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   
+  // Refs
   const dragStartX = useRef(0);
+  const dragStartY = useRef(0);
   const isDraggingRef = useRef(false); 
   const dragOffsetRef = useRef(0);
   const currentIndexRef = useRef(START_INDEX);
   const isClickBlockedRef = useRef(false);
+  
+  const activePointerId = useRef<number | null>(null);
   
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -139,7 +142,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [cardWidth, viewportWidth]);
 
   // ============================================================================
-  // INFOGRAFIKA (TEČKY)
+  // TRACKING INDICATOR (INFOGRAFIKA)
   // ============================================================================
   const getCurrentProductIndex = useCallback((index: number): number => {
     const slideData = allSlides[index];
@@ -151,6 +154,26 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const productIndex = getCurrentProductIndex(currentIndex);
     setCurrentProductIndex(productIndex);
   }, [currentIndex, getCurrentProductIndex]);
+
+  // ============================================================================
+  // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
+  // ============================================================================
+  useEffect(() => {
+    // Přednahrát obrázky pro následující karty (na pozadí)
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    const prefetchCount = isMobile ? 2 : 4; // Méně prefetch na mobilu
+    
+    for (let i = 1; i <= prefetchCount; i++) {
+      const nextIdx = currentIndex + i;
+      if (nextIdx < allSlides.length) {
+        const slide = allSlides[nextIdx];
+        if (slide?.product?.image) {
+          const img = new Image();
+          img.src = slide.product.image;
+        }
+      }
+    }
+  }, [currentIndex, allSlides]);
 
   // ============================================================================
   // VISUAL UPDATE ENGINE
@@ -203,12 +226,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             }
         }
 
+        // OPTIMALIZACE: Aplikace stylů přímo na kartu bez querySelector
+        // Odstraněn querySelector('img') z loopu - eliminuje DOM queries
+        const transitionValue = (isDraggingRef.current || instant) 
+            ? 'none' 
+            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        
         card.style.width = `${cardWidth}px`;
         card.style.transform = `scale(${scale}) translateZ(0)`;
         card.style.opacity = `${opacity}`;
-        card.style.transition = (isDraggingRef.current || instant) 
-            ? 'none' 
-            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        card.style.transition = transitionValue;
     }
 
   }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
@@ -218,8 +245,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [updateVisuals, currentIndex]); 
 
   // ============================================================================
-  // NATIVE EVENT LISTENERS (TOUCH & MOUSE)
+  // POINTER EVENTS LOGIC
   // ============================================================================
+  
   const checkBoundsAndTeleport = () => {
       const current = currentIndexRef.current;
       if (current < SAFE_ZONE_START || current > SAFE_ZONE_END) {
@@ -238,84 +266,83 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       }
   };
 
-  // --- TOUCH (Native, non-blocking scroll) ---
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
+      if (e.button !== 0 || activePointerId.current !== null) return;
+      activePointerId.current = e.pointerId;
+
       if (isResettingRef.current) return;
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-      
+
       checkBoundsAndTeleport();
-      
-      dragStartX.current = e.touches[0].clientX;
+
+      dragStartX.current = e.clientX;
+      dragStartY.current = e.clientY;
       dragOffsetRef.current = 0;
       isClickBlockedRef.current = false;
       isDraggingRef.current = false;
-      
-      setIsTransitioning(false);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-      // Spoléháme na touch-action: pan-y v CSS.
-      // Pokud prohlížeč pošle tento event, znamená to, že to NENÍ vertikální scroll.
-      const x = e.touches[0].clientX;
-      const diffX = x - dragStartX.current;
-
-      // Deadzone
-      if (Math.abs(diffX) < 5) return;
-
-      // Jsme v režimu swipe
-      isDraggingRef.current = true;
-      
-      // Zde můžeme preventovat default, aby se nestalo nic divného
-      if (e.cancelable) e.preventDefault(); 
-      
-      dragOffsetRef.current = diffX;
-      isClickBlockedRef.current = true; // Blokujeme kliknutí
-      
-      if (trackRef.current) trackRef.current.style.transition = 'none';
-      updateVisuals(true);
-  };
-
-  const handleTouchEnd = () => {
-      if (isDraggingRef.current) stopDrag();
-  };
-
-  // --- MOUSE (Desktop) ---
-  const handleMouseDown = (e: React.MouseEvent) => {
-      e.preventDefault(); 
-      if (isResettingRef.current) return;
-      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-      
-      checkBoundsAndTeleport();
-      dragStartX.current = e.clientX;
-      dragOffsetRef.current = 0;
-      isClickBlockedRef.current = false;
-      
-      isDraggingRef.current = true;
       setIsTransitioning(false);
       
-      if (trackRef.current) trackRef.current.style.transition = 'none';
-      updateVisuals(true);
-      
-      document.addEventListener('mousemove', handleWindowMouseMove);
-      document.addEventListener('mouseup', handleWindowMouseUp);
+      if (trackRef.current) {
+          trackRef.current.style.transition = 'none';
+      }
+
+      if (e.pointerType === 'mouse') {
+          e.preventDefault();
+          isDraggingRef.current = true;
+          setIsDragging(true);
+          const element = e.target as HTMLElement;
+          element.setPointerCapture(e.pointerId);
+      }
   };
 
-  const handleWindowMouseMove = useCallback((e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      const diff = e.clientX - dragStartX.current;
-      dragOffsetRef.current = diff;
-      if (Math.abs(diff) > 5) isClickBlockedRef.current = true;
-      updateVisuals(true);
-  }, [updateVisuals]);
-  
-  const handleWindowMouseUp = useCallback(() => {
-      document.removeEventListener('mousemove', handleWindowMouseMove);
-      document.removeEventListener('mouseup', handleWindowMouseUp);
-      stopDrag();
-  }, []);
+  const handlePointerMove = (e: React.PointerEvent) => {
+      if (activePointerId.current !== e.pointerId) return;
+
+      const diffX = e.clientX - dragStartX.current;
+      const diffY = e.clientY - dragStartY.current;
+
+      if (!isDraggingRef.current && e.pointerType !== 'mouse') {
+          if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) return;
+          
+          if (Math.abs(diffY) > Math.abs(diffX)) {
+              activePointerId.current = null;
+              return;
+          }
+
+          isDraggingRef.current = true;
+          setIsDragging(true);
+          const element = e.target as HTMLElement;
+          element.setPointerCapture(e.pointerId);
+      }
+
+      if (isDraggingRef.current) {
+          if (e.cancelable && e.pointerType !== 'mouse') e.preventDefault();
+          
+          dragOffsetRef.current = diffX;
+          if (Math.abs(diffX) > 5) isClickBlockedRef.current = true;
+          updateVisuals(true);
+      }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+      if (activePointerId.current !== e.pointerId) return;
+      
+      if (isDraggingRef.current) {
+          const element = e.target as HTMLElement;
+          try {
+            if (element.hasPointerCapture(e.pointerId)) {
+                element.releasePointerCapture(e.pointerId);
+            }
+          } catch(err) { /* ignore */ }
+          stopDrag();
+      }
+      
+      activePointerId.current = null;
+      isDraggingRef.current = false;
+      if (!isClickBlockedRef.current) setIsDragging(false);
+  };
 
   const stopDrag = () => {
-    isDraggingRef.current = false;
     const currentOffset = dragOffsetRef.current;
     const totalCardWidth = cardWidth + GAP;
     const movedCards = -currentOffset / totalCardWidth;
@@ -340,6 +367,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     transitionTimeoutRef.current = setTimeout(() => {
         if (isResettingRef.current) return;
         setIsTransitioning(false);
+        setIsDragging(false);
     }, LOCK_DURATION);
   };
 
@@ -369,31 +397,25 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // JSX
   // ============================================================================
   return (
-    <div ref={wrapperRef} className="relative w-full select-none group">
-      <style>{`
-        .carousel-force-no-animate * {
-          animation: none !important;
-        }
-        .carousel-force-no-animate img {
-          transform: translateZ(0) !important;
-          backface-visibility: hidden;
-          pointer-events: none;
-        }
-      `}</style>
-
+    <div ref={wrapperRef} className="relative w-full select-none">
+      {/* Styly přesunuty do index.css pro lepší výkon */}
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerLeave={handlePointerUp}
         
         style={{
-            // TOTO POVOLUJE SCROLL STRÁNKY:
             touchAction: 'pan-y',
-            // Maska pro fade efekt na krajích
-            maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)'
+            // OPTIMALIZACE: Jednodušší maskImage na mobilech, komplexnější na desktopu
+            ...(layoutMode === 'desktop' ? {
+              maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)'
+            } : {
+              // Na mobilech bez maskImage - lepší výkon
+            })
         }}
       >
         <div
@@ -402,9 +424,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             style={{
                 gap: `${GAP}px`,
                 width: 'max-content',
-                willChange: 'transform',
+                // OPTIMALIZACE: Odstraněn willChange - může způsobovat problémy na mobilech
                 backfaceVisibility: 'hidden',
-                // TOTO ZAJISTÍ, ŽE STÍN SE NEOŘÍZNE:
                 paddingTop: '40px', 
                 paddingBottom: '40px',
                 marginTop: '-20px',
@@ -414,8 +435,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         >
             {allSlides.map((item, i) => {
                 const uniqueKey = `${item.isClone ? 'clone' : 'orig'}-${item.product.id}-${i}`;
-                const isVisible = Math.abs(i - currentIndex) < 6;
-
                 return (
                     <div 
                         key={uniqueKey}
@@ -438,17 +457,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                     }
                                 }}
                             >
-                                {/* Použití klasické ProductCard s props pro carousel */}
-                                <ProductCard
+                                <ProductCardLight
                                     id={item.product.id}
                                     title={item.product.title}
                                     price={item.product.price}
                                     image={item.product.image}
                                     description={item.product.description}
-                                    inventoryQuantity={item.product.inventoryQuantity}
-                                    variantId={item.product.variantId}
-                                    disableAnimations={true} 
-                                    priority={isVisible}
+                                    disableAnimations={true}
                                 />
                             </Link>
                         </div>
@@ -466,7 +481,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
 
-      {/* Indikátor pozice */}
+      {/* Indikátor pozice (Infografika) */}
       <div className="flex justify-center items-center gap-1.5 mt-4 relative z-20">
         {products.map((_, index) => (
           <div

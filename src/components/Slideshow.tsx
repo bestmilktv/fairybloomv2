@@ -64,12 +64,17 @@ const Slideshow = () => {
                 const firstProduct = collection.products.edges[0].node;
                 const firstImage = firstProduct.images?.edges?.[0]?.node;
                 
+                // OPTIMALIZACE: Přidán ?width=1200 pro slideshow banner
+                const optimizedImageUrl = firstImage?.url 
+                  ? `${firstImage.url}${firstImage.url.includes('?') ? '&' : '?'}width=1200`
+                  : '/placeholder.jpg';
+                
                 slidesData.push({
                   id: `collection-${config.shopifyHandle}`,
                   title: config.customTitle || collection.title || 'Nová kolekce',
                   subtitle: config.customSubtitle || firstProduct.title || 'Elegantní šperky',
                   description: config.customDescription || firstProduct.description || collection.description || 'Objevte naši nejnovější kolekci s jedinečnými šperky.',
-                  image: firstImage?.url || '/placeholder.jpg',
+                  image: optimizedImageUrl,
                   cta: config.customCta || 'Zobrazit kolekci',
                   ctaLink: `/${config.shopifyHandle}`,
                 });
@@ -81,12 +86,17 @@ const Slideshow = () => {
               if (product) {
                 const firstImage = product.images?.edges?.[0]?.node;
                 
+                // OPTIMALIZACE: Přidán ?width=1200 pro slideshow banner
+                const optimizedProductImageUrl = firstImage?.url 
+                  ? `${firstImage.url}${firstImage.url.includes('?') ? '&' : '?'}width=1200`
+                  : '/placeholder.jpg';
+                
                 slidesData.push({
                   id: `product-${config.shopifyHandle}`,
                   title: config.customTitle || product.title || 'Nový produkt',
                   subtitle: config.customSubtitle || 'Exkluzivní design',
                   description: config.customDescription || product.description || 'Objevte tento jedinečný šperk.',
-                  image: firstImage?.url || '/placeholder.jpg',
+                  image: optimizedProductImageUrl,
                   cta: config.customCta || 'Zobrazit produkt',
                   ctaLink: `/produkt/${config.shopifyHandle}`,
                 });

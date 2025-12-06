@@ -8,24 +8,15 @@ interface ProductCardLightProps {
   image: string;
   description?: string;
   disableAnimations?: boolean;
-  // NOVÁ PROP: Řídí prioritu načítání
-  priority?: boolean;
 }
 
 /**
  * Lehká verze ProductCard pro karusely
  * - BEZ useCart, useLocation, useToast = 0 context subscriptions
  * - S hover animacemi pro pěkný UX
- * - Optimalizované načítání obrázků pro mobilní výkon
+ * - Tlačítko "Zobrazit detail" místo "Přidat do košíku"
  */
-const ProductCardLight = memo(({ 
-  title, 
-  price, 
-  image, 
-  description, 
-  disableAnimations = false, 
-  priority = false 
-}: ProductCardLightProps) => {
+const ProductCardLight = memo(({ title, price, image, description, disableAnimations = false }: ProductCardLightProps) => {
   
   const truncateDescription = (text: string) => {
     if (!text) return '';
@@ -86,10 +77,8 @@ const ProductCardLight = memo(({
           width={300}
           height={300}
           className={imageClasses}
-          // OPTIMALIZACE: Pokud je priorita (viditelné karty v carouselu), načti hned.
-          // Pokud ne (schované klony), načti lazy. To drasticky snižuje paměťovou náročnost.
-          loading={priority ? "eager" : "lazy"}
-          decoding={priority ? "sync" : "async"}
+          loading="lazy"
+          decoding="async"
           style={disableAnimations ? {
             transform: 'translateZ(0)',
             backfaceVisibility: 'hidden'
