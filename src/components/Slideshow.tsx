@@ -259,13 +259,20 @@ const Slideshow = () => {
   useEffect(() => {
     if (!isTransitionEnabled) {
       // Po vypnutí transition počkáme jeden frame a pak ji znovu zapneme
-      const id = requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      let rafId1: number | null = null;
+      let rafId2: number | null = null;
+      
+      rafId1 = requestAnimationFrame(() => {
+        rafId2 = requestAnimationFrame(() => {
           setIsTransitionEnabled(true);
         });
       });
 
-      return () => cancelAnimationFrame(id);
+      return () => {
+        // OPTIMALIZACE: Cleanup všech RAF
+        if (rafId1 !== null) cancelAnimationFrame(rafId1);
+        if (rafId2 !== null) cancelAnimationFrame(rafId2);
+      };
     }
   }, [isTransitionEnabled]);
 

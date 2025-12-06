@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 import { createCart, addToCart as addToShopifyCart, getCart, updateCartLines, removeCartLines } from '@/lib/shopify'
 
 export interface CartItem {
@@ -41,7 +41,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Fetch cart from Shopify
       refreshCartFromShopify(savedCartId)
     }
-  }, [])
+  }, [refreshCartFromShopify])
 
   // Save cart ID to localStorage whenever it changes
   useEffect(() => {
@@ -77,7 +77,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Fetch cart from Shopify
-  const refreshCartFromShopify = async (cartIdToFetch: string) => {
+  const refreshCartFromShopify = useCallback(async (cartIdToFetch: string) => {
     try {
       setIsLoading(true)
       const shopifyCart = await getCart(cartIdToFetch)
@@ -103,16 +103,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   // Refresh cart from Shopify
-  const refreshCart = async () => {
+  const refreshCart = useCallback(async () => {
     if (cartId) {
       await refreshCartFromShopify(cartId)
     }
-  }
+  }, [cartId, refreshCartFromShopify])
 
-  const addToCart = async (newItem: Omit<CartItem, 'quantity'>) => {
+  const addToCart = useCallback(async (newItem: Omit<CartItem, 'quantity'>) => {
     try {
       setIsLoading(true)
       console.log('Adding to cart:', newItem) // DEBUG
@@ -151,9 +151,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [cartId, refreshCartFromShopify])
 
-  const removeFromCart = async (id: string) => {
+  const removeFromCart = useCallback(async (id: string) => {
     try {
       setIsLoading(true)
       
@@ -183,14 +183,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [items, cartId, refreshCartFromShopify])
 
-  const updateQuantity = async (id: string, quantity: number) => {
+  const updateQuantity = useCallback(async (id: string, quantity: number) => {
     try {
       setIsLoading(true)
       
       if (quantity <= 0) {
-        await removeFromCart(id)
+        // Remove item if quantity is 0 or less
+        const itemToRemove = items.find(item => item.id === id)
+        if (!itemToRemove?.lineId || !cartId) {
+          throw new Error('Item or cart not found')
+        }
+        const removeResult = await removeCartLines(cartId, [itemToRemove.lineId])
+        if (removeResult.data.cartLinesRemove.userErrors.length > 0) {
+          throw new Error(removeResult.data.cartLinesRemove.userErrors[0].message)
+        }
+        await refreshCartFromShopify(cartId)
         return
       }
 
@@ -212,9 +221,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [items, cartId, refreshCartFromShopify])
 
-  const clearCart = async () => {
+  const clearCart = useCallback(async () => {
     try {
       setIsLoading(true)
       
@@ -245,17 +254,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [items, cartId])
 
-  const getTotalPrice = () => {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0)
-  }
+  // Memoizované funkce pro výpočty
+  const getTotalPrice = useMemo(() => {
+    return () => items.reduce((total, item) => total + (item.price * item.quantity), 0)
+  }, [items])
 
-  const getTotalItems = () => {
-    return items.reduce((total, item) => total + item.quantity, 0)
-  }
+  const getTotalItems = useMemo(() => {
+    return () => items.reduce((total, item) => total + item.quantity, 0)
+  }, [items])
 
-  const value = {
+  // Memoizovaný context value - zabraňuje zbytečným re-renderům
+  const value = useMemo(() => ({
     items,
     cartId,
     isLoading,
@@ -266,7 +277,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     getTotalPrice,
     getTotalItems,
     refreshCart,
-  }
+  }), [items, cartId, isLoading, addToCart, removeFromCart, updateQuantity, clearCart, getTotalPrice, getTotalItems, refreshCart])
 
   return (
     <CartContext.Provider value={value}>

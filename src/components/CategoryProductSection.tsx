@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
 
@@ -19,12 +18,7 @@ interface CategoryProductSectionProps {
 }
 
 const CategoryProductSection = ({ category, initialProducts }: CategoryProductSectionProps) => {
-  const [products, setProducts] = useState(initialProducts);
-
-  useEffect(() => {
-    setProducts(initialProducts);
-  }, [initialProducts]);
-
+  // OPTIMALIZACE: Odstraněn zbytečný state a useEffect - používáme initialProducts přímo
   return (
     // GRID: 
     // gap-4 (16px) horizontálně - menší mezery.
@@ -32,7 +26,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
     // p-4: Ochranná zóna okolo celého gridu (aby se stíny na krajích neořízly o okno).
     // pb-20: Místo dole.
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 w-full justify-items-center p-4 pb-20 overflow-visible">
-      {products.map((product, index) => (
+      {initialProducts.map((product, index) => (
         <div 
           key={product.id} 
           // WRAPPER:

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { useIsInCart } from '@/hooks/useIsInCart';
 import { Check } from 'lucide-react';
 
 interface ProductCardProps {
@@ -14,16 +15,18 @@ interface ProductCardProps {
   inventoryQuantity?: number | null;
   disableAnimations?: boolean;
   variantId?: string;
+  priority?: boolean;
 }
 
 // OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props
-const ProductCard = memo(({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId }: ProductCardProps) => {
+const ProductCard = memo(({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId, priority = false }: ProductCardProps) => {
   const location = useLocation();
   const isHomepage = location.pathname === '/';
-  const { addToCart, items } = useCart();
+  const { addToCart } = useCart();
   const { toast } = useToast();
   
-  const isInCart = items.some(item => item.id === id);
+  // OPTIMALIZACE: Použití useIsInCart hooku pro minimalizaci re-renderů
+  const isInCart = useIsInCart(id);
   
   const getAvailabilityStatus = () => {
     if (inventoryQuantity === null || inventoryQuantity === undefined) {
@@ -130,7 +133,8 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
           width={300}
           height={300}
           className={imageClasses}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
           decoding="async"
           style={disableAnimations ? {
             transform: 'translateZ(0)',

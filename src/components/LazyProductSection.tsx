@@ -15,7 +15,7 @@ interface LazyProductSectionProps {
  * blízko viewportu. Dramaticky snižuje počáteční DOM elementy a obrázky.
  */
 const LazyProductSection = memo(({ id, title, subtitle, products, categoryPath }: LazyProductSectionProps) => {
-  const [isVisible, setIsVisible] = useState(false);
+  // OPTIMALIZACE: Pouze jeden state místo dvou redundantních
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +26,6 @@ const LazyProductSection = memo(({ id, title, subtitle, products, categoryPath }
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsVisible(true);
           setHasBeenVisible(true);
           // Odpoj observer po prvním zobrazení
           observer.disconnect();

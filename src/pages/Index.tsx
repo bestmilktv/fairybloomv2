@@ -149,9 +149,21 @@ const Index = () => {
     }, observerOptions);
 
     const elements = document.querySelectorAll('.fade-in-up, .fade-in-up-delayed');
-    elements.forEach((el) => observer.observe(el));
+    const elementsArray = Array.from(elements); // Uložit do pole pro cleanup
+    
+    elementsArray.forEach((el) => observer.observe(el));
 
-    return () => observer.disconnect();
+    return () => {
+      // OPTIMALIZACE: Vždy disconnect a unobserve všechny elementy
+      observer.disconnect();
+      elementsArray.forEach((el) => {
+        try {
+          observer.unobserve(el);
+        } catch (e) {
+          // Ignorovat chyby pokud element už neexistuje
+        }
+      });
+    };
   }, []);
 
   // Handle newsletter subscription

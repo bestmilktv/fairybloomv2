@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import ProductCarousel from './ProductCarousel';
@@ -21,7 +22,8 @@ interface ProductSectionProps {
   categoryPath: string;
 }
 
-const ProductSection = ({ id, title, subtitle, products, categoryPath }: ProductSectionProps) => {
+// OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props
+const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: ProductSectionProps) => {
   const [sectionRef, sectionVisible] = useScrollAnimation();
   
   return (
@@ -59,6 +61,8 @@ const ProductSection = ({ id, title, subtitle, products, categoryPath }: Product
       </div>
     </section>
   );
-};
+});
+
+ProductSection.displayName = 'ProductSection';
 
 export default ProductSection;

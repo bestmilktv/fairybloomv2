@@ -21,13 +21,21 @@ export const useScrollAnimation = (threshold = 0.1) => {
       }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
+    const currentRef = ref.current; // Uložit do lokální proměnné pro cleanup
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
+      // OPTIMALIZACE: Vždy disconnect, bez podmínky
+      observer.disconnect();
+      // Také unobserve pro jistotu
+      if (currentRef) {
+        try {
+          observer.unobserve(currentRef);
+        } catch (e) {
+          // Ignorovat chyby pokud element už neexistuje
+        }
       }
     };
   }, [threshold]);

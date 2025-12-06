@@ -102,36 +102,65 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   
   const isResettingRef = useRef(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // OPTIMALIZACE: Refs pro throttling a virtualizaci
+  const rafRef = useRef<number | null>(null);
+  const pendingUpdateRef = useRef(false);
+  const resizeRafRef = useRef<number | null>(null);
+  const prefetchImagesRef = useRef<HTMLImageElement[]>([]);
 
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
   const [layoutMode, setLayoutMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  
+  // OPTIMALIZACE: Virtualizace - počítáme viditelný rozsah
+  const VISIBLE_BUFFER = 3; // Počet karet mimo viewport, které se renderují
 
   // ============================================================================
   // RESPONZIVITA
   // ============================================================================
   useEffect(() => {
     if (!wrapperRef.current) return;
+    
+    // OPTIMALIZACE: Throttling pomocí requestAnimationFrame
     const updateDimensions = () => {
-      if (!wrapperRef.current) return;
-      const width = wrapperRef.current.offsetWidth;
-      setViewportWidth(width);
+      if (resizeRafRef.current !== null) return;
       
-      if (width >= 1024) {
-        setLayoutMode('desktop');
-        setCardWidth((width - (4 * GAP)) / 5);
-      } else if (width >= 640) {
-        setLayoutMode('tablet');
-        setCardWidth((width - (2 * GAP)) / 3);
-      } else {
-        setLayoutMode('mobile');
-        setCardWidth(width - 32);
-      }
+      resizeRafRef.current = requestAnimationFrame(() => {
+        if (!wrapperRef.current) {
+          resizeRafRef.current = null;
+          return;
+        }
+        
+        const width = wrapperRef.current.offsetWidth;
+        setViewportWidth(width);
+        
+        if (width >= 1024) {
+          setLayoutMode('desktop');
+          setCardWidth((width - (4 * GAP)) / 5);
+        } else if (width >= 640) {
+          setLayoutMode('tablet');
+          setCardWidth((width - (2 * GAP)) / 3);
+        } else {
+          setLayoutMode('mobile');
+          setCardWidth(width - 32);
+        }
+        
+        resizeRafRef.current = null;
+      });
     };
+    
     updateDimensions();
     const resizeObserver = new ResizeObserver(updateDimensions);
     resizeObserver.observe(wrapperRef.current);
-    return () => resizeObserver.disconnect();
+    
+    return () => {
+      resizeObserver.disconnect();
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+    };
   }, []);
 
   const getPositionForIndex = useCallback((index: number) => {
@@ -159,6 +188,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
   // ============================================================================
   useEffect(() => {
+    // OPTIMALIZACE: Cleanup předchozích obrázků před načtením nových
+    prefetchImagesRef.current.forEach(img => {
+      img.src = ''; // Uvolní paměť
+    });
+    prefetchImagesRef.current = [];
+    
     // Přednahrát obrázky pro následující karty (na pozadí)
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
     const prefetchCount = isMobile ? 2 : 4; // Méně prefetch na mobilu
@@ -170,15 +205,25 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         if (slide?.product?.image) {
           const img = new Image();
           img.src = slide.product.image;
+          prefetchImagesRef.current.push(img);
         }
       }
     }
+    
+    // Cleanup při unmount nebo změně
+    return () => {
+      prefetchImagesRef.current.forEach(img => {
+        img.src = '';
+      });
+      prefetchImagesRef.current = [];
+    };
   }, [currentIndex, allSlides]);
 
   // ============================================================================
   // VISUAL UPDATE ENGINE
   // ============================================================================
-  const updateVisuals = useCallback((instant = false, overrideIndex?: number) => {
+  // OPTIMALIZACE: Interní funkce pro skutečný update (bez throttlingu)
+  const updateVisualsInternal = useCallback((instant = false, overrideIndex?: number) => {
     if (!trackRef.current || cardWidth === 0) return;
 
     const targetIndex = overrideIndex !== undefined ? overrideIndex : currentIndexRef.current;
@@ -237,8 +282,49 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         card.style.opacity = `${opacity}`;
         card.style.transition = transitionValue;
     }
-
   }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
+
+  // OPTIMALIZACE: Throttled wrapper pro updateVisuals
+  const updateVisuals = useCallback((instant = false, overrideIndex?: number) => {
+    // Pokud je instant nebo dragging, aktualizuj okamžitě
+    if (instant || isDraggingRef.current) {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      updateVisualsInternal(instant, overrideIndex);
+      return;
+    }
+
+    // Pro normální updates použij throttling
+    if (rafRef.current !== null) {
+      pendingUpdateRef.current = true;
+      return;
+    }
+
+    rafRef.current = requestAnimationFrame(() => {
+      updateVisualsInternal(instant, overrideIndex);
+      rafRef.current = null;
+      
+      // Pokud je pending update, spusť další
+      if (pendingUpdateRef.current) {
+        pendingUpdateRef.current = false;
+        updateVisuals(false);
+      }
+    });
+  }, [updateVisualsInternal]);
+
+  // OPTIMALIZACE: Vypočítat viditelný rozsah pro virtualizaci
+  const getVisibleRange = useCallback(() => {
+    if (cardWidth === 0 || viewportWidth === 0) {
+      return { startIndex: 0, endIndex: allSlides.length - 1 };
+    }
+    const totalCardWidth = cardWidth + GAP;
+    const visibleCount = Math.ceil(viewportWidth / totalCardWidth);
+    const startIndex = Math.max(0, currentIndex - VISIBLE_BUFFER);
+    const endIndex = Math.min(allSlides.length - 1, currentIndex + visibleCount + VISIBLE_BUFFER);
+    return { startIndex, endIndex };
+  }, [currentIndex, cardWidth, viewportWidth, allSlides.length]);
 
   useLayoutEffect(() => {
     updateVisuals(isResettingRef.current);
@@ -433,43 +519,61 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             }}
             onTransitionEnd={handleTransitionEnd}
         >
-            {allSlides.map((item, i) => {
-                const uniqueKey = `${item.isClone ? 'clone' : 'orig'}-${item.product.id}-${i}`;
-                return (
-                    <div 
-                        key={uniqueKey}
-                        ref={el => cardRefs.current[i] = el}
-                        className="flex-shrink-0"
-                        style={{
-                            width: `${cardWidth}px`,
-                            backfaceVisibility: 'hidden'
-                        }}
-                    >
-                        <div className="h-full"> 
-                            <Link 
-                                to={item.product.handle ? createProductPath(item.product.handle) : `/product-shopify/${item.product.handle}`}
-                                className="block h-full"
-                                draggable={false}
-                                onClick={(e) => {
-                                    if (isClickBlockedRef.current) {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                    }
-                                }}
-                            >
-                                <ProductCardLight
-                                    id={item.product.id}
-                                    title={item.product.title}
-                                    price={item.product.price}
-                                    image={item.product.image}
-                                    description={item.product.description}
-                                    disableAnimations={true}
+            {(() => {
+                // OPTIMALIZACE: Virtualizace - renderovat jen viditelné karty + buffer
+                const { startIndex, endIndex } = getVisibleRange();
+                
+                return allSlides.map((item, i) => {
+                    const uniqueKey = `${item.isClone ? 'clone' : 'orig'}-${item.product.id}-${i}`;
+                    const isVisible = i >= startIndex && i <= endIndex;
+                    
+                    return (
+                        <div 
+                            key={uniqueKey}
+                            ref={el => cardRefs.current[i] = el}
+                            className="flex-shrink-0"
+                            style={{
+                                width: `${cardWidth}px`,
+                                backfaceVisibility: 'hidden'
+                            }}
+                        >
+                            {isVisible ? (
+                                <div className="h-full"> 
+                                    <Link 
+                                        to={item.product.handle ? createProductPath(item.product.handle) : `/product-shopify/${item.product.handle}`}
+                                        className="block h-full"
+                                        draggable={false}
+                                        onClick={(e) => {
+                                            if (isClickBlockedRef.current) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }
+                                        }}
+                                    >
+                                        <ProductCardLight
+                                            id={item.product.id}
+                                            title={item.product.title}
+                                            price={item.product.price}
+                                            image={item.product.image}
+                                            description={item.product.description}
+                                            disableAnimations={true}
+                                        />
+                                    </Link>
+                                </div>
+                            ) : (
+                                // Placeholder pro neviditelné karty - zachovává layout a pozice
+                                <div 
+                                    className="h-full"
+                                    style={{ 
+                                        minHeight: cardWidth > 0 ? `${cardWidth * 1.3}px` : '400px' 
+                                    }}
+                                    aria-hidden="true"
                                 />
-                            </Link>
+                            )}
                         </div>
-                    </div>
-                );
-            })}
+                    );
+                });
+            })()}
         </div>
       </div>
 
