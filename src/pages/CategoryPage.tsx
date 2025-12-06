@@ -84,6 +84,11 @@ const CategoryPage = () => {
               const firstImage = product.images?.edges?.[0]?.node;
               const firstVariant = product.variants?.edges?.[0]?.node;
               
+              // OPTIMALIZACE: Shopify CDN - zmenšení obrázků na 500px pro stránku kategorie
+              const optimizedImageUrl = firstImage?.url 
+                ? `${firstImage.url}?width=500&height=500&crop=center`
+                : getFallbackImage(decodedCategory);
+              
               return {
                 id: product.id,
                 title: product.title,
@@ -91,7 +96,7 @@ const CategoryPage = () => {
                   `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                   'Cena na vyžádání',
                 priceAmount: firstVariant?.price ? parseFloat(firstVariant.price.amount) : null,
-                image: firstImage?.url || getFallbackImage(decodedCategory),
+                image: optimizedImageUrl,
                 description: product.description || 'Elegantní šperk z naší kolekce',
                 handle: product.handle,
                 inventoryQuantity: null as number | null,

@@ -59,8 +59,9 @@ const Index = () => {
         const fetchPromises = categories.map(async (czechKey) => {
           const shopifyHandle = collectionMapping[czechKey as keyof typeof collectionMapping];
           try {
-            // OPTIMALIZACE: 20 produktů, 1 obrázek, 1 varianta - pro homepage stačí minimum dat
-            const collection = await getProductsByCollection(shopifyHandle, 20, 1, 1);
+            // OPTIMALIZACE: 10 produktů pro homepage karusel (méně = rychlejší načítání)
+            // 1 obrázek, 1 varianta - minimum dat
+            const collection = await getProductsByCollection(shopifyHandle, 10, 1, 1);
             return { czechKey, collection, error: null };
           } catch (error) {
             console.error(`Error fetching ${czechKey}:`, error);
@@ -78,13 +79,19 @@ const Index = () => {
               const firstImage = product.images?.edges?.[0]?.node;
               const firstVariant = product.variants?.edges?.[0]?.node;
               
+              // OPTIMALIZACE: Shopify CDN - zmenšení obrázků na 400px pro karusel
+              // Původní obrázky mohou mít 2000px+, což způsobuje crashe na mobilech
+              const optimizedImageUrl = firstImage?.url 
+                ? `${firstImage.url}?width=400&height=400&crop=center`
+                : getFallbackImage(czechKey);
+              
               return {
                 id: product.id,
                 title: product.title,
                 price: firstVariant?.price ? 
                   `${parseFloat(firstVariant.price.amount).toLocaleString('cs-CZ')} ${firstVariant.price.currencyCode}` : 
                   'Cena na vyžádání',
-                image: firstImage?.url || getFallbackImage(czechKey),
+                image: optimizedImageUrl,
                 description: product.description || 'Elegantní šperk z naší kolekce',
                 handle: product.handle,
                 variantId: firstVariant?.id
