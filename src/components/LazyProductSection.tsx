@@ -33,8 +33,9 @@ const LazyProductSection = memo(({ id, title, subtitle, products, categoryPath }
         }
       },
       {
-        // Začni načítat 300px před tím než sekce vstoupí do viewportu
-        rootMargin: '300px 0px',
+        // OPTIMALIZACE: Sníženo z 300px na 100px pro menší zátěž na mobilech
+        // Sekce se načte těsně před tím než bude viditelná
+        rootMargin: '100px 0px',
         threshold: 0
       }
     );

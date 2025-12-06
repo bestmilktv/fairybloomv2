@@ -428,3 +428,14 @@ html {
 html {
   scroll-behavior: smooth;
 }
+
+/* OPTIMALIZACE: Carousel styles - přesunuty z inline <style> pro lepší výkon */
+.carousel-force-no-animate * {
+  animation: none !important;
+}
+
+.carousel-force-no-animate img {
+  transform: translateZ(0) !important;
+  backface-visibility: hidden;
+  pointer-events: none;
+}

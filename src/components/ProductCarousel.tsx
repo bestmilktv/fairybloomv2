@@ -226,21 +226,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             }
         }
 
+        // OPTIMALIZACE: Aplikace stylů přímo na kartu bez querySelector
+        // Odstraněn querySelector('img') z loopu - eliminuje DOM queries
+        const transitionValue = (isDraggingRef.current || instant) 
+            ? 'none' 
+            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        
         card.style.width = `${cardWidth}px`;
         card.style.transform = `scale(${scale}) translateZ(0)`;
-        
-        // Apply opacity only to image wrapper, not the entire card
-        const imageWrapper = card.querySelector('img')?.parentElement;
-        if (imageWrapper) {
-            imageWrapper.style.opacity = `${opacity}`;
-            imageWrapper.style.transition = (isDraggingRef.current || instant) 
-                ? 'none' 
-                : `opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
-        }
-        
-        card.style.transition = (isDraggingRef.current || instant) 
-            ? 'none' 
-            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        card.style.opacity = `${opacity}`;
+        card.style.transition = transitionValue;
     }
 
   }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
@@ -403,17 +398,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   return (
     <div ref={wrapperRef} className="relative w-full select-none">
-      <style>{`
-        .carousel-force-no-animate * {
-          animation: none !important;
-        }
-        .carousel-force-no-animate img {
-          transform: translateZ(0) !important;
-          backface-visibility: hidden;
-          pointer-events: none;
-        }
-      `}</style>
-
+      {/* Styly přesunuty do index.css pro lepší výkon */}
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
         onPointerDown={handlePointerDown}
@@ -424,8 +409,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         
         style={{
             touchAction: 'pan-y',
-            maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0, 0.1) 2%, rgba(0,0,0, 0.5) 5%, black 15%, black 85%, rgba(0,0,0, 0.5) 95%, rgba(0,0,0, 0.1) 98%, transparent 100%)'
+            // OPTIMALIZACE: Jednodušší maskImage na mobilech, komplexnější na desktopu
+            ...(layoutMode === 'desktop' ? {
+              maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)'
+            } : {
+              // Na mobilech bez maskImage - lepší výkon
+            })
         }}
       >
         <div
@@ -434,7 +424,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             style={{
                 gap: `${GAP}px`,
                 width: 'max-content',
-                willChange: 'transform',
+                // OPTIMALIZACE: Odstraněn willChange - může způsobovat problémy na mobilech
                 backfaceVisibility: 'hidden',
                 paddingTop: '40px', 
                 paddingBottom: '40px',

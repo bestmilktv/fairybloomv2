@@ -1,6 +1,5 @@
 import { memo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
 
 interface ProductCardLightProps {
   id: string;
@@ -12,12 +11,13 @@ interface ProductCardLightProps {
 }
 
 /**
- * OPTIMALIZACE: Lehká verze ProductCard pro karusely
+ * OPTIMALIZACE: Ultra-lehká verze ProductCard pro karusely
  * - BEZ useCart, useLocation, useToast = 0 context subscriptions
+ * - BEZ hover animací = minimální GPU zátěž
+ * - BEZ transitions na kartě = plynulé scrollování
  * - Tlačítko "Zobrazit detail" místo "Přidat do košíku"
- * - Dramaticky snižuje zátěž na mobilech (žádné re-rendery při změně košíku)
  */
-const ProductCardLight = memo(({ id, title, price, image, description, disableAnimations = false }: ProductCardLightProps) => {
+const ProductCardLight = memo(({ title, price, image, description }: ProductCardLightProps) => {
   
   const truncateDescription = (text: string) => {
     if (!text) return '';
@@ -27,68 +27,27 @@ const ProductCardLight = memo(({ id, title, price, image, description, disableAn
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  const cardClasses = `
-    bg-card 
-    rounded-2xl 
-    overflow-visible 
-    h-full 
-    flex 
-    flex-col 
-    relative 
-    group 
-    shadow-sm 
-    hover:shadow-lg 
-    hover:-translate-y-2 
-    transition-all 
-    duration-500 
-    ease-out
-  `;
-  
-  const imageClasses = `
-    w-full 
-    h-full 
-    object-cover 
-    transition-transform 
-    duration-700 
-    ease-in-out 
-    group-hover:scale-110
-  `;
-  
-  const titleClasses = `
-    font-serif 
-    text-xl 
-    font-semibold 
-    text-primary 
-    mb-2 
-    line-clamp-2 
-    min-h-[3.5rem] 
-    transition-colors 
-    duration-300 
-    group-hover:text-accent
-  `;
-
-  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
-
   return (
-    <div className={cardClasses}>
-      <div className={imageWrapperClasses}>
+    <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col shadow-sm">
+      {/* Obrázek - bez hover efektů pro lepší výkon */}
+      <div className="aspect-square overflow-hidden bg-muted">
         <img
           src={image}
           alt={title}
           width={300}
           height={300}
-          className={imageClasses}
+          className="w-full h-full object-cover"
           loading="lazy"
           decoding="async"
-          style={disableAnimations ? {
+          style={{
             transform: 'translateZ(0)',
             backfaceVisibility: 'hidden'
-          } : undefined}
+          }}
         />
       </div>
       
       <div className="p-6 flex flex-col flex-grow">
-        <h3 className={titleClasses}>
+        <h3 className="font-serif text-xl font-semibold text-primary mb-2 line-clamp-2 min-h-[3.5rem]">
           {title}
         </h3>
         
@@ -108,10 +67,8 @@ const ProductCardLight = memo(({ id, title, price, image, description, disableAn
           <Button 
             variant="gold" 
             size="sm"
-            className="w-full bg-gold text-primary transition-transform duration-300 hover:scale-[1.02] active:scale-95"
-            style={{ opacity: 1, isolation: 'isolate' }}
+            className="w-full bg-gold text-primary"
           >
-            <Eye className="h-4 w-4 mr-2" />
             Zobrazit detail
           </Button>
         </div>
@@ -123,4 +80,3 @@ const ProductCardLight = memo(({ id, title, price, image, description, disableAn
 ProductCardLight.displayName = 'ProductCardLight';
 
 export default ProductCardLight;
-
