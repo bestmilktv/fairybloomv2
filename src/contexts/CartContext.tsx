@@ -33,26 +33,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartId, setCartId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Load cart ID from localStorage on mount
-  useEffect(() => {
-    const savedCartId = localStorage.getItem('fairybloom-cart-id')
-    if (savedCartId) {
-      setCartId(savedCartId)
-      // Fetch cart from Shopify
-      refreshCartFromShopify(savedCartId)
-    }
-  }, [refreshCartFromShopify])
-
-  // Save cart ID to localStorage whenever it changes
-  useEffect(() => {
-    if (cartId) {
-      localStorage.setItem('fairybloom-cart-id', cartId)
-    } else {
-      localStorage.removeItem('fairybloom-cart-id')
-    }
-  }, [cartId])
-
   // Convert Shopify cart to local cart items
+  // OPTIMALIZACE: Přesunuto před useEffect, který to používá
   const convertShopifyCartToItems = (shopifyCart: any): CartItem[] => {
     if (!shopifyCart?.lines?.edges) return []
     
@@ -77,6 +59,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Fetch cart from Shopify
+  // OPTIMALIZACE: Přesunuto před useEffect, který to používá
   const refreshCartFromShopify = useCallback(async (cartIdToFetch: string) => {
     try {
       setIsLoading(true)
@@ -104,6 +87,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false)
     }
   }, [])
+
+  // Load cart ID from localStorage on mount
+  useEffect(() => {
+    const savedCartId = localStorage.getItem('fairybloom-cart-id')
+    if (savedCartId) {
+      setCartId(savedCartId)
+      // Fetch cart from Shopify
+      refreshCartFromShopify(savedCartId)
+    }
+  }, [refreshCartFromShopify])
+
+  // Save cart ID to localStorage whenever it changes
+  useEffect(() => {
+    if (cartId) {
+      localStorage.setItem('fairybloom-cart-id', cartId)
+    } else {
+      localStorage.removeItem('fairybloom-cart-id')
+    }
+  }, [cartId])
 
   // Refresh cart from Shopify
   const refreshCart = useCallback(async () => {
