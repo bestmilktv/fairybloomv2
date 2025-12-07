@@ -465,7 +465,7 @@ const ProductDetailPage = () => {
                   <Button 
                     variant="outline" 
                     size="lg" 
-                    className={`px-6 py-4 transition-all duration-300 shadow-lg hover:shadow-xl ${
+                    className={`group px-6 py-4 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 ${
                       isFavorite(product.id)
                         ? 'border-red-500 hover:border-red-600 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30'
                         : 'hover:border-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/10'
@@ -477,7 +477,7 @@ const ProductDetailPage = () => {
                       className={`h-5 w-5 mr-2 transition-all duration-300 ${
                         isFavorite(product.id)
                           ? 'fill-red-500 text-red-500 scale-110'
-                          : ''
+                          : 'group-hover:scale-110 group-hover:fill-red-400 group-hover:text-red-400'
                       }`}
                     />
                     {isFavorite(product.id) ? 'Oblíbené' : 'Oblíbit'}
