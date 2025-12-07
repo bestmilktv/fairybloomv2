@@ -406,7 +406,7 @@ const DynamicProductPage = () => {
             <div className="space-y-8 fade-in-up-delayed" style={{ animationDelay: '0.2s' }}>
               {/* Title and Price */}
               <div>
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-luxury mb-4 tracking-wide">
+                <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4 tracking-wide">
                   {product.title}
                 </h1>
                 {selectedVariant && (

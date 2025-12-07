@@ -399,7 +399,7 @@ const ProductDetailPage = () => {
             {/* Product Info */}
             <div className="space-y-6">
               <div>
-                <h1 className="text-4xl font-serif font-bold text-luxury mb-4">
+                <h1 className="text-4xl font-serif font-bold text-foreground mb-4">
                   {product.title}
                 </h1>
                 <p className="text-2xl font-semibold text-price-gold font-serif">
