@@ -2,7 +2,8 @@ import { useState, useEffect, memo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, UserCheck, LogOut, Settings, Heart } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { ShoppingCart, User, UserCheck, LogOut, Settings, Heart, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -26,6 +27,7 @@ const Navigation = memo(() => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [favoritesSidebarOpen, setFavoritesSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout, isAuthenticated, needsProfileCompletion, setNeedsProfileCompletion } = useAuth();
   const { getTotalItems } = useCart();
   const { getFavoriteCount } = useFavorites();
@@ -65,11 +67,17 @@ const Navigation = memo(() => {
   const closeMiniCart = useCallback(() => setMiniCartOpen(false), []);
   const openFavorites = useCallback(() => setFavoritesSidebarOpen(true), []);
   const closeFavorites = useCallback(() => setFavoritesSidebarOpen(false), []);
+  const openMobileMenu = useCallback(() => setMobileMenuOpen(true), []);
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
   const completeProfile = useCallback(() => setNeedsProfileCompletion(false), [setNeedsProfileCompletion]);
 
   const handleLogoClick = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  const handleCategoryClick = useCallback(() => {
+    closeMobileMenu();
+  }, [closeMobileMenu]);
 
   return (
     <nav 
@@ -112,8 +120,41 @@ const Navigation = memo(() => {
             ))}
           </div>
 
-          {/* Account, Favorites & Cart */}
+          {/* Account, Favorites & Cart & Mobile Menu */}
           <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-shrink-0">
+            {/* Mobile Menu Button - shown only on mobile/tablet */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="md:hidden !text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 h-9 w-9 sm:h-10 sm:w-10 rounded-full"
+                  aria-label="Otevřít menu"
+                >
+                  <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-background/95 backdrop-blur-xl">
+                <SheetHeader>
+                  <SheetTitle className="text-left text-2xl font-light text-primary tracking-wide">
+                    Menu
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="mt-8 flex flex-col space-y-4" aria-label="Navigace kategorií">
+                  {CATEGORIES.map(category => (
+                    <Link
+                      key={category.path}
+                      to={category.path}
+                      onClick={handleCategoryClick}
+                      className="text-primary/80 hover:text-primary px-4 py-3 rounded-lg tracking-wide smooth-font-weight hover:bg-background/80 transition-all duration-200 text-lg"
+                    >
+                      {category.name}
+                    </Link>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
