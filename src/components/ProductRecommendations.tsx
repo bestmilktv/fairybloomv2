@@ -214,7 +214,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
     return (
       <div className="mt-16 pt-16 pb-16 border-t border-border">
         <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl font-serif font-bold text-primary mb-8 text-center">
+          <h2 className="text-3xl font-serif font-bold text-foreground mb-8 text-center">
             Mohlo by se vám líbit
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -232,7 +232,7 @@ export function ProductRecommendations({ currentProductId, currentCategory }: Pr
   return (
     <div className="mt-16 pt-16 pb-16 border-t border-border">
       <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-3xl font-serif font-bold text-luxury mb-8 text-center">
+        <h2 className="text-3xl font-serif font-bold text-foreground mb-8 text-center">
           Mohlo by se vám líbit
         </h2>
         
