@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import ProductCarousel from './ProductCarousel';
@@ -25,7 +25,6 @@ interface ProductSectionProps {
 // OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props
 const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: ProductSectionProps) => {
   const [sectionRef, sectionVisible] = useScrollAnimation();
-  const [currentProductIndex, setCurrentProductIndex] = useState(0);
   
   return (
     <section 
@@ -46,24 +45,7 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
         
         {/* Products Carousel */}
         <div>
-          <ProductCarousel 
-            products={products} 
-            onProductIndexChange={setCurrentProductIndex}
-          />
-        </div>
-        
-        {/* Indikátor pozice (Infografika) - přesunuto sem, uprostřed mezi carousel a tlačítkem */}
-        <div className="flex justify-center items-center gap-1.5 mt-4 mb-4 relative z-20">
-          {products.map((_, index) => (
-            <div
-              key={index}
-              className={`transition-all duration-500 ease-out ${
-                index === currentProductIndex
-                  ? 'w-6 h-1 bg-[#502038] rounded-full'
-                  : 'w-1.5 h-1.5 bg-[#502038]/20 rounded-full'
-              }`}
-            />
-          ))}
+          <ProductCarousel products={products} />
         </div>
         
         {/* View More Button */}

@@ -16,10 +16,9 @@ interface Product {
 
 interface ProductCarouselProps {
   products: Product[];
-  onProductIndexChange?: (index: number) => void;
 }
 
-const ProductCarousel = ({ products, onProductIndexChange }: ProductCarouselProps) => {
+const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // ============================================================================
   // FALLBACK PRO MÁLO PRODUKTŮ
   // ============================================================================
@@ -183,8 +182,7 @@ const ProductCarousel = ({ products, onProductIndexChange }: ProductCarouselProp
   useEffect(() => {
     const productIndex = getCurrentProductIndex(currentIndex);
     setCurrentProductIndex(productIndex);
-    onProductIndexChange?.(productIndex);
-  }, [currentIndex, getCurrentProductIndex, onProductIndexChange]);
+  }, [currentIndex, getCurrentProductIndex]);
 
   // ============================================================================
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
@@ -587,6 +585,19 @@ const ProductCarousel = ({ products, onProductIndexChange }: ProductCarouselProp
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
 
+      {/* Indikátor pozice (Infografika) */}
+      <div className="flex justify-center items-center gap-1.5 mt-4 relative z-20">
+        {products.map((_, index) => (
+          <div
+            key={index}
+            className={`transition-all duration-500 ease-out ${
+              index === currentProductIndex
+                ? 'w-6 h-1 bg-[#502038] rounded-full'
+                : 'w-1.5 h-1.5 bg-[#502038]/20 rounded-full'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 };
