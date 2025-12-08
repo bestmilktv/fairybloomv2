@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import ProductCarousel from './ProductCarousel';
@@ -25,6 +25,7 @@ interface ProductSectionProps {
 // OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props
 const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: ProductSectionProps) => {
   const [sectionRef, sectionVisible] = useScrollAnimation();
+  const [currentProductIndex, setCurrentProductIndex] = useState(0);
   
   return (
     <section 
@@ -45,11 +46,28 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
         
         {/* Products Carousel */}
         <div>
-          <ProductCarousel products={products} />
+          <ProductCarousel 
+            products={products} 
+            onProductIndexChange={setCurrentProductIndex}
+          />
+        </div>
+        
+        {/* Indikátor pozice (Infografika) - přesunuto sem s přesně stejnými mezery */}
+        <div className="flex justify-center items-center gap-1.5 mt-4 mb-4 relative z-20">
+          {products.map((_, index) => (
+            <div
+              key={index}
+              className={`transition-all duration-500 ease-out ${
+                index === currentProductIndex
+                  ? 'w-6 h-1 bg-[#502038] rounded-full'
+                  : 'w-1.5 h-1.5 bg-[#502038]/20 rounded-full'
+              }`}
+            />
+          ))}
         </div>
         
         {/* View More Button */}
-        <div className="text-center fade-in-up mt-3 pb-8 overflow-visible">
+        <div className="text-center fade-in-up mt-4 pb-8 overflow-visible">
           <Link 
             to={categoryPath}
             className="inline-flex items-center px-6 py-3 bg-primary/80 hover:bg-primary/90 rounded-lg transition-[background-color,transform,box-shadow] duration-300 ease-in-out transform hover:scale-105 text-base font-medium text-primary-foreground shadow-lg hover:shadow-lg"
