@@ -52,7 +52,7 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
           />
         </div>
         
-        {/* Indikátor pozice (Infografika) - přesunuto sem s přesně stejnými mezery */}
+        {/* Indikátor pozice (Infografika) - přesunuto sem, uprostřed mezi carousel a tlačítkem */}
         <div className="flex justify-center items-center gap-1.5 mt-4 mb-4 relative z-20">
           {products.map((_, index) => (
             <div
@@ -67,7 +67,7 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
         </div>
         
         {/* View More Button */}
-        <div className="text-center fade-in-up mt-4 pb-8 overflow-visible">
+        <div className="text-center fade-in-up mt-5 pb-8 overflow-visible">
           <Link 
             to={categoryPath}
             className="inline-flex items-center px-6 py-3 bg-primary/80 hover:bg-primary/90 rounded-lg transition-[background-color,transform,box-shadow] duration-300 ease-in-out transform hover:scale-105 text-base font-medium text-primary-foreground shadow-lg hover:shadow-lg"
