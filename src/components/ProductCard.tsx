@@ -121,31 +121,28 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
   `;
 
   // bg-muted slouží jako placeholder při lazy loading obrázků
-  // overflow-visible pro shadow a zvětšený obrázek při hover
-  // p-3 (12px) padding pro dostatek prostoru při scale-110 (10% zvětšení)
-  const imageWrapperClasses = "aspect-square overflow-visible bg-muted rounded-t-2xl p-3";
+  // overflow-visible: Aby obrázek při scale-110 nebyl oříznutý
+  const imageWrapperClasses = "aspect-square overflow-visible bg-muted rounded-t-2xl";
 
   return (
     <div className={cardClasses}>
       <div className={imageWrapperClasses}>
         {/* OPTIMALIZACE: width a height atributy pro prevenci CLS (Cumulative Layout Shift) */}
-        {/* Vnitřní div s overflow-hidden pro obrázek, ale s dostatečným prostorem díky padding na parent */}
-        <div className="w-full h-full overflow-hidden rounded-t-2xl bg-muted">
-          <img
-            src={image}
-            alt={title}
-            width={300}
-            height={300}
-            className={imageClasses}
-            loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? "high" : "auto"}
-            decoding="async"
-            style={disableAnimations ? {
-              transform: 'translateZ(0)',
-              backfaceVisibility: 'hidden'
-            } : undefined}
-          />
-        </div>
+        {/* rounded-t-2xl přímo na obrázku pro zaoblené rohy, overflow-visible na wrapperu umožňuje vyčnívání při scale */}
+        <img
+          src={image}
+          alt={title}
+          width={300}
+          height={300}
+          className={`${imageClasses} rounded-t-2xl`}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          style={disableAnimations ? {
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden'
+          } : undefined}
+        />
       </div>
       
       <div className="p-6 flex flex-col flex-grow">

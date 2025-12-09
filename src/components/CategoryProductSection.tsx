@@ -21,19 +21,20 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   // OPTIMALIZACE: Odstraněn zbytečný state a useEffect - používáme initialProducts přímo
   return (
     // GRID: 
-    // gap-2 (8px) horizontálně - menší mezery mezi produkty.
-    // gap-y-4 (16px) vertikálně - menší mezery mezi řádky.
-    // p-4: Větší ochranná zóna okolo celého gridu (aby se stíny a zvětšené obrázky při hover neořízly).
+    // gap-1 (4px) horizontálně - minimální mezery mezi produkty.
+    // gap-y-2 (8px) vertikálně - minimální mezery mezi řádky.
+    // p-4: Ochranná zóna okolo celého gridu (aby se stíny a zvětšené obrázky při hover neořízly).
     // pb-20: Místo dole.
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 gap-y-4 w-full justify-items-center p-4 pb-20 overflow-visible">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 gap-y-2 w-full justify-items-center p-4 pb-20 overflow-visible">
       {initialProducts.map((product, index) => (
         <div 
           key={product.id} 
           // WRAPPER:
           // max-w-[240px]: Zmenšené produkty (bylo 260px).
           // relative z-0 hover:z-40: Zmenšený z-index, aby produkty nepřekrývaly navbar (z-50).
-          // p-2: Padding pro shadow a hover animaci (translate-y-2 = 8px nahoru, shadow potřebuje prostor)
-          className="fade-in-up w-full max-w-[240px] relative z-0 hover:z-40 transition-all duration-300 ease-out p-2"
+          // p-2: Padding pro shadow a hover animaci (translate-y-2 = 8px nahoru)
+          // overflow-visible: Aby shadow a zvětšený obrázek nebyly oříznuté
+          className="fade-in-up w-full max-w-[240px] relative z-0 hover:z-40 transition-all duration-300 ease-out p-2 overflow-visible"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}
