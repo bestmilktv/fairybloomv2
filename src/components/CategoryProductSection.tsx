@@ -25,7 +25,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
     // gap-y-8 (32px) vertikálně - zvětšená mezera mezi řadami.
     // p-4: Ochranná zóna.
     // pb-20: Místo dole.
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 gap-y-8 w-full justify-items-center p-4 pb-20 overflow-visible">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 gap-y-6 w-full justify-items-center p-4 pb-20 overflow-visible">
       {initialProducts.map((product, index) => (
         <div 
           key={product.id} 
