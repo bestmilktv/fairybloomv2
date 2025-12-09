@@ -121,20 +121,19 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
   `;
 
   // bg-muted slouží jako placeholder při lazy loading obrázků
-  // overflow-visible: Aby obrázek při scale-110 nebyl oříznutý
-  const imageWrapperClasses = "aspect-square overflow-visible bg-muted rounded-t-2xl";
+  // overflow-hidden: Obrázek se při hoveru zvětší (scale), ale zůstane uvnitř zaoblených rohů (maska)
+  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
 
   return (
     <div className={cardClasses}>
       <div className={imageWrapperClasses}>
         {/* OPTIMALIZACE: width a height atributy pro prevenci CLS (Cumulative Layout Shift) */}
-        {/* rounded-t-2xl přímo na obrázku pro zaoblené rohy, overflow-visible na wrapperu umožňuje vyčnívání při scale */}
         <img
           src={image}
           alt={title}
           width={300}
           height={300}
-          className={`${imageClasses} rounded-t-2xl`}
+          className={imageClasses}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
