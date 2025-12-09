@@ -21,18 +21,18 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
   // OPTIMALIZACE: Odstraněn zbytečný state a useEffect - používáme initialProducts přímo
   return (
     // GRID: 
-    // gap-4 (16px) horizontálně - menší mezery.
-    // gap-y-8 (32px) vertikálně.
-    // p-4: Ochranná zóna okolo celého gridu (aby se stíny na krajích neořízly o okno).
+    // gap-3 (12px) horizontálně - zmenšené mezery.
+    // gap-y-6 (24px) vertikálně - zmenšené mezery.
+    // p-3: Ochranná zóna okolo celého gridu (aby se stíny na krajích neořízly o okno).
     // pb-20: Místo dole.
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 gap-y-8 w-full justify-items-center p-4 pb-20 overflow-visible">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 gap-y-6 w-full justify-items-center p-3 pb-20 overflow-visible">
       {initialProducts.map((product, index) => (
         <div 
           key={product.id} 
           // WRAPPER:
           // max-w-[240px]: Zmenšené produkty (bylo 260px).
-          // relative z-0 hover:z-50: TOTO JE TEN FIX. Při hoveru karta "přeletí" ostatní -> stín se neořízne.
-          className="fade-in-up w-full max-w-[240px] relative z-0 hover:z-50 transition-all duration-300 ease-out"
+          // relative z-0 hover:z-40: Zmenšený z-index, aby produkty nepřekrývaly navbar (z-50).
+          className="fade-in-up w-full max-w-[240px] relative z-0 hover:z-40 transition-all duration-300 ease-out"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}

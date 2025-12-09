@@ -121,26 +121,30 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
   `;
 
   // bg-muted slouží jako placeholder při lazy loading obrázků
-  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
+  // overflow-visible pro shadow, vnitřní div má overflow-hidden pro obrázek
+  const imageWrapperClasses = "aspect-square overflow-visible bg-muted rounded-t-2xl";
 
   return (
     <div className={cardClasses}>
       <div className={imageWrapperClasses}>
         {/* OPTIMALIZACE: width a height atributy pro prevenci CLS (Cumulative Layout Shift) */}
-        <img
-          src={image}
-          alt={title}
-          width={300}
-          height={300}
-          className={imageClasses}
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : "auto"}
-          decoding="async"
-          style={disableAnimations ? {
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden'
-          } : undefined}
-        />
+        {/* Vnitřní div s padding pro shadow a overflow-hidden pro obrázek */}
+        <div className="w-full h-full overflow-hidden rounded-t-2xl bg-muted p-1">
+          <img
+            src={image}
+            alt={title}
+            width={300}
+            height={300}
+            className={imageClasses}
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            decoding="async"
+            style={disableAnimations ? {
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden'
+            } : undefined}
+          />
+        </div>
       </div>
       
       <div className="p-6 flex flex-col flex-grow">
