@@ -193,8 +193,9 @@ const CategoryPage = () => {
       
       <section className="pt-24 pb-12 px-6">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-4 overflow-visible">
-            <div key={`back-button-${decodedCategory}`} className="w-full max-w-[260px] p-2 fade-in-progressive-0">
+          {/* Sjednocení gridu: gap-1 a padding p-3 pro zarovnání s produkty */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-1 overflow-visible">
+            <div key={`back-button-${decodedCategory}`} className="w-full max-w-[280px] p-3 fade-in-progressive-0">
               <BackToHomepageButton />
             </div>
           </div>
@@ -213,8 +214,8 @@ const CategoryPage = () => {
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto px-6 overflow-visible">
           <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-1 overflow-visible fade-in-progressive-3">
-            {/* Stejný padding p-2 jako u produktů pro přesné zarovnání */}
-            <div className="w-full max-w-[280px] p-2">
+            {/* Stejný padding p-3 jako u produktů pro přesné zarovnání */}
+            <div className="w-full max-w-[280px] p-3">
               <Select value={sort} onValueChange={handleSortChange}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
                   <SelectValue placeholder="Seřadit" />
