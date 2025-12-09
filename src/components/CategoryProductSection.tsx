@@ -32,9 +32,9 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
           // WRAPPER:
           // max-w-[240px]: Zmenšené produkty (bylo 260px).
           // relative z-0 hover:z-40: Zmenšený z-index, aby produkty nepřekrývaly navbar (z-50).
-          // p-2: Padding pro shadow a hover animaci (translate-y-2 = 8px nahoru)
+          // p-3: Padding pro shadow a hover animaci (translate-y-2 = 8px nahoru)
           // overflow-visible: Aby shadow a zvětšený obrázek nebyly oříznuté
-          className="fade-in-up w-full max-w-[240px] relative z-0 hover:z-40 transition-all duration-300 ease-out p-2 overflow-visible"
+          className="fade-in-up w-full max-w-[240px] relative z-0 hover:z-40 transition-all duration-300 ease-out p-3 overflow-visible"
           style={{ 
             animationDelay: `${0.4 + index * 0.1}s`
           }}

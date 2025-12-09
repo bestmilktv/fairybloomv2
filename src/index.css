@@ -258,14 +258,12 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     opacity: 0;
     transform: translate3d(0, 24px, 0);
-    contain: layout style paint;
   }
   
   .fade-in-up-delayed {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
     opacity: 0;
     transform: translate3d(0, 24px, 0);
-    contain: layout style paint;
   }
 
   /* Progressive fade-in classes with optimized delays for category pages */
@@ -273,28 +271,24 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    contain: layout style paint;
   }
 
   .fade-in-progressive-1 {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    contain: layout style paint;
   }
 
   .fade-in-progressive-2 {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    contain: layout style paint;
   }
 
   .fade-in-progressive-3 {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    contain: layout style paint;
   }
 
   /* Product grid base delay - starts after header elements */
@@ -302,7 +296,6 @@ html {
     animation: fadeInUp 0.65s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
     opacity: 0;
     transform: translate3d(0, 20px, 0);
-    contain: layout style paint;
   }
 
   .scroll-fade-in {
