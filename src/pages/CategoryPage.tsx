@@ -193,8 +193,8 @@ const CategoryPage = () => {
       
       <section className="pt-24 pb-12 px-6">
         <div className="max-w-7xl mx-auto px-6">
-          {/* Sjednocení gridu: gap-1 a padding p-3 pro zarovnání s produkty */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-1 overflow-visible">
+          {/* Sjednocení gridu: gap-1 a padding px-4 pro zarovnání s produkty (které mají p-4) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-1 overflow-visible px-4">
             <div key={`back-button-${decodedCategory}`} className="w-full max-w-[280px] p-3 fade-in-progressive-0">
               <BackToHomepageButton />
             </div>
@@ -213,7 +213,7 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto px-6 overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-1 overflow-visible fade-in-progressive-3">
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-1 overflow-visible px-4 fade-in-progressive-3">
             {/* Stejný padding p-3 jako u produktů pro přesné zarovnání */}
             <div className="w-full max-w-[280px] p-3">
               <Select value={sort} onValueChange={handleSortChange}>
