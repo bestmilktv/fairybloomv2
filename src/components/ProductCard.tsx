@@ -121,15 +121,16 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
   `;
 
   // bg-muted slouží jako placeholder při lazy loading obrázků
-  // overflow-visible pro shadow, vnitřní div má overflow-hidden pro obrázek
-  const imageWrapperClasses = "aspect-square overflow-visible bg-muted rounded-t-2xl";
+  // overflow-visible pro shadow a zvětšený obrázek při hover
+  // p-3 (12px) padding pro dostatek prostoru při scale-110 (10% zvětšení)
+  const imageWrapperClasses = "aspect-square overflow-visible bg-muted rounded-t-2xl p-3";
 
   return (
     <div className={cardClasses}>
       <div className={imageWrapperClasses}>
         {/* OPTIMALIZACE: width a height atributy pro prevenci CLS (Cumulative Layout Shift) */}
-        {/* Vnitřní div s padding pro shadow a overflow-hidden pro obrázek */}
-        <div className="w-full h-full overflow-hidden rounded-t-2xl bg-muted p-1">
+        {/* Vnitřní div s overflow-hidden pro obrázek, ale s dostatečným prostorem díky padding na parent */}
+        <div className="w-full h-full overflow-hidden rounded-t-2xl bg-muted">
           <img
             src={image}
             alt={title}
