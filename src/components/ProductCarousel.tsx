@@ -258,19 +258,21 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         let opacity = 1;
 
         if (layoutMode === 'desktop') {
-            const mainZone = totalCardWidth * 1.5; 
-            if (dist > mainZone) {
-                const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
-                scale = 1 - (factor * 0.15);
-                opacity = 1 - (factor * 0.5);
-            }
+            // OPTIMALIZACE: Vypnut efekt zmenšování na krajích pro maximální plynulost
+            // const mainZone = totalCardWidth * 1.5; 
+            // if (dist > mainZone) {
+            //     const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
+            //     scale = 1 - (factor * 0.15);
+            //     opacity = 1 - (factor * 0.5);
+            // }
         } else {
-            const mainZone = totalCardWidth * 0.5;
-            if (dist > mainZone) {
-                 const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
-                 scale = 1 - (factor * 0.15);
-                 opacity = 1 - (factor * 0.5);
-            }
+            // OPTIMALIZACE: Vypnut efekt zmenšování na krajích pro maximální plynulost
+            // const mainZone = totalCardWidth * 0.5;
+            // if (dist > mainZone) {
+            //      const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
+            //      scale = 1 - (factor * 0.15);
+            //      opacity = 1 - (factor * 0.5);
+            // }
         }
 
         // OPTIMALIZACE: Aplikace stylů přímo na kartu bez querySelector
