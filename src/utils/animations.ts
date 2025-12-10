@@ -34,13 +34,15 @@ export const fadeInUp = {
   hidden: { 
     opacity: 0, 
     y: 20, 
-    willChange: "transform, opacity" // GPU akcelerace
+    willChange: "transform, opacity",
+    backfaceVisibility: "hidden" as const, // Prevence rozmazání textu
   },
   visible: { 
     opacity: 1, 
     y: 0, 
     transition: premiumTransition,
-    willChange: "auto" // Uvolnit paměť po dokončení
+    willChange: "auto",
+    backfaceVisibility: "visible" as const
   }
 };
 
@@ -48,12 +50,14 @@ export const fadeInUp = {
 export const fadeIn = {
   hidden: { 
     opacity: 0,
-    willChange: "opacity"
+    willChange: "opacity",
+    backfaceVisibility: "hidden" as const
   },
   visible: { 
     opacity: 1,
     transition: { duration: 0.8, ease: "easeOut" },
-    willChange: "auto"
+    willChange: "auto",
+    backfaceVisibility: "visible" as const
   }
 };
 
