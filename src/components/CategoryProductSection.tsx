@@ -26,11 +26,13 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
       whileInView="visible"
       viewport={{ once: true, margin: "-10%" }}
       variants={staggerContainer(0.1)}
+      layout // Přidán layout prop pro hladké přeskládání gridu
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 gap-y-6 w-full justify-items-center p-4 pb-20 overflow-visible"
     >
       {initialProducts.map((product, index) => (
         <motion.div 
           key={product.id} 
+          layout // Přidán layout prop i pro jednotlivé karty
           variants={fadeInUp}
           // OPTIMALIZACE: Odstraněn transition-all duration-300, který kolidoval s Framer Motion
           // Ponechán jen hover efekt na z-index a padding
