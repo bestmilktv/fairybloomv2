@@ -38,7 +38,7 @@ const ProductCardLight = memo(({ title, price, image, description, disableAnimat
     shadow-sm 
     hover:shadow-lg 
     hover:-translate-y-2 
-    transition-all 
+    transition-[box-shadow,transform,background-color] 
     duration-500 
     ease-out
   `;
