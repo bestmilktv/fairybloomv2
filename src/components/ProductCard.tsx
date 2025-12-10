@@ -105,6 +105,8 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     duration-700 
     ease-in-out 
     group-hover:scale-110
+    transform-gpu
+    backface-hidden
   `;
   
   const titleClasses = `
