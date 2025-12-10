@@ -41,8 +41,7 @@ export const fadeInUp = {
     opacity: 1, 
     y: 0, 
     transition: premiumTransition,
-    willChange: "auto",
-    backfaceVisibility: "visible" as const
+    backfaceVisibility: "hidden" as const // Ponecháno hidden pro konzistenci
   }
 };
 
@@ -56,8 +55,7 @@ export const fadeIn = {
   visible: { 
     opacity: 1,
     transition: { duration: 0.8, ease: "easeOut" },
-    willChange: "auto",
-    backfaceVisibility: "visible" as const
+    backfaceVisibility: "hidden" as const
   }
 };
 
@@ -66,12 +64,13 @@ export const scaleUp = {
   hidden: { 
     opacity: 0, 
     scale: 0.98,
-    willChange: "transform, opacity"
+    willChange: "transform, opacity",
+    backfaceVisibility: "hidden" as const
   },
   visible: { 
     opacity: 1, 
     scale: 1,
     transition: premiumTransition,
-    willChange: "auto"
+    backfaceVisibility: "hidden" as const
   }
 };
