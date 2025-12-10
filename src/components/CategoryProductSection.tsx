@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
-import { fadeInUp } from '@/utils/animations';
+import { fadeInUp, staggerContainer } from '@/utils/animations';
 
 interface Product {
   id: string;
@@ -21,15 +21,16 @@ interface CategoryProductSectionProps {
 
 const CategoryProductSection = ({ category, initialProducts }: CategoryProductSectionProps) => {
   return (
-    <div 
+    <motion.div 
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-10%" }}
+      variants={staggerContainer(0.1)}
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 gap-y-6 w-full justify-items-center p-4 pb-20 overflow-visible"
     >
       {initialProducts.map((product, index) => (
         <motion.div 
           key={product.id} 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-10%" }}
           variants={fadeInUp}
           // OPTIMALIZACE: Odstraněn transition-all duration-300, který kolidoval s Framer Motion
           // Ponechán jen hover efekt na z-index a padding
@@ -52,7 +53,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
           </Link>
         </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 };
 
