@@ -58,7 +58,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const BUFFER_SETS = 2;
   const CLONE_COUNT = products.length * BUFFER_SETS;
 
-  const allSlides = useMemo(() => {
+    const allSlides = useMemo(() => {
     const items = [];
     for (let i = 0; i < CLONE_COUNT; i++) {
         const sourceIndex = (products.length - 1 - (i % products.length));
@@ -85,6 +85,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [currentProductIndex, setCurrentProductIndex] = useState(0); // State pro indikátor
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Refs
   const dragStartX = useRef(0);
@@ -146,6 +147,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           setCardWidth(width - 32);
         }
         
+        setIsInitialized(true);
         resizeRafRef.current = null;
       });
     };
@@ -483,7 +485,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // JSX
   // ============================================================================
   return (
-    <div ref={wrapperRef} className="relative w-full select-none">
+    <div ref={wrapperRef} className="relative w-full select-none" style={{ opacity: isInitialized ? 1 : 0, transition: 'opacity 0.3s ease-in' }}>
       {/* Styly přesunuty do index.css pro lepší výkon */}
       <div 
         className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing"
