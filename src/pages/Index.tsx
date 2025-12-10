@@ -9,7 +9,7 @@ import Footer from '@/components/Footer';
 import { getProductsByCollection } from '@/lib/shopify';
 import { createCollectionPath } from '@/lib/slugify';
 import { toast } from '@/hooks/use-toast';
-import { staggerContainer, fadeInUp } from '@/utils/animations';
+import { fadeInUp } from '@/utils/animations';
 
 // Import product images for fallback
 import necklaceImage from '@/assets/necklace-placeholder.jpg';
