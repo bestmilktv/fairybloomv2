@@ -19,17 +19,17 @@ export const staggerContainer = (stagger = 0.1, delay = 0) => ({
   }
 });
 
-// Item appearing from bottom with blur
+// Item appearing from bottom - Optimized for performance (no blur)
 export const fadeInUp = {
   hidden: { 
     opacity: 0, 
     y: 30, 
-    filter: 'blur(10px)' 
+    // filter: 'blur(10px)' // Removed for better performance on mobile
   },
   visible: { 
     opacity: 1, 
     y: 0, 
-    filter: 'blur(0px)',
+    // filter: 'blur(0px)',
     transition: springTransition
   }
 };
@@ -43,17 +43,17 @@ export const fadeIn = {
   }
 };
 
-// Scale up (good for images/cards)
+// Scale up (good for images/cards) - Optimized for performance
 export const scaleUp = {
   hidden: { 
     opacity: 0, 
     scale: 0.95,
-    filter: 'blur(5px)'
+    // filter: 'blur(5px)' // Removed for better performance
   },
   visible: { 
     opacity: 1, 
     scale: 1,
-    filter: 'blur(0px)',
+    // filter: 'blur(0px)',
     transition: springTransition
   }
 };
