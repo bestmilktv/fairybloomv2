@@ -34,7 +34,8 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
           variants={fadeInUp}
           // OPTIMALIZACE: Odstraněn transition-all duration-300, který kolidoval s Framer Motion
           // Ponechán jen hover efekt na z-index a padding
-          className="w-full max-w-[280px] relative z-0 hover:z-40 p-3 overflow-visible"
+          // hover:z-40 odstraněno pro zamezení layout thrashingu
+          className="w-full max-w-[280px] relative z-0 p-3 overflow-visible"
         >
           <Link 
             to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 

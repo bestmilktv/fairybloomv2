@@ -33,21 +33,27 @@ export const staggerContainer = (stagger = 0.1, delay = 0) => ({
 export const fadeInUp = {
   hidden: { 
     opacity: 0, 
-    y: 20, // Zmenšeno z 30 na 20 pro jemnější efekt
+    y: 20, 
+    willChange: "transform, opacity" // GPU akcelerace
   },
   visible: { 
     opacity: 1, 
     y: 0, 
-    transition: premiumTransition
+    transition: premiumTransition,
+    willChange: "auto" // Uvolnit paměť po dokončení
   }
 };
 
 // Jednoduchý fade in
 export const fadeIn = {
-  hidden: { opacity: 0 },
+  hidden: { 
+    opacity: 0,
+    willChange: "opacity"
+  },
   visible: { 
     opacity: 1,
-    transition: { duration: 0.8, ease: "easeOut" }
+    transition: { duration: 0.8, ease: "easeOut" },
+    willChange: "auto"
   }
 };
 
@@ -55,11 +61,13 @@ export const fadeIn = {
 export const scaleUp = {
   hidden: { 
     opacity: 0, 
-    scale: 0.98, // Jemnější scale (bylo 0.95)
+    scale: 0.98,
+    willChange: "transform, opacity"
   },
   visible: { 
     opacity: 1, 
     scale: 1,
-    transition: premiumTransition
+    transition: premiumTransition,
+    willChange: "auto"
   }
 };
