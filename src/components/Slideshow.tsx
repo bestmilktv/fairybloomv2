@@ -1,10 +1,11 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { getProductsByCollection, getProductByHandle } from '@/lib/shopify';
 import { slideshowConfig } from '@/config/slideshow';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { staggerContainer, scaleUp } from '@/utils/animations';
 
 interface Slide {
   id: string;
@@ -21,7 +22,6 @@ const AUTO_ADVANCE_DELAY = 5000;
 const Slideshow = () => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(1);
-  const [slideshowRef, slideshowVisible] = useScrollAnimation();
   const [slides, setSlides] = useState<Slide[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
@@ -388,12 +388,15 @@ const Slideshow = () => {
 
   if (isLoading) {
     return (
-      <section 
-        ref={slideshowRef}
-        className={`py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30 scroll-fade-in ${slideshowVisible ? 'visible' : ''}`}
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-10%" }}
+        variants={staggerContainer(0.2)}
+        className="py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30"
       >
         <div className="max-w-7xl mx-auto">
-          <div className="relative overflow-hidden rounded-3xl bg-card shadow-2xl">
+          <motion.div variants={scaleUp} className="relative overflow-hidden rounded-3xl bg-card shadow-2xl">
             <div className="h-96 md:h-[500px] flex items-center justify-center">
               <div className="animate-pulse">
                 <div className="h-12 bg-muted rounded-lg mb-4 max-w-md mx-auto"></div>
@@ -401,19 +404,22 @@ const Slideshow = () => {
                 <div className="h-10 bg-muted rounded-lg max-w-32 mx-auto"></div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
     );
   }
 
   return (
-    <section 
-      ref={slideshowRef}
-      className={`py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30 scroll-fade-in ${slideshowVisible ? 'visible' : ''}`}
+    <motion.section 
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-10%" }}
+      variants={staggerContainer(0.2)}
+      className="py-20 px-6 bg-gradient-to-br from-secondary/50 to-accent/30"
     >
       <div className="max-w-7xl mx-auto">
-        <div className="relative overflow-hidden rounded-3xl bg-card shadow-2xl">
+        <motion.div variants={scaleUp} className="relative overflow-hidden rounded-3xl bg-card shadow-2xl">
           {/* Slides */}
           <div 
             className="flex transition-transform duration-700 ease-in-out"
@@ -489,9 +495,9 @@ const Slideshow = () => {
               />
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
-    </section>
+    </motion.section>
   );
 };
 

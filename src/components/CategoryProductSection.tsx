@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
+import { staggerContainer, fadeInUp } from '@/utils/animations';
 
 interface Product {
   id: string;
@@ -18,26 +20,19 @@ interface CategoryProductSectionProps {
 }
 
 const CategoryProductSection = ({ category, initialProducts }: CategoryProductSectionProps) => {
-  // OPTIMALIZACE: Odstraněn zbytečný state a useEffect - používáme initialProducts přímo
   return (
-    // GRID: 
-    // gap-1 (4px) horizontálně.
-    // gap-y-8 (32px) vertikálně - zvětšená mezera mezi řadami.
-    // p-4: Ochranná zóna.
-    // pb-20: Místo dole.
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 gap-y-6 w-full justify-items-center p-4 pb-20 overflow-visible">
+    <motion.div 
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-10%" }}
+      variants={staggerContainer(0.1)}
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 gap-y-6 w-full justify-items-center p-4 pb-20 overflow-visible"
+    >
       {initialProducts.map((product, index) => (
-        <div 
+        <motion.div 
           key={product.id} 
-          // WRAPPER:
-          // max-w-[280px]: Zvětšené produkty (bylo 240px).
-          // relative z-0 hover:z-40: Zmenšený z-index, aby produkty nepřekrývaly navbar (z-50).
-          // p-3: Padding pro shadow a hover animaci (translate-y-2 = 8px nahoru)
-          // overflow-visible: Aby shadow a zvětšený obrázek nebyly oříznuté
-          className="fade-in-up w-full max-w-[280px] relative z-0 hover:z-40 transition-all duration-300 ease-out p-3 overflow-visible"
-          style={{ 
-            animationDelay: `${0.4 + index * 0.1}s`
-          }}
+          variants={fadeInUp}
+          className="w-full max-w-[280px] relative z-0 hover:z-40 transition-all duration-300 ease-out p-3 overflow-visible"
         >
           <Link 
             to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 
@@ -51,13 +46,12 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
               description={product.description}
               inventoryQuantity={product.inventoryQuantity}
               variantId={product.variantId}
-              // Prvních 6 produktů načteme prioritně pro rychlost (LCP), zbytek lazy
               priority={index < 6}
             />
           </Link>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 };
 
