@@ -411,7 +411,7 @@ const Index = () => {
 
       {/* Newsletter Signup Section */}
       <section 
-        className="py-20 px-6 bg-gradient-to-br from-background to-primary/5"
+        className="py-20 px-6 bg-background"
       >
         <div className="max-w-2xl mx-auto text-center">
           <motion.div 
