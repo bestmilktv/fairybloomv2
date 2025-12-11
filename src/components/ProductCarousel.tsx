@@ -115,7 +115,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const [layoutMode, setLayoutMode] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   
   // OPTIMALIZACE: Virtualizace - počítáme viditelný rozsah
-  const VISIBLE_BUFFER = 3; // Počet karet mimo viewport, které se renderují
+  const VISIBLE_BUFFER = 6; // Zvýšeno z 3 na 6, aby při velkém kroku (3) a pomalé animaci nedocházelo k mizení karet
 
   // ============================================================================
   // RESPONZIVITA
