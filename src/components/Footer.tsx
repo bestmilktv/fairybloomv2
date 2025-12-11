@@ -17,15 +17,16 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 
 const Footer = () => {
   return (
-    <motion.footer 
-      initial={{ y: 50, opacity: 1 }} // Vyjede zespoda (50px), plná viditelnost
-      whileInView={{ y: 0, opacity: 1 }}
-      viewport={{ once: true, margin: "0px" }} // Spustí se, až když je patička v záběru
-      transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }} // Stejná "premium" křivka
-      className="bg-luxury text-luxury-foreground py-16 px-6 overflow-hidden" // overflow-hidden zabrání scrollbaru
-    >
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+    <div className="overflow-hidden w-full">
+      <motion.footer 
+        initial={{ y: "30%", opacity: 1 }} // Vyjede zespoda (30% své výšky)
+        whileInView={{ y: 0, opacity: 1 }}
+        viewport={{ once: true, margin: "-100px" }} // Spustí se o trochu dříve
+        transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }} // Decentní slide-out
+        className="bg-luxury text-luxury-foreground py-16 px-6"
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <h3 className="text-2xl font-serif font-semibold mb-4 tracking-wide">Fairy Bloom</h3>
@@ -85,8 +86,9 @@ const Footer = () => {
             Vyrobeno s <Heart className="h-4 w-4 mx-1 text-gold" /> v České republice
           </p>
         </div>
-      </div>
-    </motion.footer>
+        </div>
+      </motion.footer>
+    </div>
   );
 };
 export default Footer;
