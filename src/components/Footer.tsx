@@ -1,7 +1,5 @@
 import { Heart, Instagram } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { staggerContainer, fadeInUp } from '@/utils/animations';
 
 // TikTok Icon SVG Component
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -17,17 +15,11 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 
 const Footer = () => {
   return (
-    <motion.footer 
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-10%" }}
-      variants={staggerContainer(0.1)}
-      className="bg-luxury text-luxury-foreground py-16 px-6"
-    >
+    <footer className="bg-luxury text-luxury-foreground py-16 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
-          <motion.div variants={fadeInUp} className="col-span-1 md:col-span-2">
+          <div className="col-span-1 md:col-span-2">
             <h3 className="text-2xl font-serif font-semibold mb-4 tracking-wide">Fairy Bloom</h3>
             <p className="text-luxury-foreground/80 leading-relaxed mb-6 max-w-md">
               Ručně vyráběné šperky z pryskyřice s pravými květinami. 
@@ -53,10 +45,10 @@ const Footer = () => {
                 <TikTokIcon className="h-5 w-5" />
               </a>
             </div>
-          </motion.div>
+          </div>
           
           {/* Quick Links */}
-          <motion.div variants={fadeInUp}>
+          <div>
             <h4 className="font-semibold mb-4 text-gold">Kategorie</h4>
             <ul className="space-y-2">
               <li><Link to="/nahrdelniky" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Náhrdelníky</Link></li>
@@ -64,10 +56,10 @@ const Footer = () => {
               <li><Link to="/prsteny" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Prsteny</Link></li>
               <li><Link to="/naramky" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Náramky</Link></li>
             </ul>
-          </motion.div>
+          </div>
           
           {/* Info */}
-          <motion.div variants={fadeInUp}>
+          <div>
             <h4 className="font-semibold mb-4 text-gold">Informace</h4>
             <ul className="space-y-2">
               <li><Link to="/o-nas" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">O nás</Link></li>
@@ -75,18 +67,18 @@ const Footer = () => {
               <li><Link to="/doprava" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Doprava</Link></li>
               <li><Link to="/kontakt" className="text-luxury-foreground/80 hover:text-gold transition-colors duration-300">Kontakt</Link></li>
             </ul>
-          </motion.div>
+          </div>
         </div>
         
         {/* Bottom */}
-        <motion.div variants={fadeInUp} className="border-t border-luxury-foreground/20 pt-8 flex flex-col md:flex-row items-center justify-between">
+        <div className="border-t border-luxury-foreground/20 pt-8 flex flex-col md:flex-row items-center justify-between">
           <p className="text-luxury-foreground/60 text-sm mb-4 md:mb-0">© 2025 Fairy Bloom. Všechna práva vyhrazena.</p>
           <p className="text-luxury-foreground/60 text-sm flex items-center">
             Vyrobeno s <Heart className="h-4 w-4 mx-1 text-gold" /> v České republice
           </p>
-        </motion.div>
+        </div>
       </div>
-    </motion.footer>
+    </footer>
   );
 };
 export default Footer;

@@ -6,7 +6,7 @@
 export const premiumTransition = {
   type: "tween",
   ease: [0.25, 0.1, 0.25, 1], // Cubic bezier pro "smooth" feel
-  duration: 0.8 // Delší trvání pro pocit elegance
+  duration: 1.2 // Zpomaleno z 0.8 na 1.2 pro "slow luxury" efekt
 };
 
 // Rychlejší varianta pro interaktivní prvky
