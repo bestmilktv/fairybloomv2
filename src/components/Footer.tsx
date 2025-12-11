@@ -18,11 +18,11 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 const Footer = () => {
   return (
     <motion.footer 
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-10%" }}
-      variants={fadeInUp}
-      className="bg-luxury text-luxury-foreground py-16 px-6"
+      initial={{ y: 50, opacity: 1 }} // Vyjede zespoda (50px), plná viditelnost
+      whileInView={{ y: 0, opacity: 1 }}
+      viewport={{ once: true, margin: "0px" }} // Spustí se, až když je patička v záběru
+      transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }} // Stejná "premium" křivka
+      className="bg-luxury text-luxury-foreground py-16 px-6 overflow-hidden" // overflow-hidden zabrání scrollbaru
     >
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
