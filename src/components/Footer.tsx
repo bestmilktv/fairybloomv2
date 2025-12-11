@@ -1,5 +1,7 @@
 import { Heart, Instagram } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { fadeInUp } from '@/utils/animations';
 
 // TikTok Icon SVG Component
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -15,7 +17,13 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 
 const Footer = () => {
   return (
-    <footer className="bg-luxury text-luxury-foreground py-16 px-6">
+    <motion.footer 
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-10%" }}
+      variants={fadeInUp}
+      className="bg-luxury text-luxury-foreground py-16 px-6"
+    >
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
@@ -78,7 +86,7 @@ const Footer = () => {
           </p>
         </div>
       </div>
-    </footer>
+    </motion.footer>
   );
 };
 export default Footer;
