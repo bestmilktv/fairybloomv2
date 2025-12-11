@@ -9,7 +9,7 @@ const JewelryCarePage = () => {
       {/* Hero Section */}
       <div className="pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-8 tracking-wide">
+          <h1 className="text-5xl md:text-6xl font-serif font-bold text-primary mb-8 tracking-wide">
             Péče o šperky
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
@@ -24,7 +24,7 @@ const JewelryCarePage = () => {
           <div className="prose prose-lg max-w-none space-y-12">
             {/* General Care */}
             <section className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Obecná péče
               </h2>
               
@@ -60,7 +60,7 @@ const JewelryCarePage = () => {
 
             {/* Storage */}
             <section className="space-y-6 pt-8 border-t border-primary/20">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Skladování
               </h2>
               
@@ -96,7 +96,7 @@ const JewelryCarePage = () => {
 
             {/* Cleaning */}
             <section className="space-y-6 pt-8 border-t border-primary/20">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Čištění
               </h2>
               
@@ -132,7 +132,7 @@ const JewelryCarePage = () => {
 
             {/* Tips */}
             <section className="space-y-6 pt-8 border-t border-primary/20">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Užitečné tipy
               </h2>
               
@@ -152,4 +152,3 @@ const JewelryCarePage = () => {
 };
 
 export default JewelryCarePage;
-

@@ -9,7 +9,7 @@ const ShippingPage = () => {
       {/* Hero Section */}
       <div className="pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-8 tracking-wide">
+          <h1 className="text-5xl md:text-6xl font-serif font-bold text-primary mb-8 tracking-wide">
             Doprava
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
@@ -24,13 +24,13 @@ const ShippingPage = () => {
           <div className="prose prose-lg max-w-none space-y-12">
             {/* Shipping Options */}
             <section className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Možnosti dopravy
               </h2>
               
               <div className="space-y-6">
                 <div className="border border-primary/20 rounded-2xl p-6 hover:border-primary/40 transition-colors duration-300">
-                  <h3 className="text-2xl font-serif font-semibold text-luxury mb-3">
+                  <h3 className="text-2xl font-serif font-semibold text-primary mb-3">
                     Standardní doprava
                   </h3>
                   <p className="text-lg leading-relaxed text-foreground/90 mb-2">
@@ -42,7 +42,7 @@ const ShippingPage = () => {
                 </div>
                 
                 <div className="border border-primary/20 rounded-2xl p-6 hover:border-primary/40 transition-colors duration-300">
-                  <h3 className="text-2xl font-serif font-semibold text-luxury mb-3">
+                  <h3 className="text-2xl font-serif font-semibold text-primary mb-3">
                     Expresní doprava
                   </h3>
                   <p className="text-lg leading-relaxed text-foreground/90 mb-2">
@@ -54,7 +54,7 @@ const ShippingPage = () => {
                 </div>
                 
                 <div className="border border-primary/20 rounded-2xl p-6 hover:border-primary/40 transition-colors duration-300">
-                  <h3 className="text-2xl font-serif font-semibold text-luxury mb-3">
+                  <h3 className="text-2xl font-serif font-semibold text-primary mb-3">
                     Osobní odběr
                   </h3>
                   <p className="text-lg leading-relaxed text-foreground/90 mb-2">
@@ -69,29 +69,29 @@ const ShippingPage = () => {
 
             {/* Shipping Costs */}
             <section className="space-y-6 pt-8 border-t border-primary/20">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Ceny dopravy
               </h2>
               
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-4 border-b border-primary/10">
                   <span className="text-lg text-foreground/90">Standardní doprava</span>
-                  <span className="text-lg font-semibold text-luxury">Dle tarifu dopravce</span>
+                  <span className="text-lg font-semibold text-primary">Dle tarifu dopravce</span>
                 </div>
                 <div className="flex justify-between items-center py-4 border-b border-primary/10">
                   <span className="text-lg text-foreground/90">Expresní doprava</span>
-                  <span className="text-lg font-semibold text-luxury">Dle tarifu dopravce</span>
+                  <span className="text-lg font-semibold text-primary">Dle tarifu dopravce</span>
                 </div>
                 <div className="flex justify-between items-center py-4 border-b border-primary/10">
                   <span className="text-lg text-foreground/90">Osobní odběr</span>
-                  <span className="text-lg font-semibold text-luxury">Zdarma</span>
+                  <span className="text-lg font-semibold text-primary">Zdarma</span>
                 </div>
               </div>
             </section>
 
             {/* Packaging */}
             <section className="space-y-6 pt-8 border-t border-primary/20">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Balení
               </h2>
               
@@ -110,7 +110,7 @@ const ShippingPage = () => {
 
             {/* International Shipping */}
             <section className="space-y-6 pt-8 border-t border-primary/20">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Mezinárodní doprava
               </h2>
               
@@ -128,4 +128,3 @@ const ShippingPage = () => {
 };
 
 export default ShippingPage;
-

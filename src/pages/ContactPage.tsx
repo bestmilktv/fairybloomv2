@@ -10,7 +10,7 @@ const ContactPage = () => {
       {/* Hero Section */}
       <div className="pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-serif font-bold text-luxury mb-8 tracking-wide">
+          <h1 className="text-5xl md:text-6xl font-serif font-bold text-primary mb-8 tracking-wide">
             Kontakt
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
@@ -31,7 +31,7 @@ const ContactPage = () => {
                   <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
                     <Mail className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="text-2xl font-serif font-semibold text-luxury mb-4">
+                  <h3 className="text-2xl font-serif font-semibold text-primary mb-4">
                     E-mail
                   </h3>
                   <p className="text-lg text-muted-foreground mb-4">
@@ -39,7 +39,7 @@ const ContactPage = () => {
                   </p>
                   <a 
                     href="mailto:info@fairybloom.cz" 
-                    className="text-lg font-medium text-luxury hover:text-gold transition-colors duration-300"
+                    className="text-lg font-medium text-primary hover:text-gold transition-colors duration-300"
                   >
                     info@fairybloom.cz
                   </a>
@@ -53,7 +53,7 @@ const ContactPage = () => {
                   <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
                     <Instagram className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="text-2xl font-serif font-semibold text-luxury mb-4">
+                  <h3 className="text-2xl font-serif font-semibold text-primary mb-4">
                     Sociální sítě
                   </h3>
                   <p className="text-lg text-muted-foreground mb-6">
@@ -62,14 +62,14 @@ const ContactPage = () => {
                   <div className="flex justify-center gap-4">
                     <a 
                       href="#" 
-                      className="text-luxury-foreground/60 hover:text-gold transition-colors duration-300"
+                      className="text-primary/60 hover:text-gold transition-colors duration-300"
                       aria-label="Instagram"
                     >
                       <Instagram className="h-6 w-6" />
                     </a>
                     <a 
                       href="#" 
-                      className="text-luxury-foreground/60 hover:text-gold transition-colors duration-300"
+                      className="text-primary/60 hover:text-gold transition-colors duration-300"
                       aria-label="Facebook"
                     >
                       <Facebook className="h-6 w-6" />
@@ -81,7 +81,7 @@ const ContactPage = () => {
 
             {/* Contact Form Section */}
             <section className="space-y-6 pt-8 border-t border-primary/20">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Napište nám
               </h2>
               
@@ -144,7 +144,7 @@ const ContactPage = () => {
                 
                 <button
                   type="submit"
-                  className="w-full md:w-auto px-8 py-4 bg-luxury text-luxury-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-luxury/25 transition-[transform,box-shadow] duration-300 ease-in-out transform hover:scale-105"
+                  className="w-full md:w-auto px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-primary/25 transition-[transform,box-shadow] duration-300 ease-in-out transform hover:scale-105"
                 >
                   Odeslat zprávu
                 </button>
@@ -153,7 +153,7 @@ const ContactPage = () => {
 
             {/* Additional Info */}
             <section className="space-y-6 pt-8 border-t border-primary/20">
-              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-luxury mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-semibold text-primary mb-6">
                 Další informace
               </h2>
               
@@ -177,4 +177,3 @@ const ContactPage = () => {
 };
 
 export default ContactPage;
-
