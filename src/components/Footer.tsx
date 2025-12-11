@@ -17,7 +17,7 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 
 const Footer = () => {
   return (
-    <div className="overflow-hidden w-full">
+    <div className="overflow-hidden w-full bg-background">
       <motion.footer 
         initial={{ y: "30%", opacity: 1 }} // Vyjede zespoda (30% své výšky)
         whileInView={{ y: 0, opacity: 1 }}
