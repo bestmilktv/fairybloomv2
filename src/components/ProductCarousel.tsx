@@ -49,9 +49,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // KONFIGURACE
   // ============================================================================
   const GAP = 16;
-  const ANIMATION_DURATION = 800;
-  const LOCK_DURATION = 400;
-  const EASING_CURVE = 'cubic-bezier(0.23, 1, 0.32, 1)';
+  const ANIMATION_DURATION = 1500;
+  const LOCK_DURATION = 750;
+  const EASING_CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 
   // BUFFER_SETS = 2 pro všechna zařízení - zajišťuje funkční infinite loop
   // S ProductCardLight (bez context hooks) je 20 karet OK i pro mobily

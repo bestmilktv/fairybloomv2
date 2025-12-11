@@ -422,10 +422,10 @@ const Slideshow = () => {
         <motion.div variants={scaleUp} className="relative overflow-hidden rounded-3xl bg-card shadow-2xl">
           {/* Slides */}
           <div 
-            className="flex transition-transform duration-700 ease-in-out"
+            className="flex transition-transform duration-1000 ease-in-out"
             style={{
               transform: `translateX(calc(-${currentIndex} * 100%))`,
-              transition: isTransitionEnabled ? 'transform 0.7s ease-in-out' : 'none',
+              transition: isTransitionEnabled ? 'transform 1.2s ease-in-out' : 'none',
             }}
             onTransitionEnd={handleTransitionEnd}
           >
