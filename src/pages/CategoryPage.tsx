@@ -101,7 +101,8 @@ const CategoryPage = () => {
                 handle: product.handle,
                 inventoryQuantity: null as number | null,
                 createdAt: product.createdAt || null,
-                variantId: firstVariant?.id
+                variantId: firstVariant?.id,
+                tags: product.tags
               };
             });
 

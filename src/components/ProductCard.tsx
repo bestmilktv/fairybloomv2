@@ -16,10 +16,11 @@ interface ProductCardProps {
   disableAnimations?: boolean;
   variantId?: string;
   priority?: boolean;
+  tags?: string[];
 }
 
 // OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props
-const ProductCard = memo(({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId, priority = false }: ProductCardProps) => {
+const ProductCard = memo(({ id, title, price, image, description, inventoryQuantity, disableAnimations = false, variantId, priority = false, tags }: ProductCardProps) => {
   const location = useLocation();
   const isHomepage = location.pathname === '/';
   const { addToCart } = useCart();
@@ -124,11 +125,18 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
 
   // bg-muted slouží jako placeholder při lazy loading obrázků
   // overflow-hidden: Obrázek se při hoveru zvětší (scale), ale zůstane uvnitř zaoblených rohů (maska)
-  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
+  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl relative";
+
+  const hasTipTag = tags?.some(tag => tag.toLowerCase() === 'tip');
 
   return (
     <div className={cardClasses}>
       <div className={imageWrapperClasses}>
+        {hasTipTag && (
+          <div className="absolute top-2 left-2 z-10 bg-gold text-primary px-3 py-1 text-sm font-semibold rounded shadow-md border border-primary/10">
+            Náš tip
+          </div>
+        )}
         {/* OPTIMALIZACE: width a height atributy pro prevenci CLS (Cumulative Layout Shift) */}
         <img
           src={image}

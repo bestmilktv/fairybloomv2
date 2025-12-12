@@ -91,7 +91,8 @@ const Index = () => {
                 image: optimizedImageUrl,
                 description: product.description || 'Elegantní šperk z naší kolekce',
                 handle: product.handle,
-                variantId: firstVariant?.id
+                variantId: firstVariant?.id,
+                tags: product.tags
               };
             });
 

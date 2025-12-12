@@ -12,6 +12,7 @@ interface Product {
   handle: string;
   inventoryQuantity?: number | null;
   variantId?: string;
+  tags?: string[];
 }
 
 interface ProductCarouselProps {
@@ -37,6 +38,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 price={product.price}
                 image={product.image}
                 description={product.description}
+                tags={product.tags}
               />
             </Link>
           </div>
@@ -559,6 +561,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                                             image={item.product.image}
                                             description={item.product.description}
                                             disableAnimations={true}
+                                            tags={item.product.tags}
                                         />
                                     </Link>
                                 </div>

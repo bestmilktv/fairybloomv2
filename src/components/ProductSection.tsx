@@ -13,6 +13,7 @@ interface Product {
   description: string;
   inventoryQuantity?: number | null;
   variantId?: string;
+  tags?: string[];
 }
 
 interface ProductSectionProps {
