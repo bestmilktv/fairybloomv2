@@ -83,7 +83,8 @@ const ProductDetailPage = () => {
             fullDescription: shopifyProduct.description || 'Elegantní šperk z naší kolekce s ruční výrobou a přírodními materiály.',
             handle: shopifyProduct.handle,
             variants: shopifyProduct.variants?.edges?.map(edge => edge.node) || [],
-            inventoryQuantity: null // Will be updated when inventory is fetched
+            inventoryQuantity: null, // Will be updated when inventory is fetched
+            tags: shopifyProduct.tags
           };
           
           setProduct(transformedProduct);
@@ -324,6 +325,7 @@ const ProductDetailPage = () => {
     'naramky': 'naramky'           // Actual Shopify handle (slugified)
   };
 
+  const hasTipTag = product?.tags?.some((tag: string) => tag.toLowerCase() === 'tip');
 
   return (
     <div className="min-h-screen bg-background">
@@ -364,7 +366,12 @@ const ProductDetailPage = () => {
                   <span className="text-foreground">{product.title}</span>
                 </nav>
               </div>
-              <div className="aspect-square overflow-hidden rounded-2xl bg-muted">
+              <div className="aspect-square overflow-hidden rounded-2xl bg-muted relative">
+                {hasTipTag && (
+                  <div className="absolute top-4 left-4 z-20 bg-gold text-primary px-4 py-1.5 text-base font-semibold rounded-full shadow-md border border-primary/10 pointer-events-none transform-gpu backface-hidden">
+                    Náš tip
+                  </div>
+                )}
                 <img
                   ref={productImageRef}
                   src={product.images[selectedImage]}
