@@ -98,6 +98,8 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     ease-out
     transform-gpu
     backface-hidden
+    will-change-transform
+    antialiased
   `;
   
   const imageClasses = `
