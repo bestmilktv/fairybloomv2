@@ -96,6 +96,8 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     transition-[box-shadow,transform,background-color] 
     duration-500 
     ease-out
+    transform-gpu
+    backface-hidden
   `;
   
   const imageClasses = `
@@ -132,7 +134,7 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
   return (
     <div className={cardClasses}>
       {hasTipTag && (
-        <div className="absolute top-2 left-2 z-10 bg-gold text-primary px-3 py-1 text-sm font-semibold rounded-full shadow-md border border-primary/10">
+        <div className="absolute top-2 left-2 z-10 bg-gold text-primary px-3 py-1 text-sm font-semibold rounded-full shadow-md border border-primary/10 pointer-events-none transform-gpu backface-hidden">
           Náš tip
         </div>
       )}
