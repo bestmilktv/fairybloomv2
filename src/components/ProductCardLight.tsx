@@ -67,18 +67,18 @@ const ProductCardLight = memo(({ title, price, image, description, disableAnimat
     group-hover:text-accent
   `;
 
-  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl relative";
+  const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
 
   const hasTipTag = tags?.some(tag => tag.toLowerCase() === 'tip');
 
   return (
     <div className={cardClasses}>
+      {hasTipTag && (
+        <div className="absolute top-2 left-2 z-10 bg-gold text-primary px-3 py-1 text-sm font-semibold rounded-full shadow-md border border-primary/10">
+          Náš tip
+        </div>
+      )}
       <div className={imageWrapperClasses}>
-        {hasTipTag && (
-          <div className="absolute top-2 left-2 z-10 bg-gold text-primary px-3 py-1 text-sm font-semibold rounded shadow-md border border-primary/10">
-            Náš tip
-          </div>
-        )}
         <img
           src={image}
           alt={title}
