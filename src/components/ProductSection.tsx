@@ -29,7 +29,7 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
   return (
     <section 
       id={id} 
-      className="pt-[60px] pb-5 px-6 overflow-hidden" 
+      className="pt-[60px] pb-5 md:px-6 overflow-hidden" 
     >
       <div className="max-w-7xl mx-auto">
         {/* Section Header - Animuje se samostatně, až když je vidět */}
@@ -38,7 +38,7 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
           whileInView="visible"
           viewport={{ once: true, margin: "-20%" }}
           variants={fadeInUp}
-          className="text-center mb-6"
+          className="text-center mb-6 px-6 md:px-0"
         >
           <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-4 tracking-wide">
             {title}
@@ -64,7 +64,7 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
           whileInView="visible"
           viewport={{ once: true, margin: "-5%" }}
           variants={fadeInUp}
-          className="text-center mt-4 pt-2 pb-8 overflow-visible"
+          className="text-center mt-4 pt-2 pb-8 overflow-visible px-6 md:px-0"
         >
           <Link 
             to={categoryPath}

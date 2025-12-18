@@ -266,7 +266,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 scale = 1 - (factor * 0.15);
                 opacity = 1 - (factor * 0.5);
             }
-        } else {
+        } else if (layoutMode === 'tablet') {
             const mainZone = totalCardWidth * 0.5;
             if (dist > mainZone) {
                  const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
@@ -274,6 +274,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                  opacity = 1 - (factor * 0.5);
             }
         }
+        // Na mobilech bez škálování a opacity změn pro maximální výkon a "flat" vzhled
 
         // OPTIMALIZACE: Aplikace stylů přímo na kartu bez querySelector
         // Odstraněn querySelector('img') z loopu - eliminuje DOM queries
