@@ -583,11 +583,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       </div>
 
       {/* Controls Container - Arrows around indicators */}
-      <div className="relative mt-8 flex items-center justify-center gap-4">
+      <div className="relative mt-4 flex items-center justify-center gap-4">
         {/* Left Arrow */}
         <button 
           onClick={() => moveSlide(-1)} 
-          className="hidden md:block group bg-card hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-sm transition-all active:scale-95"
+          className="hidden md:block group bg-[#502038]/20 hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-sm transition-all active:scale-95"
           aria-label="Předchozí"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
@@ -610,7 +610,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         {/* Right Arrow */}
         <button 
           onClick={() => moveSlide(1)} 
-          className="hidden md:block group bg-card hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-sm transition-all active:scale-95"
+          className="hidden md:block group bg-[#502038]/20 hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-sm transition-all active:scale-95"
           aria-label="Další"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" /></svg>
