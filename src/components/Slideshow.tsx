@@ -469,14 +469,14 @@ const Slideshow = () => {
           {/* Navigation Arrows */}
           <button
             onClick={prevSlide}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 p-3 rounded-full bg-luxury-foreground/10 backdrop-blur-sm hover:bg-luxury-foreground/20 transition-all duration-300"
+            className="hidden md:block absolute left-4 top-1/2 transform -translate-y-1/2 z-20 p-3 rounded-full bg-luxury-foreground/10 backdrop-blur-sm hover:bg-luxury-foreground/20 transition-all duration-300"
           >
             <ChevronLeft className="h-6 w-6 text-luxury-foreground" />
           </button>
           
           <button
             onClick={nextSlide}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 p-3 rounded-full bg-luxury-foreground/10 backdrop-blur-sm hover:bg-luxury-foreground/20 transition-all duration-300"
+            className="hidden md:block absolute right-4 top-1/2 transform -translate-y-1/2 z-20 p-3 rounded-full bg-luxury-foreground/10 backdrop-blur-sm hover:bg-luxury-foreground/20 transition-all duration-300"
           >
             <ChevronRight className="h-6 w-6 text-luxury-foreground" />
           </button>
