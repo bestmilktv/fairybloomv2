@@ -37,9 +37,9 @@ const ProductCardLight = memo(({ title, price, image, description, disableAnimat
     relative 
     group 
     shadow-sm 
-    hover:shadow-lg 
-    hover:-translate-y-2 
-    transition-[box-shadow,transform,background-color] 
+    md:hover:shadow-lg 
+    md:hover:-translate-y-2 
+    transition-[box-shadow,transform,background-color]  
     duration-500 
     ease-out
     transform-gpu
@@ -55,7 +55,7 @@ const ProductCardLight = memo(({ title, price, image, description, disableAnimat
     transition-transform 
     duration-700 
     ease-in-out 
-    group-hover:scale-110
+    md:group-hover:scale-110
   `;
   
   const titleClasses = `
@@ -68,7 +68,7 @@ const ProductCardLight = memo(({ title, price, image, description, disableAnimat
     min-h-[3.5rem] 
     transition-colors 
     duration-300 
-    group-hover:text-accent
+    md:group-hover:text-accent
   `;
 
   const imageWrapperClasses = "aspect-square overflow-hidden bg-muted rounded-t-2xl";
