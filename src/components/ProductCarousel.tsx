@@ -602,14 +602,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         <div className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 gap-3 z-20">
           <button 
             onClick={() => moveSlide(-1)} 
-            className="group bg-white hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-md border border-[#502038]/10 transition-all active:scale-95"
+            className="group bg-card hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-sm transition-all active:scale-95"
             aria-label="Předchozí"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <button 
             onClick={() => moveSlide(1)} 
-            className="group bg-white hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-md border border-[#502038]/10 transition-all active:scale-95"
+            className="group bg-card hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-sm transition-all active:scale-95"
             aria-label="Další"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" /></svg>
