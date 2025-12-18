@@ -146,7 +146,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           setCardWidth((width - (2 * GAP)) / 3);
         } else {
           setLayoutMode('mobile');
-          setCardWidth(width * 0.85);
+          setCardWidth(width * 0.72);
         }
         
         setIsInitialized(true);
