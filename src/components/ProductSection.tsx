@@ -64,7 +64,7 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
           whileInView="visible"
           viewport={{ once: true, margin: "-5%" }}
           variants={fadeInUp}
-          className="text-center mt-6 pt-2 pb-8 overflow-visible"
+          className="text-center mt-4 pt-2 pb-8 overflow-visible"
         >
           <Link 
             to={categoryPath}
