@@ -582,26 +582,39 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         </div>
       </div>
 
-      {/* Navigace */}
-      <button onClick={() => moveSlide(-1)} className="hidden md:block absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-      </button>
-      <button onClick={() => moveSlide(1)} className="hidden md:block absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-all">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-      </button>
+      {/* Controls Container */}
+      <div className="relative mt-4 h-12 flex items-center justify-center">
+        {/* Indikátor pozice (Infografika) */}
+        <div className="flex justify-center items-center gap-1.5 z-20">
+          {products.map((_, index) => (
+            <div
+              key={index}
+              className={`transition-all duration-500 ease-out ${
+                index === currentProductIndex
+                  ? 'w-6 h-1 bg-[#502038] rounded-full'
+                  : 'w-1.5 h-1.5 bg-[#502038]/20 rounded-full'
+              }`}
+            />
+          ))}
+        </div>
 
-      {/* Indikátor pozice (Infografika) */}
-      <div className="flex justify-center items-center gap-1.5 mt-4 relative z-20">
-        {products.map((_, index) => (
-          <div
-            key={index}
-            className={`transition-all duration-500 ease-out ${
-              index === currentProductIndex
-                ? 'w-6 h-1 bg-[#502038] rounded-full'
-                : 'w-1.5 h-1.5 bg-[#502038]/20 rounded-full'
-            }`}
-          />
-        ))}
+        {/* Navigace vpravo dole */}
+        <div className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 gap-3 z-20">
+          <button 
+            onClick={() => moveSlide(-1)} 
+            className="group bg-white hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-md border border-[#502038]/10 transition-all active:scale-95"
+            aria-label="Předchozí"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <button 
+            onClick={() => moveSlide(1)} 
+            className="group bg-white hover:bg-[#502038] text-[#502038] hover:text-white p-2.5 rounded-full shadow-md border border-[#502038]/10 transition-all active:scale-95"
+            aria-label="Další"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
       </div>
     </div>
   );

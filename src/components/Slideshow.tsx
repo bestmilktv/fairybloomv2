@@ -466,34 +466,40 @@ const Slideshow = () => {
             ))}
           </div>
           
-          {/* Navigation Arrows */}
-          <button
-            onClick={prevSlide}
-            className="hidden md:block absolute left-4 top-1/2 transform -translate-y-1/2 z-20 p-3 rounded-full bg-luxury-foreground/10 backdrop-blur-sm hover:bg-luxury-foreground/20 transition-all duration-300"
-          >
-            <ChevronLeft className="h-6 w-6 text-luxury-foreground" />
-          </button>
-          
-          <button
-            onClick={nextSlide}
-            className="hidden md:block absolute right-4 top-1/2 transform -translate-y-1/2 z-20 p-3 rounded-full bg-luxury-foreground/10 backdrop-blur-sm hover:bg-luxury-foreground/20 transition-all duration-300"
-          >
-            <ChevronRight className="h-6 w-6 text-luxury-foreground" />
-          </button>
-          
-          {/* Indicators */}
-          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => goToSlide(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  index === activeSlideIndex 
-                    ? 'bg-gold scale-125' 
-                    : 'bg-luxury-foreground/30 hover:bg-luxury-foreground/50'
-                }`}
-              />
-            ))}
+          {/* Controls - Indicators Centered, Arrows Right */}
+          <div className="absolute bottom-6 left-0 right-0 px-8 z-20 flex justify-center items-center pointer-events-none">
+            {/* Indicators */}
+            <div className="flex space-x-2 pointer-events-auto">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === activeSlideIndex 
+                      ? 'bg-gold scale-125' 
+                      : 'bg-luxury-foreground/30 hover:bg-luxury-foreground/50'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Arrows - Right aligned */}
+            <div className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 gap-3 pointer-events-auto">
+               <button 
+                  onClick={prevSlide} 
+                  className="p-3 rounded-full bg-luxury-foreground/10 backdrop-blur-sm hover:bg-luxury-foreground/20 transition-all duration-300 text-luxury-foreground"
+                  aria-label="Předchozí slide"
+               >
+                  <ChevronLeft className="h-6 w-6" />
+               </button>
+               <button 
+                  onClick={nextSlide} 
+                  className="p-3 rounded-full bg-luxury-foreground/10 backdrop-blur-sm hover:bg-luxury-foreground/20 transition-all duration-300 text-luxury-foreground"
+                  aria-label="Další slide"
+               >
+                  <ChevronRight className="h-6 w-6" />
+               </button>
+            </div>
           </div>
         </motion.div>
       </div>
