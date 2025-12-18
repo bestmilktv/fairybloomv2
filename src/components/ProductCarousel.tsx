@@ -146,7 +146,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           setCardWidth((width - (2 * GAP)) / 3);
         } else {
           setLayoutMode('mobile');
-          setCardWidth(width - 32);
+          setCardWidth(width * 0.85);
         }
         
         setIsInitialized(true);
@@ -170,9 +170,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const getPositionForIndex = useCallback((index: number) => {
     if (cardWidth === 0) return 0;
     const totalCardWidth = cardWidth + GAP;
-    const centerOffset = (viewportWidth - cardWidth) / 2;
+    const centerOffset = layoutMode === 'mobile' ? GAP : (viewportWidth - cardWidth) / 2;
     return -(index * totalCardWidth) + centerOffset;
-  }, [cardWidth, viewportWidth]);
+  }, [cardWidth, viewportWidth, layoutMode]);
 
   // ============================================================================
   // TRACKING INDICATOR (INFOGRAFIKA)
