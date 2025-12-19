@@ -51,8 +51,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // KONFIGURACE
   // ============================================================================
   const GAP = 16;
-  const ANIMATION_DURATION = 1500;
-  const LOCK_DURATION = 750;
+  const ANIMATION_DURATION = 600;
+  const LOCK_DURATION = 600;
   const EASING_CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 
   // BUFFER_SETS = 2 pro všechna zařízení - zajišťuje funkční infinite loop
@@ -248,11 +248,25 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const startIndex = Math.max(0, targetIndex - visibleCount);
     const endIndex = Math.min(allSlides.length - 1, targetIndex + visibleCount);
 
+    // Optimalizace pro mobile: pokud jsme na mobile, nepočítáme scale/opacity efekty
+    const isMobile = layoutMode === 'mobile';
+
     for (let i = startIndex; i <= endIndex; i++) {
         const card = cardRefs.current[i];
         if (!card) continue;
 
-        const cardTrackPos = finalPos + (i * totalCardWidth); 
+        // Na mobilech jen nastavíme šířku (pokud se změnila) a přeskočíme efekty
+        if (isMobile) {
+             // Ujistíme se, že karta má správnou šířku a žádné transformace z desktopu
+             if (card.style.transform !== 'translateZ(0px)') {
+                 card.style.transform = 'translateZ(0px)';
+                 card.style.opacity = '1';
+                 card.style.width = `${cardWidth}px`;
+             }
+             continue;
+        }
+
+        const cardTrackPos = finalPos + (i * totalCardWidth);  
         const cardCenter = cardTrackPos + (cardWidth / 2);
         const dist = Math.abs(viewportCenter - cardCenter);
 
@@ -411,7 +425,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           
           dragOffsetRef.current = diffX;
           if (Math.abs(diffX) > 5) isClickBlockedRef.current = true;
-          updateVisuals(true);
+          
+          // OPTIMALIZACE: Použití requestAnimationFrame místo přímého volání
+          if (rafRef.current === null) {
+              rafRef.current = requestAnimationFrame(() => {
+                  updateVisualsInternal(true);
+                  rafRef.current = null;
+              });
+          }
       }
   };
 
