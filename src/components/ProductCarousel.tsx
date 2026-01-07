@@ -111,6 +111,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const pendingUpdateRef = useRef(false);
   const resizeRafRef = useRef<number | null>(null);
   const prefetchImagesRef = useRef<HTMLImageElement[]>([]);
+  
+  // Trackpad support refs
+  const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isWheelingRef = useRef(false);
 
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
@@ -353,7 +357,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // POINTER EVENTS LOGIC
   // ============================================================================
   
-  const checkBoundsAndTeleport = () => {
+  const checkBoundsAndTeleport = useCallback(() => {
       const current = currentIndexRef.current;
       if (current < SAFE_ZONE_START || current > SAFE_ZONE_END) {
           const slideData = allSlides[current];
@@ -369,11 +373,18 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           }
           updateVisuals(true, targetIndex);
       }
-  };
+  }, [allSlides, SAFE_ZONE_START, SAFE_ZONE_END, START_INDEX, getPositionForIndex, updateVisuals]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
       if (e.button !== 0 || activePointerId.current !== null) return;
       activePointerId.current = e.pointerId;
+
+      // Stop any active wheeling session
+      if (wheelTimeoutRef.current) {
+          clearTimeout(wheelTimeoutRef.current);
+          wheelTimeoutRef.current = null;
+      }
+      isWheelingRef.current = false;
 
       if (isResettingRef.current) return;
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
@@ -454,7 +465,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (!isClickBlockedRef.current) setIsDragging(false);
   };
 
-  const stopDrag = () => {
+  const stopDrag = useCallback(() => {
     const currentOffset = dragOffsetRef.current;
     const totalCardWidth = cardWidth + GAP;
     const movedCards = -currentOffset / totalCardWidth;
@@ -481,7 +492,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         setIsTransitioning(false);
         setIsDragging(false);
     }, LOCK_DURATION);
-  };
+  }, [cardWidth, GAP, updateVisuals, LOCK_DURATION]);
 
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDraggingRef.current) return;
@@ -504,6 +515,68 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           }, LOCK_DURATION);
       });
   };
+
+  // ============================================================================
+  // TOUCHPAD SCROLL SUPPORT
+  // ============================================================================
+  useEffect(() => {
+    const element = wrapperRef.current;
+    if (!element) return;
+
+    const handleWheel = (e: WheelEvent) => {
+        // Only handle primarily horizontal scrolls
+        // We check if horizontal scroll is dominant to avoid blocking vertical page scroll
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+            // Prevent browser back/forward navigation
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+
+            // Initialize wheeling session
+            if (!isWheelingRef.current) {
+                isWheelingRef.current = true;
+                isDraggingRef.current = true;
+                setIsDragging(true);
+                
+                checkBoundsAndTeleport();
+                
+                dragOffsetRef.current = 0;
+                isClickBlockedRef.current = true;
+                
+                if (trackRef.current) {
+                    trackRef.current.style.transition = 'none';
+                }
+            }
+
+            // Accumulate movement
+            // deltaX > 0 means scrolling right (content moves left), so we subtract
+            dragOffsetRef.current -= e.deltaX;
+
+            // Visual update via RAF
+            if (rafRef.current === null) {
+                rafRef.current = requestAnimationFrame(() => {
+                    updateVisualsInternal(true);
+                    rafRef.current = null;
+                });
+            }
+
+            // Debounce stop
+            if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current);
+            
+            wheelTimeoutRef.current = setTimeout(() => {
+                isWheelingRef.current = false;
+                stopDrag();
+            }, 60); 
+        }
+    };
+
+    element.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+        element.removeEventListener('wheel', handleWheel);
+        if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current);
+    };
+  }, [updateVisualsInternal, checkBoundsAndTeleport, stopDrag]);
 
   // ============================================================================
   // JSX
