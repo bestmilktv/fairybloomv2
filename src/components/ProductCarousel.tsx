@@ -180,7 +180,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const getPositionForIndex = useCallback((index: number) => {
     if (cardWidth === 0) return 0;
     const totalCardWidth = cardWidth + GAP;
-    const centerOffset = layoutMode === 'mobile' ? GAP : (viewportWidth - cardWidth) / 2;
+    // Na mobilech přidáme malinkatý offset, aby byl vidět kousek předchozího produktu
+    const centerOffset = layoutMode === 'mobile' ? GAP + 10 : (viewportWidth - cardWidth) / 2;
     return -(index * totalCardWidth) + centerOffset;
   }, [cardWidth, viewportWidth, layoutMode]);
 
