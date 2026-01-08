@@ -1,6 +1,8 @@
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Mail, Instagram } from 'lucide-react';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 // TikTok Icon SVG Component
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -15,6 +17,78 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 );
 
 const ContactPage = () => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.name || !formData.email || !formData.message) {
+      toast({
+        title: 'Chyba',
+        description: 'Prosím vyplňte všechna povinná pole (jméno, email a zpráva).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Nepodařilo se odeslat zprávu');
+      }
+
+      // Success
+      toast({
+        title: 'Zpráva odeslána',
+        description: 'Děkujeme za vaši zprávu. Odpovíme vám co nejdříve.',
+      });
+
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: ''
+      });
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      toast({
+        title: 'Chyba',
+        description: error instanceof Error ? error.message : 'Nepodařilo se odeslat zprávu. Zkuste to prosím znovu.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -101,29 +175,34 @@ const ContactPage = () => {
                 Napište nám
               </h2>
               
-              <form className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-foreground/80 mb-2">
-                      Jméno a příjmení
+                      Jméno a příjmení *
                     </label>
                     <input
                       type="text"
                       id="name"
                       name="name"
+                      value={formData.name}
+                      onChange={handleChange}
                       className="w-full px-4 py-3 rounded-lg border border-border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
                       placeholder="Vaše jméno"
+                      required
                     />
                   </div>
                   
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-foreground/80 mb-2">
-                      E-mail
+                      E-mail *
                     </label>
                     <input
                       type="email"
                       id="email"
                       name="email"
+                      value={formData.email}
+                      onChange={handleChange}
                       className="w-full px-4 py-3 rounded-lg border border-border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
                       placeholder="vas@email.cz"
                       required
@@ -139,6 +218,8 @@ const ContactPage = () => {
                     type="text"
                     id="subject"
                     name="subject"
+                    value={formData.subject}
+                    onChange={handleChange}
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
                     placeholder="O čem byste chtěli hovořit?"
                   />
@@ -146,12 +227,14 @@ const ContactPage = () => {
                 
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium text-foreground/80 mb-2">
-                    Zpráva
+                    Zpráva *
                   </label>
                   <textarea
                     id="message"
                     name="message"
                     rows={6}
+                    value={formData.message}
+                    onChange={handleChange}
                     className="w-full px-4 py-3 rounded-lg border border-border bg-background/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300 resize-none"
                     placeholder="Vaše zpráva..."
                     required
@@ -160,9 +243,10 @@ const ContactPage = () => {
                 
                 <button
                   type="submit"
-                  className="w-full md:w-auto px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-primary/25 transition-[transform,box-shadow] duration-300 ease-in-out transform hover:scale-105"
+                  disabled={isSubmitting}
+                  className="w-full md:w-auto px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium tracking-wide hover:shadow-lg hover:shadow-primary/25 transition-[transform,box-shadow] duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  Odeslat zprávu
+                  {isSubmitting ? 'Odesílám...' : 'Odeslat zprávu'}
                 </button>
               </form>
             </section>

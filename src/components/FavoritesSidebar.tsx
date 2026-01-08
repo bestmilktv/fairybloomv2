@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useFavorites } from '@/contexts/FavoritesContext'
 import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getProductById } from '@/lib/shopify'
 
 interface FavoritesSidebarProps {
@@ -25,6 +25,7 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
   const { favorites, removeFromFavorites, isLoading: favoritesLoading } = useFavorites()
   const { addToCart, removeFromCart, items } = useCart()
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [favoriteProducts, setFavoriteProducts] = useState<FavoriteProduct[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
@@ -95,6 +96,18 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
         variant: "destructive",
       })
     }
+  }
+
+  const handleViewProducts = () => {
+    onClose()
+    navigate('/')
+    // Scroll to náhrdelníky section after navigation
+    setTimeout(() => {
+      const element = document.getElementById('náhrdelníky')
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
   }
 
   const handleToggleCart = async (product: FavoriteProduct, event: React.MouseEvent) => {
@@ -212,7 +225,7 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
                 <Heart className="h-16 w-16 text-muted-foreground mx-auto mb-6 opacity-60" />
                 <h3 className="text-lg font-medium text-foreground mb-2">Ještě jste si neoblíbili žádný produkt</h3>
                 <p className="text-muted-foreground mb-6">Oblíbené produkty si můžete uložit pro pozdější nákup</p>
-                <Button onClick={onClose} variant="outline" className="hover:bg-gold/10 hover:border-gold">
+                <Button onClick={handleViewProducts} variant="outline" className="hover:bg-gold/10 hover:border-gold">
                   Prohlédnout produkty
                 </Button>
               </div>
