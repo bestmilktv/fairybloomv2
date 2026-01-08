@@ -176,30 +176,16 @@ const Navigation = memo(() => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group overflow-visible"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group flex items-center justify-center"
               style={{ 
-                transformOrigin: 'center center',
-                backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden'
+                transformOrigin: 'center center'
               }}
               onClick={openFavorites}
               aria-label={`Oblíbené${getFavoriteCount() > 0 ? ` (${getFavoriteCount()})` : ''}`}
             >
-              <div className="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style={{ transformOrigin: 'center center' }}>
-                <Heart className="h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300 group-hover:fill-primary/20" style={{ transform: 'translateZ(0)' }} />
-              </div>
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110 group-hover:fill-primary/20" style={{ transform: 'translateZ(0)', transformOrigin: 'center center' }} />
               {getFavoriteCount() > 0 && (
-                <span 
-                  className="absolute bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-shadow duration-300 group-hover:shadow-md pointer-events-none" 
-                  style={{ 
-                    top: '-2px',
-                    right: '-2px',
-                    transform: 'translateZ(0)',
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden'
-                  }} 
-                  aria-hidden="true"
-                >
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" style={{ transform: 'translateZ(0)', transformOrigin: 'center center' }} aria-hidden="true">
                   {getFavoriteCount()}
                 </span>
               )}
@@ -207,31 +193,17 @@ const Navigation = memo(() => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group overflow-visible"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group flex items-center justify-center"
               style={{ 
-                transformOrigin: 'center center',
-                backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden'
+                transformOrigin: 'center center'
               }}
               onClick={openMiniCart}
               data-cart-icon
               aria-label={`Košík${getTotalItems() > 0 ? ` (${getTotalItems()})` : ''}`}
             >
-              <div className="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style={{ transformOrigin: 'center center' }}>
-                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300" style={{ transform: 'translateZ(0)' }} />
-              </div>
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" style={{ transform: 'translateZ(0)', transformOrigin: 'center center' }} />
               {getTotalItems() > 0 && (
-                <span 
-                  className="absolute bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-shadow duration-300 group-hover:shadow-md pointer-events-none" 
-                  style={{ 
-                    top: '-2px',
-                    right: '-2px',
-                    transform: 'translateZ(0)',
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden'
-                  }} 
-                  aria-hidden="true"
-                >
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" style={{ transform: 'translateZ(0)', transformOrigin: 'center center' }} aria-hidden="true">
                   {getTotalItems()}
                 </span>
               )}
