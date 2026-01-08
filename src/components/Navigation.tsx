@@ -176,24 +176,27 @@ const Navigation = memo(() => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group overflow-visible"
               style={{ 
-                contain: 'layout style paint', 
                 transformOrigin: 'center center',
-                transform: 'translateZ(0)',
-                willChange: 'transform'
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden'
               }}
               onClick={openFavorites}
               aria-label={`Oblíbené${getFavoriteCount() > 0 ? ` (${getFavoriteCount()})` : ''}`}
             >
-              <Heart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110 group-hover:fill-primary/20" />
+              <div className="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style={{ transformOrigin: 'center center' }}>
+                <Heart className="h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300 group-hover:fill-primary/20" style={{ transform: 'translateZ(0)' }} />
+              </div>
               {getFavoriteCount() > 0 && (
                 <span 
-                  className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" 
+                  className="absolute bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-shadow duration-300 group-hover:shadow-md pointer-events-none" 
                   style={{ 
+                    top: '-2px',
+                    right: '-2px',
                     transform: 'translateZ(0)',
-                    transformOrigin: 'center center',
-                    willChange: 'transform'
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden'
                   }} 
                   aria-hidden="true"
                 >
@@ -204,25 +207,28 @@ const Navigation = memo(() => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group"
+              className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group overflow-visible"
               style={{ 
-                contain: 'layout style paint', 
                 transformOrigin: 'center center',
-                transform: 'translateZ(0)',
-                willChange: 'transform'
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden'
               }}
               onClick={openMiniCart}
               data-cart-icon
               aria-label={`Košík${getTotalItems() > 0 ? ` (${getTotalItems()})` : ''}`}
             >
-              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
+              <div className="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style={{ transformOrigin: 'center center' }}>
+                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300" style={{ transform: 'translateZ(0)' }} />
+              </div>
               {getTotalItems() > 0 && (
                 <span 
-                  className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" 
+                  className="absolute bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-shadow duration-300 group-hover:shadow-md pointer-events-none" 
                   style={{ 
+                    top: '-2px',
+                    right: '-2px',
                     transform: 'translateZ(0)',
-                    transformOrigin: 'center center',
-                    willChange: 'transform'
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden'
                   }} 
                   aria-hidden="true"
                 >
