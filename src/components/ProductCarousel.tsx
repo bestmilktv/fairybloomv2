@@ -256,7 +256,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     
     trackRef.current.style.transition = (isDraggingRef.current || instant) 
         ? 'none' 
-        : `transform ${duration}ms cubic-bezier(0.25, 1, 0.5, 1)`; // Apple-like easeOutQuart/Quint hybrid
+        : `transform ${duration}ms cubic-bezier(0.33, 1, 0.68, 1)`; // Apple's easeOutCubic - velmi plynulá
 
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
     const startIndex = Math.max(0, targetIndex - visibleCount);
@@ -505,34 +505,35 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         if (velocity < 0 && indexDiff === 0) indexDiff = 1; // Swipe doleva -> další slide
         if (velocity > 0 && indexDiff === 0) indexDiff = -1; // Swipe doprava -> předchozí slide
     } else {
-        // Standardní threshold pro pomalé tažení
-        const threshold = pointerType === 'touch' ? 0.2 : 0.25;
-        if (Math.abs(movedCards) > threshold && Math.abs(currentOffset) > 50) {
+        // Pro touch: pokud je posun větší než 30% karty, posuneme se
+        // Toto zajistí, že i při malém posunu se animace spustí
+        const threshold = pointerType === 'touch' ? 0.3 : 0.25;
+        if (Math.abs(movedCards) > threshold || Math.abs(currentOffset) > (totalCardWidth * 0.3)) {
             if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
             if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
         }
     }
 
-    // Výpočet dynamické doby trvání animace pro maximální plynulost
-    // Pokud uživatel "hodí" kartou (swipe), animace by měla být svižnější
-    const baseDuration = 500;
-    let duration = baseDuration;
-    
+    // VŽDY použijeme plynulou, delší animaci pro Apple-like feel
+    // Minimální duration je 650ms pro plynulost, maximální 800ms
     const targetIndex = currentIndexRef.current + indexDiff;
     const targetPos = getPositionForIndex(targetIndex);
     const currentPos = getPositionForIndex(currentIndexRef.current) + currentOffset;
     const remainingDistance = Math.abs(targetPos - currentPos);
     
-    // Adjust duration based on distance and velocity
+    // Pro Apple-like plynulost: delší animace, která se přizpůsobí vzdálenosti
+    // Ale vždy minimálně 650ms pro smooth feel
+    let duration = 650; // Základní plynulá délka
+    
     if (remainingDistance > 0) {
-        // Čím menší vzdálenost, tím rychlejší animace, ale ne méně než 250ms
-        const distanceFactor = Math.min(1, remainingDistance / totalCardWidth);
-        duration = Math.max(300, baseDuration * distanceFactor);
-        
-        // Pokud byl swipe rychlý, zkrátíme čas (simulace setrvačnosti)
-        if (isSwipe) {
-            duration = Math.min(duration, 400);
-        }
+        // Čím větší vzdálenost, tím delší animace (ale max 800ms)
+        const distanceFactor = Math.min(1.2, remainingDistance / totalCardWidth);
+        duration = Math.min(800, Math.max(650, 650 * distanceFactor));
+    }
+    
+    // Pro rychlé swipy můžeme trochu zkrátit, ale ne moc
+    if (isSwipe && Math.abs(velocity) > 1.0) {
+        duration = Math.max(550, duration * 0.85);
     }
     
     dynamicDurationRef.current = duration;
@@ -543,8 +544,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setCurrentIndex(newIndex);
     currentIndexRef.current = newIndex;
 
+    // DŮLEŽITÉ: Musíme zajistit, že se animace spustí až po resetu dragOffset
+    // Použijeme dvojitý RAF pro zajištění správného načasování
     requestAnimationFrame(() => {
-        updateVisuals(false); 
+        requestAnimationFrame(() => {
+            updateVisuals(false); 
+        });
     });
 
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
@@ -554,7 +559,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         setIsDragging(false);
         // Reset duration back to default for arrows
         dynamicDurationRef.current = ANIMATION_DURATION;
-    }, duration + 50); // Timeout slightly longer than animation
+    }, duration + 100); // Timeout delší než animace
   }, [cardWidth, GAP, updateVisuals, getPositionForIndex, ANIMATION_DURATION]);
 
   const handleTransitionEnd = () => {
