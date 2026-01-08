@@ -75,6 +75,11 @@ const DynamicProductPage = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [animatingToCart, setAnimatingToCart] = useState(false);
   const productImageRef = useRef<HTMLImageElement>(null);
+  
+  // Touch/swipe handling
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const minSwipeDistance = 50; // Minimální vzdálenost pro swipe
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -369,7 +374,53 @@ const DynamicProductPage = () => {
                 </nav>
               </div>
               {/* Main Image */}
-              <div className="aspect-square bg-muted rounded-2xl overflow-hidden relative group">
+              <div 
+                className="aspect-square bg-muted rounded-2xl overflow-hidden relative group"
+                onTouchStart={(e) => {
+                  if (displayImages.length <= 1) return;
+                  const touch = e.touches[0];
+                  touchStartX.current = touch.clientX;
+                  touchStartY.current = touch.clientY;
+                }}
+                onTouchMove={(e) => {
+                  // Prevent default scrolling while swiping horizontally
+                  if (touchStartX.current !== null && touchStartY.current !== null) {
+                    const touch = e.touches[0];
+                    const diffX = Math.abs(touch.clientX - touchStartX.current);
+                    const diffY = Math.abs(touch.clientY - touchStartY.current);
+                    
+                    // If horizontal movement is dominant, prevent vertical scroll
+                    if (diffX > diffY && diffX > 10) {
+                      e.preventDefault();
+                    }
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (displayImages.length <= 1 || touchStartX.current === null || touchStartY.current === null) {
+                    touchStartX.current = null;
+                    touchStartY.current = null;
+                    return;
+                  }
+                  
+                  const touch = e.changedTouches[0];
+                  const diffX = touch.clientX - touchStartX.current;
+                  const diffY = touch.clientY - touchStartY.current;
+                  
+                  // Check if it's a horizontal swipe (not vertical scroll)
+                  if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
+                    if (diffX > 0) {
+                      // Swipe right - previous image
+                      setSelectedImage((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1));
+                    } else {
+                      // Swipe left - next image
+                      setSelectedImage((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
+                    }
+                  }
+                  
+                  touchStartX.current = null;
+                  touchStartY.current = null;
+                }}
+              >
                 <img
                   ref={productImageRef}
                   src={displayImages[selectedImage]?.url || fallbackImage}

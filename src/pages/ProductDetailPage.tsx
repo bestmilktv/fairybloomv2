@@ -34,6 +34,11 @@ const ProductDetailPage = () => {
   const [inventoryError, setInventoryError] = useState(false);
   const [primaryCollection, setPrimaryCollection] = useState<{handle: string, title: string} | null>(null);
   const productImageRef = useRef<HTMLImageElement>(null);
+  
+  // Touch/swipe handling
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const minSwipeDistance = 50; // Minimální vzdálenost pro swipe
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -366,7 +371,53 @@ const ProductDetailPage = () => {
                   <span className="text-foreground">{product.title}</span>
                 </nav>
               </div>
-              <div className="aspect-square overflow-hidden rounded-2xl bg-muted relative group">
+              <div 
+                className="aspect-square overflow-hidden rounded-2xl bg-muted relative group"
+                onTouchStart={(e) => {
+                  if (product.images.length <= 1) return;
+                  const touch = e.touches[0];
+                  touchStartX.current = touch.clientX;
+                  touchStartY.current = touch.clientY;
+                }}
+                onTouchMove={(e) => {
+                  // Prevent default scrolling while swiping horizontally
+                  if (touchStartX.current !== null && touchStartY.current !== null) {
+                    const touch = e.touches[0];
+                    const diffX = Math.abs(touch.clientX - touchStartX.current);
+                    const diffY = Math.abs(touch.clientY - touchStartY.current);
+                    
+                    // If horizontal movement is dominant, prevent vertical scroll
+                    if (diffX > diffY && diffX > 10) {
+                      e.preventDefault();
+                    }
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (product.images.length <= 1 || touchStartX.current === null || touchStartY.current === null) {
+                    touchStartX.current = null;
+                    touchStartY.current = null;
+                    return;
+                  }
+                  
+                  const touch = e.changedTouches[0];
+                  const diffX = touch.clientX - touchStartX.current;
+                  const diffY = touch.clientY - touchStartY.current;
+                  
+                  // Check if it's a horizontal swipe (not vertical scroll)
+                  if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
+                    if (diffX > 0) {
+                      // Swipe right - previous image
+                      setSelectedImage((prev) => (prev === 0 ? product.images.length - 1 : prev - 1));
+                    } else {
+                      // Swipe left - next image
+                      setSelectedImage((prev) => (prev === product.images.length - 1 ? 0 : prev + 1));
+                    }
+                  }
+                  
+                  touchStartX.current = null;
+                  touchStartY.current = null;
+                }}
+              >
                 {hasTipTag && (
                   <div className="absolute top-4 left-4 z-20 bg-gold text-primary px-4 py-1.5 text-base font-semibold rounded-full shadow-md border border-primary/10 pointer-events-none transform-gpu backface-hidden">
                     Náš tip
