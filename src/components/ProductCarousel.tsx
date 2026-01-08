@@ -97,8 +97,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const currentIndexRef = useRef(START_INDEX);
   const isClickBlockedRef = useRef(false);
   
-  const activePointerId = useRef<number | null>(null);
+  // Velocity tracking
+  const lastDragX = useRef(0);
+  const lastDragTime = useRef(0);
+  const velocityRef = useRef(0);
+  const dynamicDurationRef = useRef(ANIMATION_DURATION);
   
+  const activePointerId = useRef<number | null>(null);
+
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -244,9 +250,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const finalPos = basePos + currentDrag;
     
     trackRef.current.style.transform = `translate3d(${finalPos}px, 0, 0)`;
+    
+    // Použijeme dynamickou duration pro dojezd po swipnutí, jinak standardní
+    const duration = (instant || isDraggingRef.current) ? 0 : dynamicDurationRef.current;
+    
     trackRef.current.style.transition = (isDraggingRef.current || instant) 
         ? 'none' 
-        : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.165, 0.84, 0.44, 1)`;
+        : `transform ${duration}ms cubic-bezier(0.25, 1, 0.5, 1)`; // Apple-like easeOutQuart/Quint hybrid
 
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
     const startIndex = Math.max(0, targetIndex - visibleCount);
@@ -379,6 +389,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (e.button !== 0 || activePointerId.current !== null) return;
       activePointerId.current = e.pointerId;
 
+      // Reset velocity tracking
+      lastDragX.current = e.clientX;
+      lastDragTime.current = performance.now();
+      velocityRef.current = 0;
+
       // Stop any active wheeling session
       if (wheelTimeoutRef.current) {
           clearTimeout(wheelTimeoutRef.current);
@@ -434,6 +449,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (isDraggingRef.current) {
           if (e.cancelable && e.pointerType !== 'mouse') e.preventDefault();
           
+          // Velocity tracking
+          const now = performance.now();
+          const dt = now - lastDragTime.current;
+          if (dt > 10) {
+              const dx = e.clientX - lastDragX.current;
+              velocityRef.current = dx / dt; // pixels per ms
+              lastDragX.current = e.clientX;
+              lastDragTime.current = now;
+          }
+
           dragOffsetRef.current = diffX;
           if (Math.abs(diffX) > 5) isClickBlockedRef.current = true;
           
@@ -471,13 +496,46 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const movedCards = -currentOffset / totalCardWidth;
     let indexDiff = Math.round(movedCards);
 
-    // Zvýšíme citlivost pro touch (mobily), aby se snáze dalo posouvat
-    const threshold = pointerType === 'touch' ? 0.1 : 0.15;
-
-    if (Math.abs(movedCards) > threshold && Math.abs(currentOffset) > 50) {
-        if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
-        if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
+    // Velocity boost - pokud je švihnutí rychlé, posuneme i při menším pohybu
+    const velocity = velocityRef.current;
+    const isSwipe = Math.abs(velocity) > 0.5; // > 0.5px/ms je rozumný švih
+    
+    // Pokud je swipe ve směru pohybu, vynutíme posun
+    if (isSwipe) {
+        if (velocity < 0 && indexDiff === 0) indexDiff = 1; // Swipe doleva -> další slide
+        if (velocity > 0 && indexDiff === 0) indexDiff = -1; // Swipe doprava -> předchozí slide
+    } else {
+        // Standardní threshold pro pomalé tažení
+        const threshold = pointerType === 'touch' ? 0.2 : 0.25;
+        if (Math.abs(movedCards) > threshold && Math.abs(currentOffset) > 50) {
+            if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
+            if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
+        }
     }
+
+    // Výpočet dynamické doby trvání animace pro maximální plynulost
+    // Pokud uživatel "hodí" kartou (swipe), animace by měla být svižnější
+    const baseDuration = 500;
+    let duration = baseDuration;
+    
+    const targetIndex = currentIndexRef.current + indexDiff;
+    const targetPos = getPositionForIndex(targetIndex);
+    const currentPos = getPositionForIndex(currentIndexRef.current) + currentOffset;
+    const remainingDistance = Math.abs(targetPos - currentPos);
+    
+    // Adjust duration based on distance and velocity
+    if (remainingDistance > 0) {
+        // Čím menší vzdálenost, tím rychlejší animace, ale ne méně než 250ms
+        const distanceFactor = Math.min(1, remainingDistance / totalCardWidth);
+        duration = Math.max(300, baseDuration * distanceFactor);
+        
+        // Pokud byl swipe rychlý, zkrátíme čas (simulace setrvačnosti)
+        if (isSwipe) {
+            duration = Math.min(duration, 400);
+        }
+    }
+    
+    dynamicDurationRef.current = duration;
 
     const newIndex = currentIndexRef.current + indexDiff;
     setIsTransitioning(true);
@@ -494,8 +552,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         if (isResettingRef.current) return;
         setIsTransitioning(false);
         setIsDragging(false);
-    }, LOCK_DURATION);
-  }, [cardWidth, GAP, updateVisuals, LOCK_DURATION]);
+        // Reset duration back to default for arrows
+        dynamicDurationRef.current = ANIMATION_DURATION;
+    }, duration + 50); // Timeout slightly longer than animation
+  }, [cardWidth, GAP, updateVisuals, getPositionForIndex, ANIMATION_DURATION]);
 
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDraggingRef.current) return;
@@ -505,6 +565,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   const moveSlide = (direction: number) => {
       if (isTransitioning) return;
+
+      // Reset duration to standard for arrow clicks
+      dynamicDurationRef.current = ANIMATION_DURATION;
 
       // Pokud ještě dobíhá setrvačnost z touchpadu/kolečka, zastavíme ji
       if (isWheelingRef.current) {
