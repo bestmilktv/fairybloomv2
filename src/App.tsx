@@ -22,6 +22,7 @@ const CartPage = lazy(() => import("./pages/CartPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const JewelryCarePage = lazy(() => import("./pages/JewelryCarePage"));
+const PackagingPage = lazy(() => import("./pages/PackagingPage"));
 const ShippingPage = lazy(() => import("./pages/ShippingPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 
@@ -125,6 +126,7 @@ const App = () => (
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/o-nas" element={<AboutPage />} />
           <Route path="/pece-o-sperky" element={<JewelryCarePage />} />
+          <Route path="/baleni" element={<PackagingPage />} />
           <Route path="/doprava" element={<ShippingPage />} />
           <Route path="/kontakt" element={<ContactPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
