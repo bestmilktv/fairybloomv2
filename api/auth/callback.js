@@ -263,6 +263,10 @@ export default async function handler(req, res) {
     // Calculate expiration time
     const expiresAt = new Date(Date.now() + (expires_in * 1000)).toISOString();
 
+    // Set session max age (30 minutes = 1800 seconds, or 1 hour = 3600 seconds)
+    // You can configure this via environment variable SESSION_MAX_AGE
+    const SESSION_MAX_AGE = parseInt(process.env.SESSION_MAX_AGE || '1800', 10); // Default: 30 minutes
+
     // Dekódovat id_token (JWT) pro získání zákaznických dat
     let customerData = null;
     if (id_token) {
@@ -288,12 +292,14 @@ export default async function handler(req, res) {
 
     // Set secure HTTP-only cookie with customer data
     // CRITICAL: Cookie must be set BEFORE sending response to popup
-    setAuthCookie(res, access_token, expiresAt, customerData);
+    setAuthCookie(res, access_token, expiresAt, customerData, SESSION_MAX_AGE);
 
     // DEBUG: Log cookie was set
     const tokenPreview = `${access_token.slice(0, 6)}...${access_token.slice(-4)}`;
+    const sessionExpiresAt = new Date(Date.now() + (SESSION_MAX_AGE * 1000)).toISOString();
     console.log('[OAuth Callback] Cookie set with token preview:', tokenPreview);
-    console.log('[OAuth Callback] Cookie expires at:', expiresAt);
+    console.log('[OAuth Callback] Shopify token expires at:', expiresAt);
+    console.log('[OAuth Callback] Session expires at:', sessionExpiresAt, `(${SESSION_MAX_AGE}s = ${SESSION_MAX_AGE / 60} minutes)`);
     console.log('[OAuth Callback] Cookie secure:', process.env.NODE_ENV === 'production');
     console.log('[OAuth Callback] Cookie domain will be set automatically by browser');
 

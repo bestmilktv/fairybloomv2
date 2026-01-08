@@ -62,6 +62,11 @@ VITE_APP_URL=http://localhost:8080
 
 # Shopify Admin API (for inventory)
 SHOPIFY_ADMIN_API_TOKEN=your_admin_api_token
+
+# Session Configuration (optional)
+# Session expiration in seconds (default: 1800 = 30 minutes)
+# Options: 1800 (30 min), 3600 (1 hour), 7200 (2 hours)
+SESSION_MAX_AGE=1800
 ```
 
 ## 3. Vercel Deployment Configuration

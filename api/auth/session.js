@@ -35,13 +35,19 @@ export default async function handler(req, res) {
         });
       }
 
+      // Set session max age (30 minutes = 1800 seconds, or 1 hour = 3600 seconds)
+      // You can configure this via environment variable SESSION_MAX_AGE
+      const SESSION_MAX_AGE = parseInt(process.env.SESSION_MAX_AGE || '1800', 10); // Default: 30 minutes
+
       // Set cookie in parent window (this is the key fix!)
-      setAuthCookie(res, access_token, expiresAt, customer || null);
+      setAuthCookie(res, access_token, expiresAt, customer || null, SESSION_MAX_AGE);
 
       // DEBUG: Log cookie was set
       const tokenPreview = `${access_token.slice(0, 6)}...${access_token.slice(-4)}`;
+      const sessionExpiresAt = new Date(Date.now() + (SESSION_MAX_AGE * 1000)).toISOString();
       console.log('[Session API] Cookie set in parent window with token preview:', tokenPreview);
-      console.log('[Session API] Cookie expires at:', expiresAt);
+      console.log('[Session API] Shopify token expires at:', expiresAt);
+      console.log('[Session API] Session expires at:', sessionExpiresAt, `(${SESSION_MAX_AGE}s = ${SESSION_MAX_AGE / 60} minutes)`);
       console.log('[Session API] Cookie secure:', process.env.NODE_ENV === 'production');
 
       return res.status(200).json({ 

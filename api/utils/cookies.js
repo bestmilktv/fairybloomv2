@@ -7,13 +7,19 @@
  * Set authentication cookie with secure flags
  * @param {Object} res - Response object
  * @param {string} token - Access token to store
- * @param {string} expiresAt - ISO string of expiration time
+ * @param {string} expiresAt - ISO string of expiration time (from Shopify)
  * @param {Object} customerData - Customer data from JWT (optional)
+ * @param {number} sessionMaxAge - Max age for session in seconds (default: 30 minutes)
  */
-export function setAuthCookie(res, token, expiresAt, customerData = null) {
+export function setAuthCookie(res, token, expiresAt, customerData = null, sessionMaxAge = 1800) {
+  // Calculate session expiration (shorter than Shopify token expiration)
+  // This ensures users are logged out after the session time, even if Shopify token is still valid
+  const sessionExpiresAt = new Date(Date.now() + (sessionMaxAge * 1000)).toISOString();
+  
   const cookieValue = JSON.stringify({
     access_token: token,
-    expires_at: expiresAt,
+    expires_at: expiresAt, // Shopify token expiration (for reference)
+    session_expires_at: sessionExpiresAt, // Our own session expiration
     customer: customerData
   });
   
@@ -21,11 +27,12 @@ export function setAuthCookie(res, token, expiresAt, customerData = null) {
   
   // Cookie options - don't set domain to allow browser to set it automatically
   // This ensures cookie works for both www.fairybloom.cz and fairybloom.cz
-  const expiresDate = new Date(expiresAt);
+  const expiresDate = new Date(sessionExpiresAt); // Use session expiration for cookie
   const cookieString = [
     `shopify_access_token=${encodedValue}`,
     `Path=/`,
     `Expires=${expiresDate.toUTCString()}`,
+    `Max-Age=${sessionMaxAge}`, // Add Max-Age for better browser support
     `HttpOnly`,
     process.env.NODE_ENV === 'production' ? `Secure` : '',
     `SameSite=None`
@@ -88,12 +95,14 @@ export function getAuthCookie(req) {
       return null;
     }
     
-    // Check if token is expired
-    if (parsed.expires_at) {
-      const expiresDate = new Date(parsed.expires_at);
+    // Check if SESSION is expired (use our own session expiration, not Shopify token expiration)
+    // This ensures users are logged out after the session time, even if Shopify token is still valid
+    const expirationToCheck = parsed.session_expires_at || parsed.expires_at;
+    if (expirationToCheck) {
+      const expiresDate = new Date(expirationToCheck);
       const now = new Date();
       if (expiresDate < now) {
-        console.log('[getAuthCookie] Token expired:', parsed.expires_at);
+        console.log('[getAuthCookie] Session expired:', expirationToCheck);
         return null;
       }
     }
