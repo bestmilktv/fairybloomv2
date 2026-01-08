@@ -246,7 +246,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     trackRef.current.style.transform = `translate3d(${finalPos}px, 0, 0)`;
     trackRef.current.style.transition = (isDraggingRef.current || instant) 
         ? 'none' 
-        : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+        : `transform ${ANIMATION_DURATION}ms cubic-bezier(0.165, 0.84, 0.44, 1)`;
 
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
     const startIndex = Math.max(0, targetIndex - visibleCount);
@@ -457,7 +457,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 element.releasePointerCapture(e.pointerId);
             }
           } catch(err) { /* ignore */ }
-          stopDrag();
+          stopDrag(e.pointerType);
       }
       
       activePointerId.current = null;
@@ -465,13 +465,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (!isClickBlockedRef.current) setIsDragging(false);
   };
 
-  const stopDrag = useCallback(() => {
+  const stopDrag = useCallback((pointerType: string = 'mouse') => {
     const currentOffset = dragOffsetRef.current;
     const totalCardWidth = cardWidth + GAP;
     const movedCards = -currentOffset / totalCardWidth;
     let indexDiff = Math.round(movedCards);
 
-    if (Math.abs(movedCards) > 0.15 && Math.abs(currentOffset) > 50) {
+    // Zvýšíme citlivost pro touch (mobily), aby se snáze dalo posouvat
+    const threshold = pointerType === 'touch' ? 0.1 : 0.15;
+
+    if (Math.abs(movedCards) > threshold && Math.abs(currentOffset) > 50) {
         if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
         if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
     }
@@ -502,6 +505,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   const moveSlide = (direction: number) => {
       if (isTransitioning) return;
+
+      // Pokud ještě dobíhá setrvačnost z touchpadu/kolečka, zastavíme ji
+      if (isWheelingRef.current) {
+          isWheelingRef.current = false;
+          if (wheelTimeoutRef.current) {
+              clearTimeout(wheelTimeoutRef.current);
+              wheelTimeoutRef.current = null;
+          }
+          // Reset drag stavu pro čistý start animace
+          isDraggingRef.current = false;
+          setIsDragging(false);
+          dragOffsetRef.current = 0;
+      }
+
       checkBoundsAndTeleport();
       requestAnimationFrame(() => {
           setIsTransitioning(true);
@@ -565,7 +582,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             
             wheelTimeoutRef.current = setTimeout(() => {
                 isWheelingRef.current = false;
-                stopDrag();
+                stopDrag('mouse'); // Wheel považujeme za mouse/touchpad
             }, 60); 
         }
     };
