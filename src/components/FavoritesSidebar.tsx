@@ -188,7 +188,7 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-background to-primary/5">
-            <h2 className="text-xl font-serif font-semibold text-luxury">
+            <h2 className="text-xl font-serif font-semibold text-foreground">
               Oblíbené produkty: ({favorites.length})
             </h2>
             <Button
@@ -210,7 +210,7 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
             ) : favoriteProducts.length === 0 ? (
               <div className="text-center py-12 fade-in-up">
                 <Heart className="h-16 w-16 text-muted-foreground mx-auto mb-6 opacity-60" />
-                <h3 className="text-lg font-medium text-luxury mb-2">Ještě jste si neoblíbili žádný produkt</h3>
+                <h3 className="text-lg font-medium text-foreground mb-2">Ještě jste si neoblíbili žádný produkt</h3>
                 <p className="text-muted-foreground mb-6">Oblíbené produkty si můžete uložit pro pozdější nákup</p>
                 <Button onClick={onClose} variant="outline" className="hover:bg-gold/10 hover:border-gold">
                   Prohlédnout produkty

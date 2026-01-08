@@ -113,6 +113,7 @@ async function initiateOAuthFlowRedirect(): Promise<OAuthResult> {
 
 /**
  * OAuth flow using popup window (for desktop)
+ * Falls back to redirect if popup is blocked
  * @returns {Promise<OAuthResult>} OAuth result
  */
 async function initiateOAuthFlowPopup(): Promise<OAuthResult> {
@@ -133,10 +134,10 @@ async function initiateOAuthFlowPopup(): Promise<OAuthResult> {
         throw new OAuthError('Failed to generate valid PKCE parameters', 'OAUTH_ERROR');
       }
 
-      // Store parameters in sessionStorage (will be accessible in popup)
+      // Store parameters in sessionStorage (will be accessible in popup or after redirect)
       sessionStorage.setItem('oauth_code_verifier', codeVerifier);
       sessionStorage.setItem('oauth_state', state);
-      sessionStorage.removeItem('oauth_redirect_mode'); // Clear redirect flag
+      sessionStorage.removeItem('oauth_redirect_mode'); // Clear redirect flag initially
 
       // Build authorization URL
       const authUrl = buildAuthorizationUrl(codeChallenge, state);
@@ -148,8 +149,35 @@ async function initiateOAuthFlowPopup(): Promise<OAuthResult> {
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
 
+      // FALLBACK: If popup is blocked, use redirect instead
+      // Check multiple conditions to detect blocked popup
+      let isPopupBlocked = false;
+      
       if (!oauthPopup) {
-        throw new OAuthError('Popup was blocked by browser', 'POPUP_BLOCKED');
+        // Most obvious case: window.open returned null
+        isPopupBlocked = true;
+      } else {
+        // Safari sometimes returns a window object but blocks access
+        try {
+          // Try to access popup properties - will throw if blocked
+          const isClosed = oauthPopup.closed;
+          // Try to access location - will throw if blocked in Safari
+          const location = oauthPopup.location;
+          
+          // Also check if popup is immediately closed (some browsers do this)
+          if (isClosed) {
+            isPopupBlocked = true;
+          }
+        } catch (e) {
+          // Popup is blocked (access denied) - common in Safari
+          isPopupBlocked = true;
+        }
+      }
+      
+      if (isPopupBlocked) {
+        console.log('[OAuth] Popup blocked, falling back to redirect mode');
+        sessionStorage.setItem('oauth_redirect_mode', 'true');
+        return initiateOAuthFlowRedirect();
       }
 
       // Set up promise handlers

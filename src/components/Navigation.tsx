@@ -177,12 +177,26 @@ const Navigation = memo(() => {
               variant="ghost" 
               size="icon" 
               className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group"
+              style={{ 
+                contain: 'layout style paint', 
+                transformOrigin: 'center center',
+                transform: 'translateZ(0)',
+                willChange: 'transform'
+              }}
               onClick={openFavorites}
               aria-label={`Oblíbené${getFavoriteCount() > 0 ? ` (${getFavoriteCount()})` : ''}`}
             >
               <Heart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110 group-hover:fill-primary/20" />
               {getFavoriteCount() > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" aria-hidden="true">
+                <span 
+                  className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" 
+                  style={{ 
+                    transform: 'translateZ(0)',
+                    transformOrigin: 'center center',
+                    willChange: 'transform'
+                  }} 
+                  aria-hidden="true"
+                >
                   {getFavoriteCount()}
                 </span>
               )}
@@ -191,13 +205,27 @@ const Navigation = memo(() => {
               variant="ghost" 
               size="icon" 
               className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full group"
+              style={{ 
+                contain: 'layout style paint', 
+                transformOrigin: 'center center',
+                transform: 'translateZ(0)',
+                willChange: 'transform'
+              }}
               onClick={openMiniCart}
               data-cart-icon
               aria-label={`Košík${getTotalItems() > 0 ? ` (${getTotalItems()})` : ''}`}
             >
               <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
               {getTotalItems() > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" aria-hidden="true">
+                <span 
+                  className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-primary text-primary-foreground text-[10px] sm:text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md" 
+                  style={{ 
+                    transform: 'translateZ(0)',
+                    transformOrigin: 'center center',
+                    willChange: 'transform'
+                  }} 
+                  aria-hidden="true"
+                >
                   {getTotalItems()}
                 </span>
               )}

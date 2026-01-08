@@ -127,7 +127,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-background to-primary/5">
-            <h2 className="text-xl font-serif font-semibold text-luxury">
+            <h2 className="text-xl font-serif font-semibold text-foreground">
               Košík ({getTotalItems()})
             </h2>
             <Button
@@ -145,7 +145,7 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
             {items.length === 0 ? (
               <div className="text-center py-12 fade-in-up">
                 <ShoppingBag className="h-16 w-16 text-muted-foreground mx-auto mb-6 opacity-60" />
-                <h3 className="text-lg font-medium text-luxury mb-2">Váš košík je prázdný</h3>
+                <h3 className="text-lg font-medium text-foreground mb-2">Váš košík je prázdný</h3>
                 <p className="text-muted-foreground mb-6">Přidejte si nějaké krásné šperky</p>
                 <Button onClick={onClose} variant="outline" className="hover:bg-gold/10 hover:border-gold">
                   Pokračovat v nákupu
