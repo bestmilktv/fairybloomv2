@@ -28,6 +28,7 @@ const Navigation = memo(() => {
   const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [favoritesSidebarOpen, setFavoritesSidebarOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const { user, logout, isAuthenticated, needsProfileCompletion, setNeedsProfileCompletion } = useAuth();
   const { getTotalItems } = useCart();
   const { getFavoriteCount } = useFavorites();
@@ -123,12 +124,12 @@ const Navigation = memo(() => {
           {/* Account, Favorites & Cart & Mobile Menu */}
           <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-shrink-0">
             {isAuthenticated && user ? (
-              <DropdownMenu>
+              <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full"
+                    className={`!text-primary/80 hover:!text-primary hover:!bg-background/80 ${!profileDropdownOpen ? 'hover:!scale-110' : ''} hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full focus:outline-none focus-visible:outline-none focus:ring-0 focus:ring-offset-0`}
                     aria-label="Uživatelský účet"
                   >
                     <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:scale-110" />
