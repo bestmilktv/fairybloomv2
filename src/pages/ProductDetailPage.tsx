@@ -366,7 +366,7 @@ const ProductDetailPage = () => {
                   <span className="text-foreground">{product.title}</span>
                 </nav>
               </div>
-              <div className="aspect-square overflow-hidden rounded-2xl bg-muted relative">
+              <div className="aspect-square overflow-hidden rounded-2xl bg-muted relative group">
                 {hasTipTag && (
                   <div className="absolute top-4 left-4 z-20 bg-gold text-primary px-4 py-1.5 text-base font-semibold rounded-full shadow-md border border-primary/10 pointer-events-none transform-gpu backface-hidden">
                     Náš tip
@@ -378,11 +378,42 @@ const ProductDetailPage = () => {
                   alt={product.title}
                   className="w-full h-full object-cover transition-transform duration-500"
                 />
+                {/* Navigation Arrows */}
+                {product.images.length > 1 && (
+                  <>
+                    {/* Left Arrow */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage((prev) => (prev === 0 ? product.images.length - 1 : prev - 1));
+                      }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200"
+                      aria-label="Předchozí fotka"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    {/* Right Arrow */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage((prev) => (prev === product.images.length - 1 ? 0 : prev + 1));
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200"
+                      aria-label="Další fotka"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
               </div>
               
               {product.images.length > 1 && (
                 <div className="grid grid-cols-4 gap-4">
-                  {product.images.map((image: string, index: number) => (
+                  {product.images.slice(0, 3).map((image: string, index: number) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
@@ -399,6 +430,36 @@ const ProductDetailPage = () => {
                       />
                     </button>
                   ))}
+                  {product.images.length > 3 && (
+                    <button
+                      onClick={() => {
+                        // Přepne na další fotku (pokud je vybraná >= 3, přepne na další)
+                        if (selectedImage >= 3 && selectedImage < product.images.length - 1) {
+                          setSelectedImage(selectedImage + 1);
+                        } else if (selectedImage >= 3) {
+                          setSelectedImage(3);
+                        } else {
+                          setSelectedImage(3);
+                        }
+                      }}
+                      className={`aspect-square overflow-hidden rounded-lg transition-all duration-300 relative ${
+                        selectedImage >= 3 
+                          ? 'ring-2 ring-primary ring-offset-2'
+                          : 'hover:ring-2 hover:ring-primary/50'
+                      }`}
+                    >
+                      <img
+                        src={product.images[selectedImage >= 3 ? selectedImage : 3]}
+                        alt={`${product.title} ${(selectedImage >= 3 ? selectedImage : 3) + 1}`}
+                        className="w-full h-full object-cover opacity-50"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <span className="text-white font-semibold text-lg">
+                          +{product.images.length - 4}
+                        </span>
+                      </div>
+                    </button>
+                  )}
                 </div>
               )}
             </div>

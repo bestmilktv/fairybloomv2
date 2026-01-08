@@ -369,19 +369,50 @@ const DynamicProductPage = () => {
                 </nav>
               </div>
               {/* Main Image */}
-              <div className="aspect-square bg-muted rounded-2xl overflow-hidden">
+              <div className="aspect-square bg-muted rounded-2xl overflow-hidden relative group">
                 <img
                   ref={productImageRef}
                   src={displayImages[selectedImage]?.url || fallbackImage}
                   alt={displayImages[selectedImage]?.altText || product.title}
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                 />
+                {/* Navigation Arrows */}
+                {displayImages.length > 1 && (
+                  <>
+                    {/* Left Arrow */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1));
+                      }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200"
+                      aria-label="Předchozí fotka"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    {/* Right Arrow */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200"
+                      aria-label="Další fotka"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
               </div>
               
               {/* Thumbnail Images */}
               {displayImages.length > 1 && (
                 <div className="grid grid-cols-4 gap-4">
-                  {displayImages.map((image, index) => (
+                  {displayImages.slice(0, 3).map((image, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
@@ -398,6 +429,36 @@ const DynamicProductPage = () => {
                       />
                     </button>
                   ))}
+                  {displayImages.length > 3 && (
+                    <button
+                      onClick={() => {
+                        // Přepne na další fotku (pokud je vybraná >= 3, přepne na další)
+                        if (selectedImage >= 3 && selectedImage < displayImages.length - 1) {
+                          setSelectedImage(selectedImage + 1);
+                        } else if (selectedImage >= 3) {
+                          setSelectedImage(3);
+                        } else {
+                          setSelectedImage(3);
+                        }
+                      }}
+                      className={`aspect-square bg-muted rounded-lg overflow-hidden border-2 transition-all duration-300 relative ${
+                        selectedImage >= 3 
+                          ? 'border-gold shadow-lg' 
+                          : 'border-transparent hover:border-gold/50'
+                      }`}
+                    >
+                      <img
+                        src={displayImages[selectedImage >= 3 ? selectedImage : 3]?.url || displayImages[3]?.url}
+                        alt={displayImages[selectedImage >= 3 ? selectedImage : 3]?.altText || `${product.title} ${(selectedImage >= 3 ? selectedImage : 3) + 1}`}
+                        className="w-full h-full object-cover opacity-50"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <span className="text-white font-semibold text-lg">
+                          +{displayImages.length - 4}
+                        </span>
+                      </div>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
