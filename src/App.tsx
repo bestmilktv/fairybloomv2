@@ -7,6 +7,7 @@ import { useEffect, lazy, Suspense } from "react";
 import { useCart } from "@/contexts/CartContext";
 import Navigation from "@/components/Navigation";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { CookieConsent } from "@/components/CookieConsent";
 
 // OPTIMALIZACE: Lazy loading stránek - snižuje initial bundle size
 // Homepage a NotFound zůstávají statické (kritické pro UX)
@@ -106,6 +107,8 @@ const App = () => (
       <CheckoutUrlGuard />
       <Toaster />
       <Sonner />
+      {/* Cookie Consent Banner */}
+      <CookieConsent />
       {/* Error Boundary pro graceful error handling */}
       <ErrorBoundary>
         <Suspense fallback={<PageLoadingFallback />}>

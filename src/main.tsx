@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
+import { CookieConsentProvider } from '@/contexts/CookieConsentContext';
 import App from "./App.tsx";
 import "./index.css";
 
@@ -33,13 +34,15 @@ window.addEventListener('pageshow', (event) => {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <FavoritesProvider>
-            <App />
-          </FavoritesProvider>
-        </CartProvider>
-      </AuthProvider>
+      <CookieConsentProvider>
+        <AuthProvider>
+          <CartProvider>
+            <FavoritesProvider>
+              <App />
+            </FavoritesProvider>
+          </CartProvider>
+        </AuthProvider>
+      </CookieConsentProvider>
     </BrowserRouter>
   </StrictMode>
 );

@@ -82,7 +82,10 @@ const Footer = () => {
         
         {/* Bottom */}
         <div className="border-t border-luxury-foreground/20 pt-8 flex flex-col md:flex-row items-center justify-between">
-          <p className="text-luxury-foreground/60 text-sm mb-4 md:mb-0">© 2025 Fairy Bloom. Všechna práva vyhrazena.</p>
+          <div className="flex flex-col items-center md:items-start mb-4 md:mb-0">
+            <p className="text-luxury-foreground/60 text-sm">© 2025 Fairy Bloom. Všechna práva vyhrazena.</p>
+            <p className="text-luxury-foreground/60 text-sm">Využívá Shopify.</p>
+          </div>
           <p className="text-luxury-foreground/60 text-sm flex items-center">
             Vyrobeno s <Heart className="h-4 w-4 mx-1 text-gold" /> v České republice
           </p>
