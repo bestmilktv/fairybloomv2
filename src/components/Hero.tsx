@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { setActiveScrollAnimation } from '@/utils/scrollUtils';
 import heroImage from '@/assets/hero-jewelry.jpg';
 
 const Hero = () => {
@@ -8,6 +9,7 @@ const Hero = () => {
     const distance = targetPosition - startPosition;
     const duration = Math.abs(distance) * 1.25; // Zpomalení o 25% (1.25x delší)
     let startTime: number | null = null;
+    let animationId: number | null = null;
 
     const easeInOutCubic = (t: number): number => {
       return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -22,11 +24,15 @@ const Hero = () => {
       window.scrollTo(0, startPosition + distance * easedProgress);
 
       if (progress < 1) {
-        requestAnimationFrame(animation);
+        animationId = requestAnimationFrame(animation);
+        setActiveScrollAnimation(animationId);
+      } else {
+        setActiveScrollAnimation(null);
       }
     };
 
-    requestAnimationFrame(animation);
+    animationId = requestAnimationFrame(animation);
+    setActiveScrollAnimation(animationId);
   };
 
   const scrollToProducts = () => {

@@ -115,10 +115,8 @@ const Navigation = memo(() => {
 
   // Handler pro kliknutí na overlay Sheet - funguje i během animace
   const handleSheetOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      // Zastavíme scroll animaci při zavírání
-      stopSmoothScroll();
-    }
+    // Zastavíme scroll animaci PŘED změnou stavu (pro otevření i zavření)
+    stopSmoothScroll();
     setMobileMenuOpen(open);
   }, []);
 
@@ -272,10 +270,8 @@ const Navigation = memo(() => {
                   size="icon" 
                   className="md:hidden !text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 h-9 w-9 sm:h-10 sm:w-10 rounded-full"
                   aria-label="Otevřít menu"
-                  onClick={(e) => {
-                    stopSmoothScroll();
-                    // Necháme Sheet zpracovat kliknutí
-                  }}
+                  // ODSTRANIT onClick - necháme Radix UI zpracovat kliknutí
+                  // stopSmoothScroll se zavolá v handleSheetOpenChange PŘED otevřením
                 >
                   <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Button>
