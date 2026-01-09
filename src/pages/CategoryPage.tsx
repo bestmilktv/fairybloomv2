@@ -214,7 +214,7 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto px-6 overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-9 gap-y-10 justify-items-center overflow-visible px-4 pt-10 fade-in-progressive-3">
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-9 gap-y-10 justify-items-center overflow-visible px-4 pt-10 pb-10 fade-in-progressive-3">
             {/* Zarovnání s novým grid layoutem */}
             <div className="w-full max-w-[320px]">
               <Select value={sort} onValueChange={handleSortChange}>
