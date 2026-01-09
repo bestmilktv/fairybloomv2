@@ -160,8 +160,9 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     hasAuthorization: !!headers['Authorization']
   });
 
-  // Add timeout to fail faster (3 seconds) - helps speed up fallback to Admin API
-  const TIMEOUT_MS = 3000;
+  // OPTIMIZATION: Reduced timeout from 3 seconds to 1.5 seconds
+  // This speeds up fallback to Admin API if Customer Account API is slow
+  const TIMEOUT_MS = 1500;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 

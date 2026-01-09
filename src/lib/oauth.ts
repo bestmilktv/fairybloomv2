@@ -32,6 +32,12 @@ export interface OAuthResult {
   expiresAt?: string;
   idToken?: string;
   error?: string;
+  customer?: {
+    sub?: string;
+    email?: string;
+    given_name?: string;
+    family_name?: string;
+  };
 }
 
 export interface OAuthError extends Error {
@@ -272,7 +278,7 @@ async function handleOAuthCallback(
     return;
   }
 
-  const { type, access_token, expires_at, id_token, error } = event.data;
+  const { type, access_token, expires_at, id_token, error, customer } = event.data;
 
   if (type === 'OAUTH_SUCCESS') {
     // Clean up
@@ -299,7 +305,7 @@ async function handleOAuthCallback(
           body: JSON.stringify({
             access_token: access_token,
             expires_at: expires_at,
-            customer: event.data.customer || null
+            customer: customer || null
           }),
         });
 
@@ -311,8 +317,9 @@ async function handleOAuthCallback(
           const setCookieData = await setCookieResponse.json();
           console.log('[OAuth] Cookie successfully set in parent window:', setCookieData);
           
-          // Wait a bit for cookie to be available
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // OPTIMIZATION: Reduced wait time from 300ms to 100ms
+          // Cookie should be available immediately after response
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (cookieError) {
         console.error('[OAuth] Error setting cookie in parent window:', cookieError);
@@ -324,7 +331,8 @@ async function handleOAuthCallback(
       success: true,
       accessToken: access_token,
       expiresAt: expires_at,
-      idToken: id_token
+      idToken: id_token,
+      customer: customer || undefined
     });
   } else if (type === 'OAUTH_ERROR') {
     // Clean up

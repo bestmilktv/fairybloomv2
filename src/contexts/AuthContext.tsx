@@ -82,11 +82,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Mark that user just logged in
           setJustLoggedIn(true)
           
-          // Wait a bit for cookie to be available
-          await new Promise(resolve => setTimeout(resolve, 500))
+          // OPTIMIZATION: Try to get customer data from localStorage (set by callback)
+          // This allows optimistic update on mobile too
+          try {
+            const storedCustomer = localStorage.getItem('fairybloom_customer');
+            if (storedCustomer) {
+              const customerData = JSON.parse(storedCustomer);
+              if (customerData && customerData.sub) {
+                setUser({
+                  id: customerData.sub || '',
+                  firstName: customerData.given_name || customerData.first_name || '',
+                  lastName: customerData.family_name || customerData.last_name || '',
+                  email: customerData.email || '',
+                  address: undefined,
+                  acceptsMarketing: false
+                });
+                setLoading(false); // Show user as logged in immediately
+              }
+            }
+          } catch (e) {
+            console.warn('[Auth] Could not parse stored customer data:', e);
+          }
           
-          // Refresh user data
-          await refreshUser(false, true)
+          // OPTIMIZATION: Reduced wait time from 500ms to 200ms
+          // Cookie should be available faster
+          await new Promise(resolve => setTimeout(resolve, 200))
+          
+          // Refresh user data in background (non-blocking if we have optimistic data)
+          refreshUser(false, true).catch(error => {
+            console.error('Background user refresh failed:', error);
+            // If refresh fails, we still have optimistic state
+          })
         } else if (oauthError === 'true') {
           // OAuth redirect failed
           const errorMessage = urlParams.get('error_message') || 'Přihlášení se nezdařilo'
@@ -153,9 +179,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Mark that user just logged in - this will allow modal to show if needed
       setJustLoggedIn(true)
       
-      // OAuth was successful, fetch customer data
-      // Pass checkJustLoggedIn=true to ensure modal check uses the correct flag
-      await refreshUser(false, true)
+      // OPTIMIZATION: Optimistically set user as authenticated immediately
+      // Use basic data from OAuth token if available, or create minimal user object
+      // This makes UI update instantly while we fetch full profile in background
+      if (result.customer) {
+        setUser({
+          id: result.customer.sub || '',
+          firstName: result.customer.given_name || '',
+          lastName: result.customer.family_name || '',
+          email: result.customer.email || '',
+          address: undefined,
+          acceptsMarketing: false
+        })
+      }
+      
+      // Set loading to false immediately so UI shows user as logged in
+      setLoading(false)
+      
+      // Fetch full customer data in background (non-blocking)
+      // Don't await - let it happen in background
+      refreshUser(false, true).catch(error => {
+        console.error('Background user refresh failed:', error)
+        // If refresh fails, we still have optimistic state
+      })
       
       // Try to associate existing cart with newly authenticated customer
       const cartId = localStorage.getItem('fairybloom-cart-id');
@@ -189,14 +235,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       // Only set loading to false on desktop (popup mode)
       // On mobile, user is redirected, so loading state doesn't matter
+      // Note: Loading is already set to false above for optimistic update
       const isMobile = typeof window !== 'undefined' && (
         window.innerWidth < 768 ||
         /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
           navigator.userAgent.toLowerCase()
         )
       )
-      if (!isMobile) {
-      setLoading(false)
+      if (!isMobile && loading) {
+        // Only set if still loading (error case)
+        setLoading(false)
       }
     }
   }

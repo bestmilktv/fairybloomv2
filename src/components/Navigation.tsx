@@ -15,6 +15,7 @@ import { stopSmoothScroll } from '@/utils/scrollUtils';
 import logo from '@/assets/logo.png';
 
 // OPTIMALIZACE: Statická data mimo komponentu - nevytváří se při každém renderu
+// Pořadí: Náhrdelníky, Náušnice, Prsteny, Náramky
 const CATEGORIES = [
   { name: 'Náhrdelníky', path: '/nahrdelniky' },
   { name: 'Náušnice', path: '/nausnice' },
@@ -22,6 +23,7 @@ const CATEGORIES = [
   { name: 'Náramky', path: '/naramky' }
 ];
 
+// Pořadí: O nás, Péče o šperky, Balení, Doprava, Kontakt
 const INFO_LINKS = [
   { name: 'O nás', path: '/o-nas' },
   { name: 'Péče o šperky', path: '/pece-o-sperky' },
@@ -306,8 +308,8 @@ const Navigation = memo(() => {
                         onClick={handleCategoryClick}
                         className="block text-primary/70 hover:text-primary px-5 py-3.5 rounded-xl tracking-wide smooth-font-weight hover:bg-primary/5 transition-all duration-300 text-lg font-light opacity-0 w-full"
                         style={{ 
-                          animation: `menuItemReveal 0.9s cubic-bezier(0.2, 0, 0, 1) forwards`,
-                          animationDelay: `${index * 120 + 200}ms`
+                          animation: `menuItemReveal 0.4s cubic-bezier(0.2, 0, 0, 1) forwards`,
+                          animationDelay: `${index * 50 + 100}ms`
                         }}
                       >
                         {category.name}
@@ -319,8 +321,8 @@ const Navigation = memo(() => {
                   <div 
                     className="my-4 h-px bg-primary/10 opacity-0 w-full"
                     style={{ 
-                      animation: `menuItemReveal 0.9s cubic-bezier(0.2, 0, 0, 1) forwards`,
-                      animationDelay: `${CATEGORIES.length * 120 + 200}ms`
+                      animation: `menuItemReveal 0.4s cubic-bezier(0.2, 0, 0, 1) forwards`,
+                      animationDelay: `${CATEGORIES.length * 50 + 100}ms`
                     }}
                   />
 
@@ -333,8 +335,8 @@ const Navigation = memo(() => {
                         onClick={handleCategoryClick}
                         className="block text-primary/70 hover:text-primary px-5 py-3.5 rounded-xl tracking-wide smooth-font-weight hover:bg-primary/5 transition-all duration-300 text-lg font-light opacity-0 w-full"
                         style={{ 
-                          animation: `menuItemReveal 0.9s cubic-bezier(0.2, 0, 0, 1) forwards`,
-                          animationDelay: `${(CATEGORIES.length + 1 + index) * 120 + 200}ms`
+                          animation: `menuItemReveal 0.4s cubic-bezier(0.2, 0, 0, 1) forwards`,
+                          animationDelay: `${(CATEGORIES.length + 1 + index) * 50 + 100}ms`
                         }}
                       >
                         {link.name}
