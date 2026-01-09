@@ -195,8 +195,8 @@ const CategoryPage = () => {
       <section className="pt-24 pb-12 px-6">
         <div className="max-w-7xl mx-auto px-6">
           {/* Sjednocení gridu s novým layoutem produktů */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 w-full gap-4 gap-y-8 overflow-visible px-4">
-            <div key={`back-button-${decodedCategory}`} className="w-full fade-in-progressive-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-6 gap-y-10 justify-items-center overflow-visible px-4">
+            <div key={`back-button-${decodedCategory}`} className="w-full max-w-[320px] fade-in-progressive-0">
               <BackToHomepageButton />
             </div>
           </div>
@@ -214,9 +214,9 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto px-6 overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 w-full gap-4 gap-y-8 overflow-visible px-4 fade-in-progressive-3">
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-6 gap-y-10 justify-items-center overflow-visible px-4 fade-in-progressive-3">
             {/* Zarovnání s novým grid layoutem */}
-            <div className="w-full">
+            <div className="w-full max-w-[320px]">
               <Select value={sort} onValueChange={handleSortChange}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
                   <SelectValue placeholder="Seřadit" />
@@ -237,11 +237,11 @@ const CategoryPage = () => {
       <section className="pt-0 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto px-6 overflow-visible">
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 w-full gap-4 gap-y-8 overflow-visible pb-20 px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-6 gap-y-10 justify-items-center overflow-visible pb-20 px-4">
               {Array.from({ length: expectedProductCount }).map((_, i) => (
                 <div 
                   key={`placeholder-${decodedCategory}-${i}`} 
-                  className="opacity-0 pointer-events-none w-full"
+                  className="opacity-0 pointer-events-none w-full max-w-[320px]"
                 >
                   <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
                     <div className="aspect-square bg-transparent" />

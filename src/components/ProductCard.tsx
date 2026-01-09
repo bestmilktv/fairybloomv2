@@ -157,7 +157,7 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
         />
       </div>
       
-      <div className="p-4 flex flex-col flex-grow">
+      <div className="p-5 flex flex-col flex-grow">
         <h3 className={titleClasses}>
           {title}
         </h3>
