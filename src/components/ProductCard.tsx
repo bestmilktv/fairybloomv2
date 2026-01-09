@@ -121,7 +121,6 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     text-primary 
     mb-2 
     line-clamp-2 
-    min-h-[3.5rem] 
     transition-colors 
     duration-300 
     group-hover:text-accent
@@ -158,13 +157,13 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
         />
       </div>
       
-      <div className="p-6 flex flex-col flex-grow">
+      <div className="p-4 flex flex-col flex-grow">
         <h3 className={titleClasses}>
           {title}
         </h3>
         
         {description && (
-          <p className="text-muted-foreground mb-4 leading-relaxed line-clamp-3 flex-grow text-justify">
+          <p className="text-muted-foreground mb-3 leading-relaxed line-clamp-2 flex-grow text-sm">
             {truncateDescription(description)}
           </p>
         )}

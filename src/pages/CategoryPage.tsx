@@ -194,9 +194,9 @@ const CategoryPage = () => {
       
       <section className="pt-24 pb-12 px-6">
         <div className="max-w-7xl mx-auto px-6">
-          {/* Sjednocení gridu: gap-1 a padding px-4 pro zarovnání s produkty (které mají p-4) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-1 overflow-visible px-4">
-            <div key={`back-button-${decodedCategory}`} className="w-full max-w-[280px] p-3 fade-in-progressive-0">
+          {/* Sjednocení gridu s novým layoutem produktů */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 w-full gap-4 gap-y-8 overflow-visible px-4">
+            <div key={`back-button-${decodedCategory}`} className="w-full fade-in-progressive-0">
               <BackToHomepageButton />
             </div>
           </div>
@@ -214,9 +214,9 @@ const CategoryPage = () => {
       {/* Toolbar: Sorting */}
       <section className="px-6 pb-0 overflow-visible">
         <div className="max-w-7xl mx-auto px-6 overflow-visible">
-          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-1 overflow-visible px-4 fade-in-progressive-3">
-            {/* Stejný padding p-3 jako u produktů pro přesné zarovnání */}
-            <div className="w-full max-w-[280px] p-3">
+          <div key={`sort-${decodedCategory}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 w-full gap-4 gap-y-8 overflow-visible px-4 fade-in-progressive-3">
+            {/* Zarovnání s novým grid layoutem */}
+            <div className="w-full">
               <Select value={sort} onValueChange={handleSortChange}>
                 <SelectTrigger className="h-11 rounded-full border-2 border-primary/30 bg-card text-primary font-medium shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-300 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0">
                   <SelectValue placeholder="Seřadit" />
@@ -237,11 +237,11 @@ const CategoryPage = () => {
       <section className="pt-0 pb-16 px-6 overflow-visible">
         <div className="max-w-7xl mx-auto px-6 overflow-visible">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full justify-items-center gap-4 overflow-visible pb-20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 w-full gap-4 gap-y-8 overflow-visible pb-20 px-4">
               {Array.from({ length: expectedProductCount }).map((_, i) => (
                 <div 
                   key={`placeholder-${decodedCategory}-${i}`} 
-                  className="opacity-0 pointer-events-none w-full max-w-[260px] p-2"
+                  className="opacity-0 pointer-events-none w-full"
                 >
                   <div className="bg-card rounded-2xl overflow-hidden h-full flex flex-col">
                     <div className="aspect-square bg-transparent" />

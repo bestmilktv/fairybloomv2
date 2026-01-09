@@ -21,6 +21,14 @@ const CATEGORIES = [
   { name: 'Náramky', path: '/naramky' }
 ];
 
+const INFO_LINKS = [
+  { name: 'O nás', path: '/o-nas' },
+  { name: 'Péče o šperky', path: '/pece-o-sperky' },
+  { name: 'Balení', path: '/baleni' },
+  { name: 'Doprava', path: '/doprava' },
+  { name: 'Kontakt', path: '/kontakt' }
+];
+
 // OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props/state
 const Navigation = memo(() => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -230,22 +238,52 @@ const Navigation = memo(() => {
                     Menu
                   </SheetTitle>
                 </SheetHeader>
-                <nav className="mt-8 flex flex-col space-y-3" aria-label="Navigace kategorií">
-                  {CATEGORIES.map((category, index) => (
-                    <Link
-                      key={category.path}
-                      to={category.path}
-                      onClick={handleCategoryClick}
-                      className="text-primary/70 hover:text-primary px-5 py-3.5 rounded-xl tracking-wide smooth-font-weight hover:bg-primary/5 transition-all duration-300 text-lg font-light opacity-0"
-                      style={{ 
-                        animation: `menuItemReveal 0.9s cubic-bezier(0.2, 0, 0, 1) forwards`,
-                        animationDelay: `${index * 120 + 200}ms`
-                      }}
-                    >
-                      {category.name}
-                    </Link>
-                  ))}
-                </nav>
+                <div className="mt-8 flex flex-col">
+                  {/* Kategorie */}
+                  <nav className="flex flex-col space-y-3" aria-label="Navigace kategorií">
+                    {CATEGORIES.map((category, index) => (
+                      <Link
+                        key={category.path}
+                        to={category.path}
+                        onClick={handleCategoryClick}
+                        className="text-primary/70 hover:text-primary px-5 py-3.5 rounded-xl tracking-wide smooth-font-weight hover:bg-primary/5 transition-all duration-300 text-lg font-light opacity-0"
+                        style={{ 
+                          animation: `menuItemReveal 0.9s cubic-bezier(0.2, 0, 0, 1) forwards`,
+                          animationDelay: `${index * 120 + 200}ms`
+                        }}
+                      >
+                        {category.name}
+                      </Link>
+                    ))}
+                  </nav>
+
+                  {/* Oddělovač */}
+                  <div 
+                    className="my-6 h-px bg-primary/10 opacity-0"
+                    style={{ 
+                      animation: `menuItemReveal 0.9s cubic-bezier(0.2, 0, 0, 1) forwards`,
+                      animationDelay: `${CATEGORIES.length * 120 + 200}ms`
+                    }}
+                  />
+
+                  {/* Informace */}
+                  <nav className="flex flex-col space-y-3" aria-label="Navigace informací">
+                    {INFO_LINKS.map((link, index) => (
+                      <Link
+                        key={link.path}
+                        to={link.path}
+                        onClick={handleCategoryClick}
+                        className="text-primary/70 hover:text-primary px-5 py-3.5 rounded-xl tracking-wide smooth-font-weight hover:bg-primary/5 transition-all duration-300 text-lg font-light opacity-0"
+                        style={{ 
+                          animation: `menuItemReveal 0.9s cubic-bezier(0.2, 0, 0, 1) forwards`,
+                          animationDelay: `${(CATEGORIES.length + 1 + index) * 120 + 200}ms`
+                        }}
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                  </nav>
+                </div>
               </SheetContent>
             </Sheet>
           </div>

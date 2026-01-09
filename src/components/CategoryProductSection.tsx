@@ -28,7 +28,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
       viewport={{ once: true, margin: "-10%" }}
       variants={staggerContainer(0.1)}
       layout // Přidán layout prop pro hladké přeskládání gridu
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 gap-y-6 w-full justify-items-center p-4 pb-20 overflow-visible"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 gap-y-8 w-full px-4 pb-20 overflow-visible"
     >
       {initialProducts.map((product, index) => (
         <motion.div 
@@ -38,7 +38,8 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
           // OPTIMALIZACE: Odstraněn transition-all duration-300, který kolidoval s Framer Motion
           // Ponechán jen hover efekt na z-index a padding
           // hover:z-40 odstraněno pro zamezení layout thrashingu
-          className="w-full max-w-[280px] relative z-0 p-3 overflow-visible"
+          // Změna: odstraněn max-w a justify-items-center, karty vyplní sloupec
+          className="w-full relative z-0 overflow-visible"
         >
           <Link 
             to={product.handle ? `/produkt/${product.handle}` : `/product-shopify/${product.handle}`} 
@@ -49,7 +50,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
               title={product.title}
               price={product.price}
               image={product.image}
-              description={product.description}
+              description={undefined}
               inventoryQuantity={product.inventoryQuantity}
               variantId={product.variantId}
               priority={index < 6}
