@@ -1,9 +1,7 @@
-import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
 import { fadeInUp, staggerContainer } from '@/utils/animations';
-import { useImagePreloader } from '@/hooks/useImagePreloader';
 
 interface Product {
   id: string;
@@ -23,23 +21,17 @@ interface CategoryProductSectionProps {
 }
 
 const CategoryProductSection = ({ category, initialProducts }: CategoryProductSectionProps) => {
-  // Preload všech obrázků produktů před zobrazením
-  const imageUrls = useMemo(() => initialProducts.map(p => p.image).filter(Boolean), [initialProducts]);
-  const imagesLoaded = useImagePreloader(imageUrls);
-
   return (
     <motion.div 
       initial="hidden"
-      animate={imagesLoaded ? "visible" : "hidden"}
+      whileInView="visible"
       viewport={{ once: true, margin: "-10%" }}
       variants={staggerContainer(0.1)}
-      layout // Přidán layout prop pro hladké přeskládání gridu
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-9 gap-y-10 w-full justify-items-center px-4 pb-20 overflow-visible"
     >
       {initialProducts.map((product, index) => (
         <motion.div 
           key={product.id} 
-          layout // Přidán layout prop i pro jednotlivé karty
           variants={fadeInUp}
           // OPTIMALIZACE: Odstraněn transition-all duration-300, který kolidoval s Framer Motion
           // Ponechán jen hover efekt na z-index a padding

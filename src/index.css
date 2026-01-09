@@ -359,6 +359,14 @@ html {
   nav a[class*="scale"]:hover {
     transform: translateZ(0) scale(1.05) !important;
   }
+
+  /* Performance: only apply will-change on devices that actually hover (desktop/laptop).
+     Keeping will-change always-on is often worse on mobile (extra GPU layers + memory). */
+  @media (hover: hover) and (pointer: fine) {
+    .will-change-on-hover {
+      will-change: transform;
+    }
+  }
 }
 
 @keyframes fadeInUp {

@@ -1,10 +1,9 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProductCarousel from './ProductCarousel';
 import { fadeInUp } from '@/utils/animations';
-import { useImagePreloader } from '@/hooks/useImagePreloader';
 
 interface Product {
   id: string;
@@ -27,10 +26,6 @@ interface ProductSectionProps {
 
 // OPTIMALIZACE: Memoizovaná komponenta - re-renderuje se jen při změně props
 const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: ProductSectionProps) => {
-  // Preload všech obrázků produktů před zobrazením
-  const imageUrls = useMemo(() => products.map(p => p.image).filter(Boolean), [products]);
-  const imagesLoaded = useImagePreloader(imageUrls);
-
   return (
     <section 
       id={id} 
@@ -53,10 +48,10 @@ const ProductSection = memo(({ id, title, subtitle, products, categoryPath }: Pr
           </p>
         </motion.div>
         
-        {/* Products Carousel - Čeká na načtení obrázků před animací */}
+        {/* Products Carousel - animuje se až při zobrazení (bez agresivního JS preloadu obrázků) */}
         <motion.div 
           initial="hidden"
-          animate={imagesLoaded ? "visible" : "hidden"}
+          whileInView="visible"
           viewport={{ once: true, margin: "-10%" }}
           variants={fadeInUp}
         >

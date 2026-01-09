@@ -44,7 +44,7 @@ const ProductCardLight = memo(({ title, price, image, description, disableAnimat
     ease-out
     transform-gpu
     backface-hidden
-    will-change-transform
+    will-change-on-hover
     antialiased
   `;
   

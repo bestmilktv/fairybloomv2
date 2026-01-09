@@ -259,27 +259,19 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         ? 'none' 
         : `transform ${duration}ms cubic-bezier(0.33, 1, 0.68, 1)`; // Apple's easeOutCubic - velmi plynulá
 
+    // PERFORMANCE: On mobile we intentionally skip per-card style updates (scale/opacity/transition).
+    // During scroll/drag we want to touch *only* the track transform to avoid main-thread jank.
+    if (layoutMode === 'mobile') {
+      return;
+    }
+
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
     const startIndex = Math.max(0, targetIndex - visibleCount);
     const endIndex = Math.min(allSlides.length - 1, targetIndex + visibleCount);
 
-    // Optimalizace pro mobile: pokud jsme na mobile, nepočítáme scale/opacity efekty
-    const isMobile = layoutMode === 'mobile';
-
     for (let i = startIndex; i <= endIndex; i++) {
         const card = cardRefs.current[i];
         if (!card) continue;
-
-        // Na mobilech jen nastavíme šířku (pokud se změnila) a přeskočíme efekty
-        if (isMobile) {
-             // Ujistíme se, že karta má správnou šířku a žádné transformace z desktopu
-             if (card.style.transform !== 'translateZ(0px)') {
-                 card.style.transform = 'translateZ(0px)';
-                 card.style.opacity = '1';
-                 card.style.width = `${cardWidth}px`;
-             }
-             continue;
-        }
 
         const cardTrackPos = finalPos + (i * totalCardWidth);  
         const cardCenter = cardTrackPos + (cardWidth / 2);
