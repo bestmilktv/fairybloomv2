@@ -238,8 +238,8 @@ const Navigation = memo(() => {
                       onClick={handleCategoryClick}
                       className="text-primary/70 hover:text-primary px-5 py-3.5 rounded-xl tracking-wide smooth-font-weight hover:bg-primary/5 transition-all duration-300 text-lg font-light opacity-0"
                       style={{ 
-                        animation: `menuItemReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards`,
-                        animationDelay: `${index * 80 + 150}ms`
+                        animation: `menuItemReveal 0.9s cubic-bezier(0.2, 0, 0, 1) forwards`,
+                        animationDelay: `${index * 120 + 200}ms`
                       }}
                     >
                       {category.name}

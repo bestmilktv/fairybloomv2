@@ -372,7 +372,7 @@ html {
 @keyframes menuItemReveal {
   from {
     opacity: 0;
-    transform: translate3d(12px, 0, 0);
+    transform: translate3d(8px, 0, 0);
   }
   to {
     opacity: 1;
