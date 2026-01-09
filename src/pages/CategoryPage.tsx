@@ -196,7 +196,7 @@ const CategoryPage = () => {
         <div className="max-w-7xl mx-auto px-6">
           {/* Sjednocení gridu s novým layoutem produktů */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full gap-9 gap-y-10 justify-items-center overflow-visible px-4">
-            <div key={`back-button-${decodedCategory}`} className="w-full max-w-[320px] fade-in-progressive-0">
+            <div key={`back-button-${decodedCategory}`} className="hidden md:block w-full max-w-[320px] fade-in-progressive-0">
               <BackToHomepageButton />
             </div>
           </div>
