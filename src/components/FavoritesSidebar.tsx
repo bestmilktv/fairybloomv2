@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Heart, Loader2, ShoppingCart, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useFavorites } from '@/contexts/FavoritesContext'
@@ -30,9 +30,20 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
   const [favoriteProducts, setFavoriteProducts] = useState<FavoriteProduct[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   // Blokování scrollu na pozadí když je sidebar otevřený
   useLockBodyScroll(isOpen)
+
+  // Handler pro reset touch stavů po ukončení dotyku
+  // Toto pomáhá obnovit scrollování po long press
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Zajistíme, že se touch eventy správně vyčistí
+    // Force reflow pro reset touch stavů
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.touchAction = 'pan-y'
+    }
+  }, [])
 
   // Fetch product details for favorite IDs
   useEffect(() => {
@@ -219,7 +230,16 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
           </div>
 
           {/* Favorites Items */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div 
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto p-6"
+            style={{ 
+              touchAction: 'pan-y', // Povoluje vertikální scroll i po long press
+              WebkitOverflowScrolling: 'touch' // Smooth scrolling na iOS
+            }}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+          >
             {loadingProducts || favoritesLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -245,6 +265,9 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
                       to={`/produkt/${product.handle}`}
                       onClick={onClose}
                       className="flex items-center space-x-4 flex-1 min-w-0"
+                      style={{
+                        WebkitTouchCallout: 'default' // Povoluje long press menu
+                      }}
                     >
                       <div className="relative flex-shrink-0">
                         <img
