@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
 import { fadeInUp, staggerContainer } from '@/utils/animations';
+import { useImagePreloader } from '@/hooks/useImagePreloader';
 
 interface Product {
   id: string;
@@ -21,10 +23,14 @@ interface CategoryProductSectionProps {
 }
 
 const CategoryProductSection = ({ category, initialProducts }: CategoryProductSectionProps) => {
+  // Preload všech obrázků produktů před zobrazením
+  const imageUrls = useMemo(() => initialProducts.map(p => p.image).filter(Boolean), [initialProducts]);
+  const imagesLoaded = useImagePreloader(imageUrls);
+
   return (
     <motion.div 
       initial="hidden"
-      whileInView="visible"
+      animate={imagesLoaded ? "visible" : "hidden"}
       viewport={{ once: true, margin: "-10%" }}
       variants={staggerContainer(0.1)}
       layout // Přidán layout prop pro hladké přeskládání gridu

@@ -534,7 +534,7 @@ async function handleWebhook(req, res) {
 
             // Prepare email content
             const emailSubject = `Produkt je opět skladem! - ${product.title}`;
-            const productUrl = `https://${storeDomain}/products/${product.handle}`;
+            const productUrl = `https://${storeDomain}/produkt/${product.handle}`;
             
             // Get variant price (format: "123.45" from Shopify REST API)
             const variantPrice = variant.price || '0';

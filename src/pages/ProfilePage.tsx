@@ -50,14 +50,12 @@ export default function ProfilePage() {
   const [editCountry, setEditCountry] = useState('CZ')
   const [editPhone, setEditPhone] = useState('')
 
-  // Loading state
-  if (loading && !user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-primary">Načítám...</div>
-      </div>
-    )
-  }
+  // Redirect if no user - moved to useEffect to avoid render-time redirect
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/', { replace: true })
+    }
+  }, [loading, user, navigate])
 
   // Refresh user data logic
   useEffect(() => {
@@ -72,7 +70,7 @@ export default function ProfilePage() {
       }
     }
     refreshData()
-  }, [location.pathname, loading])
+  }, [location.pathname, loading, refreshUser, setNeedsProfileCompletion])
 
   // Initialize edit form when entering edit mode
   useEffect(() => {
@@ -144,12 +142,13 @@ export default function ProfilePage() {
     }
   }, [activeTab, favorites])
 
-  // Redirect if no user
-  if (!user) {
-    window.location.href = '/'
+  // Loading state - show loading while loading or if no user (will redirect)
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-primary">Přesměrovávám...</div>
+        <div className="animate-pulse text-primary">
+          {loading ? 'Načítám...' : 'Přesměrovávám...'}
+        </div>
       </div>
     )
   }
