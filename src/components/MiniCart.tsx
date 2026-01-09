@@ -3,6 +3,7 @@ import { X, Plus, Minus, ShoppingBag, Loader2, ExternalLink } from 'lucide-react
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { Link } from 'react-router-dom'
 
 interface MiniCartProps {
@@ -14,6 +15,9 @@ export function MiniCart({ isOpen, onClose }: MiniCartProps) {
   const { items, cartId, isLoading, updateQuantity, removeFromCart, getTotalPrice, getTotalItems, clearCart, refreshCart } = useCart()
   const { toast } = useToast()
   const [isCheckingOut, setIsCheckingOut] = useState(false)
+
+  // Blokování scrollu na pozadí když je sidebar otevřený
+  useLockBodyScroll(isOpen)
 
   const formatPrice = (price: number) => {
     return `${price.toLocaleString('cs-CZ')} Kč`

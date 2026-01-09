@@ -11,6 +11,7 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { CompleteProfileModal } from '@/components/auth/CompleteProfileModal';
 import { MiniCart } from '@/components/MiniCart';
 import { FavoritesSidebar } from '@/components/FavoritesSidebar';
+import { stopSmoothScroll } from '@/utils/scrollUtils';
 import logo from '@/assets/logo.png';
 
 // OPTIMALIZACE: Statická data mimo komponentu - nevytváří se při každém renderu
@@ -70,17 +71,41 @@ const Navigation = memo(() => {
   }, [logout]);
 
   // OPTIMALIZACE: Memoizované callbacky pro otevírání modalů
-  const openAuthModal = useCallback(() => setAuthModalOpen(true), []);
+  // Zastavíme scroll animaci před otevřením, aby kliknutí fungovalo i během scrollu
+  const openAuthModal = useCallback(() => {
+    stopSmoothScroll();
+    setAuthModalOpen(true);
+  }, []);
+  
   const closeAuthModal = useCallback(() => setAuthModalOpen(false), []);
-  const openMiniCart = useCallback(() => setMiniCartOpen(true), []);
+  
+  const openMiniCart = useCallback(() => {
+    stopSmoothScroll();
+    setMiniCartOpen(true);
+  }, []);
+  
   const closeMiniCart = useCallback(() => setMiniCartOpen(false), []);
-  const openFavorites = useCallback(() => setFavoritesSidebarOpen(true), []);
+  
+  const openFavorites = useCallback(() => {
+    stopSmoothScroll();
+    setFavoritesSidebarOpen(true);
+  }, []);
+  
   const closeFavorites = useCallback(() => setFavoritesSidebarOpen(false), []);
-  const openMobileMenu = useCallback(() => setMobileMenuOpen(true), []);
-  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+  
+  const openMobileMenu = useCallback(() => {
+    stopSmoothScroll();
+    setMobileMenuOpen(true);
+  }, []);
+  
+  const closeMobileMenu = useCallback(() => {
+    setMobileMenuOpen(false);
+  }, []);
+  
   const completeProfile = useCallback(() => setNeedsProfileCompletion(false), [setNeedsProfileCompletion]);
 
   const handleLogoClick = useCallback(() => {
+    stopSmoothScroll();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -88,11 +113,21 @@ const Navigation = memo(() => {
     closeMobileMenu();
   }, [closeMobileMenu]);
 
+  // Handler pro kliknutí na overlay Sheet - funguje i během animace
+  const handleSheetOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      // Zastavíme scroll animaci při zavírání
+      stopSmoothScroll();
+    }
+    setMobileMenuOpen(open);
+  }, []);
+
   return (
     <nav 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'glass-effect shadow-lg' : 'bg-transparent'}`}
       role="navigation"
       aria-label="Hlavní navigace"
+      style={{ pointerEvents: 'auto' }} // Zajišťujeme, že navbar má vždy aktivní pointer events
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
@@ -133,13 +168,22 @@ const Navigation = memo(() => {
           <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-shrink-0">
             {isAuthenticated && user ? (
               <div className={profileDropdownOpen ? '' : 'group'}>
-                <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
+                <DropdownMenu 
+                  open={profileDropdownOpen} 
+                  onOpenChange={(open) => {
+                    if (open) {
+                      stopSmoothScroll();
+                    }
+                    setProfileDropdownOpen(open);
+                  }}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="ghost" 
                       size="icon" 
                       className={`!text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!shadow-lg hover:!shadow-primary/10 relative h-9 w-9 sm:h-10 sm:w-10 rounded-full focus:outline-none focus-visible:outline-none focus:ring-0 focus:ring-offset-0 ${!profileDropdownOpen ? 'hover:!scale-110 transition-transform duration-300' : '!scale-100 !transition-none'}`}
                       aria-label="Uživatelský účet"
+                      onClick={() => stopSmoothScroll()}
                     >
                       <UserCheck className={`h-4 w-4 sm:h-5 sm:w-5 ${!profileDropdownOpen ? 'transition-transform duration-300 group-hover:scale-110' : 'transition-none'}`} />
                     </Button>
@@ -221,18 +265,31 @@ const Navigation = memo(() => {
             </Button>
             
             {/* Mobile Menu Button - shown only on mobile/tablet, positioned at the end */}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <Sheet open={mobileMenuOpen} onOpenChange={handleSheetOpenChange}>
               <SheetTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="md:hidden !text-primary/80 hover:!text-primary hover:!bg-background/80 hover:!scale-110 hover:!shadow-lg hover:!shadow-primary/10 h-9 w-9 sm:h-10 sm:w-10 rounded-full"
                   aria-label="Otevřít menu"
+                  onClick={(e) => {
+                    stopSmoothScroll();
+                    // Necháme Sheet zpracovat kliknutí
+                  }}
                 >
                   <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-background/95 backdrop-blur-xl">
+              <SheetContent 
+                side="right" 
+                className="w-[300px] sm:w-[400px] bg-background/95 backdrop-blur-xl"
+                onInteractOutside={(e) => {
+                  // Zastavíme scroll animaci při kliknutí ven
+                  stopSmoothScroll();
+                  // Povolíme zavření i během animace
+                  return true;
+                }}
+              >
                 <SheetHeader>
                   <SheetTitle className="text-left text-2xl font-light text-primary tracking-wide">
                     Menu

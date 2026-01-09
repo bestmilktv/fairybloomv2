@@ -24,6 +24,7 @@ const SheetOverlay = React.forwardRef<
     )}
     {...props}
     ref={ref}
+    style={{ pointerEvents: 'auto', ...props.style }} // Zajišťujeme aktivní pointer events i během animace
   />
 ));
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
@@ -55,7 +56,19 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
   ({ side = "right", className, children, ...props }, ref) => (
     <SheetPortal>
       <SheetOverlay />
-      <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
+      <SheetPrimitive.Content 
+        ref={ref} 
+        className={cn(sheetVariants({ side }), className)} 
+        {...props}
+        onInteractOutside={(e) => {
+          // Zajišťujeme, že kliknutí ven funguje i během animace
+          if (props.onInteractOutside) {
+            return props.onInteractOutside(e);
+          }
+          return true; // Povolíme zavření
+        }}
+        style={{ pointerEvents: 'auto', ...props.style }} // Zajišťujeme aktivní pointer events i během animace
+      >
         {children}
         <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none disabled:pointer-events-none">
           <X className="h-6 w-6" />

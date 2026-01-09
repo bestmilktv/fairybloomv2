@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useFavorites } from '@/contexts/FavoritesContext'
 import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/hooks/use-toast'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { Link, useNavigate } from 'react-router-dom'
 import { getProductById } from '@/lib/shopify'
 
@@ -29,6 +30,9 @@ export function FavoritesSidebar({ isOpen, onClose }: FavoritesSidebarProps) {
   const [favoriteProducts, setFavoriteProducts] = useState<FavoriteProduct[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [addingToCart, setAddingToCart] = useState<string | null>(null)
+
+  // Blokování scrollu na pozadí když je sidebar otevřený
+  useLockBodyScroll(isOpen)
 
   // Fetch product details for favorite IDs
   useEffect(() => {
