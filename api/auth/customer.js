@@ -160,16 +160,25 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     hasAuthorization: !!headers['Authorization']
   });
 
-  const response = await fetch(CUSTOMER_ACCOUNT_URL, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      query,
-      variables,
-    }),
-  });
+  // Add timeout to fail faster (3 seconds) - helps speed up fallback to Admin API
+  const TIMEOUT_MS = 3000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  if (!response.ok) {
+  try {
+    const response = await fetch(CUSTOMER_ACCOUNT_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        query,
+        variables,
+      }),
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
     const errorText = await response.text();
     console.error(`[Customer Account API] Error ${response.status}:`, errorText);
     console.error(`[Customer Account API] Response headers:`, Object.fromEntries(response.headers.entries()));
@@ -210,15 +219,23 @@ async function fetchCustomerAccount(query, variables = {}, req = null, accessTok
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  const data = await response.json();
+    const data = await response.json();
 
-  if (data.errors && data.errors.length > 0) {
-    const errorMessages = data.errors.map((error) => error.message).join(', ');
-    console.error('[Customer Account API] GraphQL errors:', errorMessages);
-    throw new Error(`GraphQL errors: ${errorMessages}`);
+    if (data.errors && data.errors.length > 0) {
+      const errorMessages = data.errors.map((error) => error.message).join(', ');
+      console.error('[Customer Account API] GraphQL errors:', errorMessages);
+      throw new Error(`GraphQL errors: ${errorMessages}`);
+    }
+
+    return data;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.warn('[Customer Account API] Request timeout after', TIMEOUT_MS, 'ms');
+      throw new Error('Request timeout - Customer Account API took too long');
+    }
+    throw error;
   }
-
-  return data;
 }
 
 /**

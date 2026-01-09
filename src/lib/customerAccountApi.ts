@@ -281,11 +281,14 @@ export async function fetchCustomerOrder(orderId: string): Promise<CustomerAccou
 
 /**
  * Check if customer is authenticated by checking backend
+ * Uses fast session endpoint instead of full customer endpoint
  * @returns {Promise<boolean>} True if authenticated
  */
 export async function isCustomerAuthenticated(): Promise<boolean> {
   try {
-    const response = await fetch('/api/auth/customer', {
+    // Use /api/auth/session instead of /api/auth/customer for faster check
+    // This endpoint only checks the cookie, no external API calls
+    const response = await fetch('/api/auth/session', {
       method: 'GET',
       credentials: 'include',
     });

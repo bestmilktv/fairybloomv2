@@ -368,6 +368,18 @@ html {
   }
 }
 
+/* Premium menu item animation - elegant slide-in from right with fade */
+@keyframes menuItemReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(12px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 /* Carousel animations */
 @keyframes carouselSlide {
   from {

@@ -99,14 +99,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Show error toast (if available)
           // Note: toast might not be available here, so we'll just log it
         } else {
-          // Normal page load - check if customer is authenticated
-        const isAuth = await isCustomerAuthenticated()
-        if (isAuth) {
-          // Fetch customer data, but don't set justLoggedIn - this is just page load
-          // Skip modal check since this is not a fresh login
+          // Normal page load - directly try to fetch customer data
+          // fetchCustomerProfile will return null if not authenticated (401),
+          // so we don't need a separate isCustomerAuthenticated check
+          // This saves one API call and speeds up initialization
           setJustLoggedIn(false)
           await refreshUser(true, false)
-          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error)

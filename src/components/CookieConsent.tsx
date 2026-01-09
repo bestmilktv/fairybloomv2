@@ -14,8 +14,19 @@ export function CookieConsent() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t shadow-lg animate-in slide-in-from-bottom duration-300">
-      <div className="container mx-auto px-4 py-4 md:py-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="container mx-auto px-4 py-4 md:py-6 relative">
+        {/* Křížek - na mobilu vpravo nahoře, na desktopu vpravo vedle tlačítek */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 md:relative md:top-0 md:right-0 h-6 w-6 shrink-0"
+          onClick={handleClose}
+          aria-label="Zavřít"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pr-8 md:pr-0">
           <div className="flex-1">
             <h3 className="text-lg font-semibold mb-2">Používáme cookies</h3>
             <p className="text-sm text-muted-foreground">
@@ -31,28 +42,19 @@ export function CookieConsent() {
               .
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-2 shrink-0">
+          <div className="flex flex-row items-center gap-2 shrink-0 w-full md:w-auto">
             <Button
               variant="outline"
               onClick={acceptNecessary}
-              className="whitespace-nowrap"
+              className="whitespace-nowrap flex-1 md:flex-none"
             >
               Pouze nezbytné
             </Button>
             <Button
               onClick={acceptAll}
-              className="whitespace-nowrap"
+              className="whitespace-nowrap flex-1 md:flex-none"
             >
               Přijmout vše
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              onClick={handleClose}
-              aria-label="Zavřít"
-            >
-              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>

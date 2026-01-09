@@ -230,14 +230,17 @@ const Navigation = memo(() => {
                     Menu
                   </SheetTitle>
                 </SheetHeader>
-                <nav className="mt-8 flex flex-col space-y-4" aria-label="Navigace kategorií">
+                <nav className="mt-8 flex flex-col space-y-3" aria-label="Navigace kategorií">
                   {CATEGORIES.map((category, index) => (
                     <Link
                       key={category.path}
                       to={category.path}
                       onClick={handleCategoryClick}
-                      className="text-primary/80 hover:text-primary px-4 py-3 rounded-lg tracking-wide smooth-font-weight hover:bg-background/80 transition-all duration-200 text-lg opacity-0 translate-y-4 animate-[fadeInUp_0.5s_ease-out_forwards]"
-                      style={{ animationDelay: `${index * 100 + 200}ms` }}
+                      className="text-primary/70 hover:text-primary px-5 py-3.5 rounded-xl tracking-wide smooth-font-weight hover:bg-primary/5 transition-all duration-300 text-lg font-light opacity-0"
+                      style={{ 
+                        animation: `menuItemReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards`,
+                        animationDelay: `${index * 80 + 150}ms`
+                      }}
                     >
                       {category.name}
                     </Link>
