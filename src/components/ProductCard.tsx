@@ -80,7 +80,7 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  // Třídy jsou nyní jednotné. Hover efekty jsou aktivní VŽDY.
+  // Třídy jsou nyní jednotné. Hover efekty jsou aktivní jen na desktopu (md a výš).
   const cardClasses = `
     bg-card 
     rounded-2xl 
@@ -91,8 +91,8 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     relative 
     group 
     shadow-sm 
-    hover:shadow-lg 
-    hover:-translate-y-2 
+    md:hover:shadow-lg 
+    md:hover:-translate-y-2 
     transition-[box-shadow,transform,background-color] 
     duration-500 
     ease-out
@@ -109,7 +109,7 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     transition-transform 
     duration-700 
     ease-in-out 
-    group-hover:scale-110
+    md:group-hover:scale-110
     transform-gpu
     backface-hidden
   `;
@@ -123,7 +123,7 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
     line-clamp-2 
     transition-colors 
     duration-300 
-    group-hover:text-accent
+    md:group-hover:text-accent
   `;
 
   // bg-muted slouží jako placeholder při lazy loading obrázků
@@ -191,8 +191,8 @@ const ProductCard = memo(({ id, title, price, image, description, inventoryQuant
             disabled={isInCart || !variantId}
             className={`w-full ${
               isInCart 
-                ? 'bg-primary/80 hover:bg-primary/90 border border-primary/30 text-primary-foreground shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:border-primary/50 transition-all duration-300' 
-                : 'bg-gold text-primary transition-transform duration-300 hover:scale-[1.02] active:scale-95'
+                ? 'bg-primary/80 md:hover:bg-primary/90 border border-primary/30 text-primary-foreground shadow-lg shadow-primary/10 md:hover:shadow-primary/20 md:hover:border-primary/50 transition-all duration-300' 
+                : 'bg-gold text-primary transition-transform duration-300 md:hover:scale-[1.02] active:scale-95'
             }`}
             style={!isInCart ? { opacity: 1, isolation: 'isolate' } : undefined}
           >
