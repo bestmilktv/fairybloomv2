@@ -770,7 +770,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           {products.map((_, index) => (
             <div
               key={index}
-              className={`transition-all duration-500 ease-out ${
+              className={`transition-all duration-300 ease-out ${
                 index === currentProductIndex
                   ? 'w-6 h-1 bg-[#502038] rounded-full'
                   : 'w-1.5 h-1.5 bg-[#502038]/20 rounded-full'
