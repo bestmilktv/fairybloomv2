@@ -50,33 +50,55 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  onOverlayClick?: () => void; // Callback pro zavření při kliknutí na overlay
+}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => (
-    <SheetPortal>
-      <SheetOverlay />
-      <SheetPrimitive.Content 
-        ref={ref} 
-        className={cn(sheetVariants({ side }), className)} 
-        {...props}
-        onInteractOutside={(e) => {
-          // Zajišťujeme, že kliknutí ven funguje i během animace
-          if (props.onInteractOutside) {
-            return props.onInteractOutside(e);
-          }
-          return true; // Povolíme zavření
-        }}
-        style={{ pointerEvents: 'auto', ...props.style }} // Zajišťujeme aktivní pointer events i během animace
-      >
-        {children}
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none disabled:pointer-events-none">
-          <X className="h-6 w-6" />
-          <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
-      </SheetPrimitive.Content>
-    </SheetPortal>
-  ),
+  ({ side = "right", className, children, onOverlayClick, ...props }, ref) => {
+    // Handler pro kliknutí na overlay - funguje i během animace
+    const handleOverlayClick = React.useCallback((e: React.MouseEvent) => {
+      // Zavřeme Sheet i během animace
+      if (onOverlayClick) {
+        onOverlayClick();
+      }
+    }, [onOverlayClick]);
+
+    return (
+      <SheetPortal>
+        <SheetOverlay 
+          onClick={handleOverlayClick}
+          onPointerDown={(e) => {
+            // Zajistíme, že kliknutí na overlay zavře Sheet i během animace
+            // Použijeme onPointerDown pro okamžitou reakci
+            if (onOverlayClick && e.target === e.currentTarget) {
+              onOverlayClick();
+            }
+          }}
+        />
+        <SheetPrimitive.Content 
+          ref={ref} 
+          className={cn(sheetVariants({ side }), className)} 
+          {...props}
+          onInteractOutside={(e) => {
+            // Zajišťujeme, že kliknutí ven funguje i během animace
+            if (props.onInteractOutside) {
+              return props.onInteractOutside(e);
+            }
+            // DŮLEŽITÉ: Vždy povolíme zavření, i během animace
+            return true;
+          }}
+          style={{ pointerEvents: 'auto', ...props.style }} // Zajišťujeme aktivní pointer events i během animace
+        >
+          {children}
+          <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none disabled:pointer-events-none">
+            <X className="h-6 w-6" />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        </SheetPrimitive.Content>
+      </SheetPortal>
+    );
+  },
 );
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 

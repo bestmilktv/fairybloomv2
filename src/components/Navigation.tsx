@@ -283,6 +283,11 @@ const Navigation = memo(() => {
               <SheetContent 
                 side="right" 
                 className="w-[300px] sm:w-[400px] bg-background/95 backdrop-blur-xl"
+                onOverlayClick={() => {
+                  // Zavřeme menu i během animace při kliknutí na overlay
+                  stopSmoothScroll();
+                  setMobileMenuOpen(false);
+                }}
                 onInteractOutside={(e) => {
                   // Zastavíme scroll animaci při kliknutí ven
                   stopSmoothScroll();
