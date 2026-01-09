@@ -1,12 +1,17 @@
 import { useEffect } from 'react';
+import { useIsMobile } from './use-mobile';
 
 /**
  * Hook pro zablokování scrollu na body když je modal/sidebar otevřený
  * Používá se pro lepší UX na mobilech - zabraňuje scrollování pozadí
+ * Na PC zůstává scrollování pozadí povoleno
  */
 export function useLockBodyScroll(isLocked: boolean) {
+  const isMobile = useIsMobile();
+
   useEffect(() => {
-    if (isLocked) {
+    // Blokujeme scroll pouze na mobilech
+    if (isLocked && isMobile) {
       // Uložíme aktuální scroll pozici
       const scrollY = window.scrollY;
       
@@ -32,5 +37,5 @@ export function useLockBodyScroll(isLocked: boolean) {
         }
       };
     }
-  }, [isLocked]);
+  }, [isLocked, isMobile]);
 }
