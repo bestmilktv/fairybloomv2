@@ -28,7 +28,7 @@ const CategoryProductSection = ({ category, initialProducts }: CategoryProductSe
       viewport={{ once: true, margin: "-10%" }}
       variants={staggerContainer(0.1)}
       layout // Přidán layout prop pro hladké přeskládání gridu
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 gap-y-10 w-full justify-items-center px-4 pb-20 overflow-visible"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-9 gap-y-10 w-full justify-items-center px-4 pb-20 overflow-visible"
     >
       {initialProducts.map((product, index) => (
         <motion.div 
