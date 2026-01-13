@@ -225,28 +225,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return START_INDEX + originalIndex;
   }, [START_INDEX, products.length]);
 
-  // Keep index safely inside clone window *and* keep X bounded (no drifting into empty space).
-  // We do this by shifting index by whole product cycles (±products.length) and shifting X by the
-  // matching pixel amount so the visible content does not jump.
-  const rebaseIndexByCycles = useCallback((index: number) => {
-    if (cardWidth === 0) return { index, shiftPx: 0 };
-    const len = products.length;
-    const tw = cardWidth + GAP;
-
-    let next = index;
-    let shiftPx = 0;
-
-    while (next > SAFE_ZONE_END) {
-      next -= len;
-      shiftPx += len * tw;
-    }
-    while (next < SAFE_ZONE_START) {
-      next += len;
-      shiftPx -= len * tw;
-    }
-    return { index: next, shiftPx };
-  }, [GAP, SAFE_ZONE_END, SAFE_ZONE_START, cardWidth, products.length]);
-
   // ============================================================================
   // TRACKING INDICATOR (INFOGRAFIKA)
   // ============================================================================
@@ -282,9 +260,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const cyclePx = products.length * totalCardWidth;
     const base = getPositionForIndex(index);
     if (!Number.isFinite(cyclePx) || cyclePx === 0) return base;
-    const k = Math.round((fromX - base) / cyclePx);
-    return base + (k * cyclePx);
-  }, [GAP, cardWidth, getPositionForIndex, products.length]);
+    // IMPORTANT: Keep targets within physically rendered clone sets (prevents drifting into blank space).
+    // With BUFFER_SETS=N we have clones for ±N cycles around the original set.
+    let best = base;
+    let bestDist = Infinity;
+    for (let n = -BUFFER_SETS; n <= BUFFER_SETS; n++) {
+      const candidate = base + (n * cyclePx);
+      const d = Math.abs(fromX - candidate);
+      if (d < bestDist) {
+        bestDist = d;
+        best = candidate;
+      }
+    }
+    return best;
+  }, [BUFFER_SETS, GAP, cardWidth, getPositionForIndex, products.length]);
 
   // ============================================================================
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
@@ -405,25 +394,21 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Mark settled
     setIsTransitioning(false);
 
-    // If out of safe zone, teleport to equivalent index AFTER settle (invisible because slide is the same).
-    const current = currentIndexRef.current;
-    const { index: rebasedIndex, shiftPx } = rebaseIndexByCycles(current);
-    if (rebasedIndex !== current) {
-      // Shift physical X by whole cycles so the visible content does not jump.
-      currentXRef.current += shiftPx;
-      targetXRef.current += shiftPx;
-      dragBaseXRef.current += shiftPx;
-
-      currentIndexRef.current = rebasedIndex;
-      setCurrentIndex(rebasedIndex);
-      renderIndexRef.current = rebasedIndex;
-      setRenderIndex(rebasedIndex);
-      applyTrackTransform(currentXRef.current, false);
+    // Keep the "logical" index anchored in the central safe window without changing physical X.
+    // This avoids large instantaneous translate shifts that can cause a full-row flash on some GPUs.
+    const physicalX = currentXRef.current;
+    const idx = Math.round(estimateIndexFloatFromX(physicalX));
+    const safeIdx = rebaseToSafeIndex(idx);
+    if (safeIdx !== currentIndexRef.current) {
+      currentIndexRef.current = safeIdx;
+      setCurrentIndex(safeIdx);
+      renderIndexRef.current = safeIdx;
+      setRenderIndex(safeIdx);
     }
 
     lastSettledIndexRef.current = currentIndexRef.current;
     updateCardEffectsAtX(currentXRef.current, false);
-  }, [applyTrackTransform, rebaseIndexByCycles, updateCardEffectsAtX]);
+  }, [estimateIndexFloatFromX, rebaseToSafeIndex, updateCardEffectsAtX]);
 
   const startSpring = useCallback(() => {
     if (cardWidth === 0) return;
@@ -656,15 +641,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     // Find the nearest index to the current visual center
     let desiredIndex = Math.round(estimateIndexFloatFromX(releaseX));
-
-    // Keep inside safe clone window, shifting X by whole cycles invisibly if needed
-    const rebased = rebaseIndexByCycles(desiredIndex);
-    if (rebased.shiftPx !== 0) {
-      releaseX += rebased.shiftPx;
-      dragBaseXRef.current += rebased.shiftPx;
-    }
-
-    desiredIndex = rebased.index;
+    // Keep the logical index inside the central safe window (no physical shift needed).
+    desiredIndex = rebaseToSafeIndex(desiredIndex);
     currentXRef.current = releaseX;
     applyTrackTransform(currentXRef.current, false);
     currentIndexRef.current = desiredIndex;
@@ -683,7 +661,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsDragging(false);
     isDraggingRef.current = false;
     startSpring();
-  }, [applyTrackTransform, estimateIndexFloatFromX, getClosestCongruentTargetX, getPositionForIndex, rebaseIndexByCycles, startSpring]);
+  }, [applyTrackTransform, estimateIndexFloatFromX, getClosestCongruentTargetX, rebaseToSafeIndex, startSpring]);
 
   const moveSlide = (direction: number) => {
       if (isDraggingRef.current) return;
@@ -703,15 +681,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       setIsTransitioning(true);
       const step = layoutMode === 'desktop' ? 3 : 1;
-      let nextIndex = currentIndexRef.current + (direction * step);
-      const rebased = rebaseIndexByCycles(nextIndex);
-      if (rebased.shiftPx !== 0) {
-        currentXRef.current += rebased.shiftPx;
-        targetXRef.current += rebased.shiftPx;
-        dragBaseXRef.current += rebased.shiftPx;
-        applyTrackTransform(currentXRef.current, false);
-      }
-      nextIndex = rebased.index;
+      const rawNext = currentIndexRef.current + (direction * step);
+      const nextIndex = rebaseToSafeIndex(rawNext);
       currentIndexRef.current = nextIndex;
       setCurrentIndex(nextIndex);
       renderIndexRef.current = nextIndex;
