@@ -55,7 +55,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // (Swipe/drag uses dynamic durations set in `stopDrag()`.)
   const ARROW_ANIMATION_DURATION = 850;
   const LOCK_DURATION = 850;
-  const EASING_CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+  // "Luxusní" easing: very smooth glide with a soft, premium stop (slightly more refined than easeOutCubic).
+  // Chosen to avoid "snap" at the end while still feeling responsive.
+  const TRACK_EASING_CURVE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+  const EASING_CURVE = TRACK_EASING_CURVE;
 
   // BUFFER_SETS = 2 pro všechna zařízení - zajišťuje funkční infinite loop
   // S ProductCardLight (bez context hooks) je 20 karet OK i pro mobily
@@ -259,7 +262,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     
     trackRef.current.style.transition = (isDraggingRef.current || instant) 
         ? 'none' 
-        : `transform ${duration}ms cubic-bezier(0.33, 1, 0.68, 1)`; // Apple's easeOutCubic - velmi plynulá
+        : `transform ${duration}ms ${TRACK_EASING_CURVE}`; // premium glide
 
     // PERFORMANCE: On mobile we intentionally skip per-card style updates (scale/opacity/transition).
     // During scroll/drag we want to touch *only* the track transform to avoid main-thread jank.
