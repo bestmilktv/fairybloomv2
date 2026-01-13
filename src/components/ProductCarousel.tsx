@@ -833,7 +833,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 
                 return allSlides.map((item, i) => {
                     const uniqueKey = `${item.isClone ? 'clone' : 'orig'}-${item.product.id}-${i}`;
-                    const isVisible = i >= startIndex && i <= endIndex;
+                    // Virtualize only on mobile. On desktop/tablet placeholders can flash during
+                    // infinite rebases, which looks like "all cards blink".
+                    const isVisible = layoutMode !== 'mobile' || (i >= startIndex && i <= endIndex);
                     
                     return (
                         <div 
