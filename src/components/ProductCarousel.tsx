@@ -338,9 +338,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const el = trackRef.current;
     // We do not use CSS transitions for motion; the spring drives the value.
     el.style.transition = 'none';
-    el.style.willChange = isAnimating ? 'transform' : '';
+    // Keep the track promoted on desktop/tablet to avoid GPU flashes on large rebases.
+    // On mobile we keep it dynamic to reduce memory pressure.
+    el.style.willChange = layoutMode === 'mobile' ? (isAnimating ? 'transform' : '') : 'transform';
     el.style.transform = `translate3d(${x}px, 0, 0)`;
-  }, []);
+  }, [layoutMode]);
 
   const updateCardEffectsAtX = useCallback((x: number, isAnimating: boolean, nowTs?: number) => {
     // Desktop/tablet only
@@ -420,12 +422,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const { index: rebasedIndex, shiftPx } = rebaseIndexByCycles(current);
     if (rebasedIndex !== current) {
       // Keep translateX bounded inside the clone track.
-      // To reduce "flash", keep compositor hint during the rebase frame.
+      // Compositor hint is kept on desktop/tablet via applyTrackTransform.
       currentXRef.current += shiftPx;
       targetXRef.current += shiftPx;
       dragBaseXRef.current += shiftPx;
       applyTrackTransform(currentXRef.current, true);
-      requestAnimationFrame(() => applyTrackTransform(currentXRef.current, false));
 
       currentIndexRef.current = rebasedIndex;
       // Avoid full component rerender on desktop/tablet (can cause visible flash).
@@ -729,7 +730,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         targetXRef.current += rebased.shiftPx;
         dragBaseXRef.current += rebased.shiftPx;
         applyTrackTransform(currentXRef.current, true);
-        requestAnimationFrame(() => applyTrackTransform(currentXRef.current, false));
       }
       nextIndex = rebased.index;
       currentIndexRef.current = nextIndex;
