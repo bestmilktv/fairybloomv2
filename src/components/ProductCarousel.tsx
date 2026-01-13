@@ -216,13 +216,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return (centerOffset - x) / totalCardWidth;
   }, [GAP, cardWidth, getCenterOffsetPx]);
 
-  // Convert *physical* translateX (which can be shifted by infinite rebase) back into the
-  // same coordinate space as `getPositionForIndex(index)`, so nearest-index snapping is stable.
-  const getIndexFloatFromPhysicalX = useCallback((physicalX: number) => {
-    const baseShift = currentXRef.current - getPositionForIndex(currentIndexRef.current);
-    return estimateIndexFloatFromX(physicalX - baseShift);
-  }, [estimateIndexFloatFromX, getPositionForIndex]);
-
   // Keep indices always inside a safe window of our cloned slide list to guarantee infinite loop.
   // This prevents drifting outside `allSlides` length while keeping the same visual product (modulo).
   const rebaseToSafeIndex = useCallback((index: number) => {
@@ -274,14 +267,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (ts - lastRenderIdxTsRef.current < 50) return;
     lastRenderIdxTsRef.current = ts;
 
-    const idx = Math.round(getIndexFloatFromPhysicalX(x));
-    // Keep inside rendered clone window bounds (safety); rebasing will keep it near the safe zone.
-    const clamped = Math.max(0, Math.min(allSlides.length - 1, idx));
-    if (clamped !== renderIndexRef.current) {
-      renderIndexRef.current = clamped;
-      setRenderIndex(clamped);
+    const idx = Math.round(estimateIndexFloatFromX(x));
+    const safeIdx = rebaseToSafeIndex(idx);
+    if (safeIdx !== renderIndexRef.current) {
+      renderIndexRef.current = safeIdx;
+      setRenderIndex(safeIdx);
     }
-  }, [allSlides.length, getIndexFloatFromPhysicalX]);
+  }, [estimateIndexFloatFromX, rebaseToSafeIndex]);
 
   // ============================================================================
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
@@ -346,7 +338,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const viewportCenter = viewportWidth / 2;
 
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
-    const anchorFloat = getIndexFloatFromPhysicalX(x);
+    const anchorFloat = estimateIndexFloatFromX(x);
     // Use floor/ceil around a *continuous* center so both sides update symmetrically.
     const anchorMin = Math.floor(anchorFloat);
     const anchorMax = Math.ceil(anchorFloat);
@@ -387,7 +379,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         ? 'none'
         : `transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 420ms cubic-bezier(0.16, 1, 0.3, 1)`;
     }
-  }, [GAP, allSlides.length, cardWidth, getIndexFloatFromPhysicalX, layoutMode, viewportWidth]);
+  }, [GAP, allSlides.length, cardWidth, estimateIndexFloatFromX, layoutMode, viewportWidth]);
 
   const cancelSpring = useCallback(() => {
     if (animRafRef.current !== null) {
@@ -645,21 +637,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Always snap to the nearest centered position (no threshold-based "pop").
     const currentOffset = dragOffsetRef.current;
     let releaseX = dragBaseXRef.current + currentOffset;
-    // Coordinate-space offset between index-based position and physical X.
-    // Must be applied consistently to targetX to avoid "jumps" on very short swipes.
-    let baseShift = dragBaseXRef.current - getPositionForIndex(currentIndexRef.current);
 
     // Start the spring from the exact visual position at release
     dragOffsetRef.current = 0;
 
     // Find the nearest index to the current visual center
-    let desiredIndex = Math.round(getIndexFloatFromPhysicalX(releaseX));
+    let desiredIndex = Math.round(estimateIndexFloatFromX(releaseX));
 
     // Keep inside safe clone window, shifting X by whole cycles invisibly if needed
     const rebased = rebaseIndexByCycles(desiredIndex);
     if (rebased.shiftPx !== 0) {
       releaseX += rebased.shiftPx;
-      baseShift += rebased.shiftPx;
       dragBaseXRef.current += rebased.shiftPx;
     }
 
@@ -673,7 +661,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setRenderIndex(desiredIndex);
 
     setIsTransitioning(true);
-    targetXRef.current = getPositionForIndex(desiredIndex) + baseShift;
+    // Target should be the closest congruent position for this index (modulo one product cycle),
+    // so the snap always travels the shortest smooth distance and never "jumps back".
+    const totalCardWidth = cardWidth + GAP;
+    const cyclePx = products.length * totalCardWidth;
+    const base = getPositionForIndex(desiredIndex);
+    const k = cyclePx === 0 ? 0 : Math.round((releaseX - base) / cyclePx);
+    targetXRef.current = base + (k * cyclePx);
 
     // No injected velocity: premium snap is determined by position only (predictable, no pops).
     velocityXRef.current = 0;
@@ -681,7 +675,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsDragging(false);
     isDraggingRef.current = false;
     startSpring();
-  }, [applyTrackTransform, getIndexFloatFromPhysicalX, getPositionForIndex, rebaseIndexByCycles, startSpring]);
+  }, [GAP, applyTrackTransform, cardWidth, estimateIndexFloatFromX, getPositionForIndex, products.length, rebaseIndexByCycles, startSpring]);
 
   const moveSlide = (direction: number) => {
       if (isDraggingRef.current) return;
