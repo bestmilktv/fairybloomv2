@@ -624,10 +624,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const stopDrag = useCallback((_pointerType: string = 'mouse') => {
     // Always snap to the nearest centered position (no threshold-based "pop").
     const currentOffset = dragOffsetRef.current;
-    const releaseX = dragBaseXRef.current + currentOffset;
+    let releaseX = dragBaseXRef.current + currentOffset;
+    // Coordinate-space offset between index-based position and physical X.
+    // Must be applied consistently to targetX to avoid "jumps" on very short swipes.
+    let baseShift = dragBaseXRef.current - getPositionForIndex(currentIndexRef.current);
 
     // Start the spring from the exact visual position at release
-    currentXRef.current = releaseX;
     dragOffsetRef.current = 0;
 
     // Find the nearest index to the current visual center
@@ -637,12 +639,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Keep inside safe clone window, shifting X by whole cycles invisibly if needed
     const rebased = rebaseIndexByCycles(desiredIndex);
     if (rebased.shiftPx !== 0) {
-      currentXRef.current += rebased.shiftPx;
+      releaseX += rebased.shiftPx;
+      baseShift += rebased.shiftPx;
       dragBaseXRef.current += rebased.shiftPx;
-      applyTrackTransform(currentXRef.current, false);
     }
 
     desiredIndex = rebased.index;
+    currentXRef.current = releaseX;
+    applyTrackTransform(currentXRef.current, false);
     currentIndexRef.current = desiredIndex;
     setCurrentIndex(desiredIndex);
     // Keep virtualization aligned immediately after snap decision
@@ -650,7 +654,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setRenderIndex(desiredIndex);
 
     setIsTransitioning(true);
-    targetXRef.current = getPositionForIndex(desiredIndex);
+    targetXRef.current = getPositionForIndex(desiredIndex) + baseShift;
 
     // No injected velocity: premium snap is determined by position only (predictable, no pops).
     velocityXRef.current = 0;
@@ -677,6 +681,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       }
 
       setIsTransitioning(true);
+      // Keep targetX in the same coordinate space as currentX
+      let baseShift = currentXRef.current - getPositionForIndex(currentIndexRef.current);
       const step = layoutMode === 'desktop' ? 3 : 1;
       let nextIndex = currentIndexRef.current + (direction * step);
       const rebased = rebaseIndexByCycles(nextIndex);
@@ -685,11 +691,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         targetXRef.current += rebased.shiftPx;
         dragBaseXRef.current += rebased.shiftPx;
         applyTrackTransform(currentXRef.current, false);
+        baseShift += rebased.shiftPx;
       }
       nextIndex = rebased.index;
       currentIndexRef.current = nextIndex;
       setCurrentIndex(nextIndex);
-      targetXRef.current = getPositionForIndex(nextIndex);
+      targetXRef.current = getPositionForIndex(nextIndex) + baseShift;
       startSpring();
   };
 
