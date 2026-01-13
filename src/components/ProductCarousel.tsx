@@ -254,15 +254,27 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     const basePos = getPositionForIndex(targetIndex);
     const finalPos = basePos + currentDrag;
-    
-    trackRef.current.style.transform = `translate3d(${finalPos}px, 0, 0)`;
-    
+
     // Použijeme dynamickou duration pro dojezd po swipnutí, jinak standardní
     const duration = (instant || isDraggingRef.current) ? 0 : dynamicDurationRef.current;
     
-    trackRef.current.style.transition = (isDraggingRef.current || instant) 
-        ? 'none' 
-        : `transform ${duration}ms ${TRACK_EASING_CURVE}`; // premium glide
+    // IMPORTANT: set transition BEFORE transform to avoid "jump" at animation start
+    // (common when switching from `transition: none` after drag/teleport).
+    const el = trackRef.current;
+    const shouldAnimate = !(instant || isDraggingRef.current);
+    const nextTransition = shouldAnimate ? `transform ${duration}ms ${TRACK_EASING_CURVE}` : 'none';
+    const wasTransitionNone = el.style.transition === '' || el.style.transition === 'none';
+
+    el.style.transition = nextTransition;
+    // Promote only during glide (helps the first frames feel "Apple smooth")
+    el.style.willChange = shouldAnimate ? 'transform' : '';
+
+    // If we just switched from none -> animated, force a reflow so transform change animates
+    if (shouldAnimate && wasTransitionNone) {
+      void el.offsetWidth;
+    }
+
+    el.style.transform = `translate3d(${finalPos}px, 0, 0)`;
 
     // PERFORMANCE: On mobile we intentionally skip per-card style updates (scale/opacity/transition).
     // During scroll/drag we want to touch *only* the track transform to avoid main-thread jank.
@@ -374,6 +386,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           currentIndexRef.current = targetIndex;
           setCurrentIndex(targetIndex);
           if (trackRef.current) {
+              trackRef.current.style.willChange = '';
               trackRef.current.style.transition = 'none';
               const newPos = getPositionForIndex(targetIndex);
               trackRef.current.style.transform = `translate3d(${newPos}px, 0, 0)`;
@@ -412,6 +425,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       setIsTransitioning(false);
       
       if (trackRef.current) {
+          trackRef.current.style.willChange = '';
           trackRef.current.style.transition = 'none';
       }
 
@@ -563,6 +577,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDraggingRef.current) return;
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+    trackRef.current.style.willChange = '';
     setIsTransitioning(false);
   };
 
@@ -627,6 +642,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 isClickBlockedRef.current = true;
                 
                 if (trackRef.current) {
+                    trackRef.current.style.willChange = '';
                     trackRef.current.style.transition = 'none';
                 }
             }
