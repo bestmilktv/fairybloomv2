@@ -89,6 +89,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // STATE & REFS
   // ============================================================================
   const [currentIndex, setCurrentIndex] = useState(START_INDEX);
+  // During fast drag/spring motion we update a separate lightweight index for virtualization/rendering,
+  // so we never "outrun" the rendered window (which looks like skipping/bugging).
+  const [renderIndex, setRenderIndex] = useState(START_INDEX);
   const [currentProductIndex, setCurrentProductIndex] = useState(0); // State pro indikátor
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -100,6 +103,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const isDraggingRef = useRef(false); 
   const dragOffsetRef = useRef(0);
   const currentIndexRef = useRef(START_INDEX);
+  const renderIndexRef = useRef(START_INDEX);
   const isClickBlockedRef = useRef(false);
   
   // Velocity tracking
@@ -134,6 +138,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const lastSettledIndexRef = useRef(START_INDEX);
   const dragBaseXRef = useRef(0);
   const lastCardFxTsRef = useRef<number>(0);
+  const lastRenderIdxTsRef = useRef<number>(0);
 
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
@@ -255,6 +260,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const productIndex = getCurrentProductIndex(currentIndex);
     setCurrentProductIndex(productIndex);
   }, [currentIndex, getCurrentProductIndex]);
+
+  const maybeUpdateRenderIndex = useCallback((x: number, nowTs?: number) => {
+    const ts = nowTs ?? performance.now();
+    // Throttle to avoid excessive React re-renders while still keeping virtualization aligned.
+    if (ts - lastRenderIdxTsRef.current < 50) return;
+    lastRenderIdxTsRef.current = ts;
+
+    const idx = Math.round(estimateIndexFloatFromX(x));
+    const clamped = Math.max(0, Math.min(allSlides.length - 1, idx));
+    if (clamped !== renderIndexRef.current) {
+      renderIndexRef.current = clamped;
+      setRenderIndex(clamped);
+    }
+  }, [allSlides.length, estimateIndexFloatFromX]);
 
   // ============================================================================
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
@@ -425,6 +444,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       velocityXRef.current = nextV;
       applyTrackTransform(nextX, true);
       updateCardEffectsAtX(nextX, true, ts);
+      maybeUpdateRenderIndex(nextX, ts);
 
       const dist = Math.abs(target - nextX);
       const vel = Math.abs(nextV);
@@ -451,7 +471,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     applyTrackTransform,
     cancelSpring,
     cardWidth,
+    maybeUpdateRenderIndex,
     settleAndRebaseIfNeeded,
+    updateCardEffectsAtX,
   ]);
 
   // OPTIMALIZACE: Vypočítat viditelný rozsah pro virtualizaci
@@ -461,12 +483,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }
     const totalCardWidth = cardWidth + GAP;
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth);
-    const minIndex = Math.min(currentIndex, lastSettledIndexRef.current);
-    const maxIndex = Math.max(currentIndex, lastSettledIndexRef.current);
+    const minIndex = Math.min(renderIndex, lastSettledIndexRef.current);
+    const maxIndex = Math.max(renderIndex, lastSettledIndexRef.current);
     const startIndex = Math.max(0, minIndex - VISIBLE_BUFFER);
     const endIndex = Math.min(allSlides.length - 1, maxIndex + visibleCount + VISIBLE_BUFFER);
     return { startIndex, endIndex };
-  }, [GAP, VISIBLE_BUFFER, currentIndex, cardWidth, viewportWidth, allSlides.length]);
+  }, [GAP, VISIBLE_BUFFER, renderIndex, cardWidth, viewportWidth, allSlides.length]);
 
   // Keep spring positions in sync when layout metrics change (resize / responsive breakpoint)
   useLayoutEffect(() => {
@@ -574,6 +596,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               currentXRef.current = x;
               applyTrackTransform(x, false);
               updateCardEffectsAtX(x, true);
+              maybeUpdateRenderIndex(x);
               dragRafRef.current = null;
             });
           }
@@ -622,6 +645,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     desiredIndex = rebased.index;
     currentIndexRef.current = desiredIndex;
     setCurrentIndex(desiredIndex);
+    // Keep virtualization aligned immediately after snap decision
+    renderIndexRef.current = desiredIndex;
+    setRenderIndex(desiredIndex);
 
     setIsTransitioning(true);
     targetXRef.current = getPositionForIndex(desiredIndex);
@@ -706,6 +732,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 currentXRef.current = x;
                 applyTrackTransform(x, false);
                 updateCardEffectsAtX(x, true);
+              maybeUpdateRenderIndex(x);
                 dragRafRef.current = null;
               });
             }
