@@ -139,6 +139,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const dragBaseXRef = useRef(0);
   const lastCardFxTsRef = useRef<number>(0);
   const lastRenderIdxTsRef = useRef<number>(0);
+  // Invisible rebasing: shift index<->X mapping origin instead of jumping translateX.
+  // This prevents occasional full-row flashes on cycle boundaries.
+  const xOriginRef = useRef(0);
 
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
@@ -212,9 +215,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (cardWidth === 0) return currentIndexRef.current;
     const totalCardWidth = cardWidth + GAP;
     const centerOffset = getCenterOffsetPx();
-    // x = -(index*tw) + centerOffset  => index = (centerOffset - x) / tw
-    return (centerOffset - x) / totalCardWidth;
+    // With invisible rebasing:
+    // x = -(index*tw) + centerOffset + xOrigin  => index = (centerOffset + xOrigin - x) / tw
+    return (centerOffset + xOriginRef.current - x) / totalCardWidth;
   }, [GAP, cardWidth, getCenterOffsetPx]);
+
+  const getXForIndex = useCallback((index: number) => {
+    return getPositionForIndex(index) + xOriginRef.current;
+  }, [getPositionForIndex]);
 
   // Keep indices always inside a safe window of our cloned slide list to guarantee infinite loop.
   // This prevents drifting outside `allSlides` length while keeping the same visual product (modulo).
@@ -279,7 +287,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const getClosestCongruentTargetX = useCallback((index: number, fromX: number) => {
     const totalCardWidth = cardWidth + GAP;
     const cyclePx = products.length * totalCardWidth;
-    const base = getPositionForIndex(index);
+    const base = getXForIndex(index);
     if (!Number.isFinite(cyclePx) || cyclePx === 0) return base;
     // IMPORTANT: Keep targets within physically rendered clone sets (prevents drifting into blank space).
     // With BUFFER_SETS=N we have clones for ±N cycles around the original set.
@@ -294,7 +302,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       }
     }
     return best;
-  }, [BUFFER_SETS, GAP, cardWidth, getPositionForIndex, products.length]);
+  }, [BUFFER_SETS, GAP, cardWidth, getXForIndex, products.length]);
 
   // ============================================================================
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
@@ -420,10 +428,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const current = currentIndexRef.current;
     const { index: rebasedIndex, shiftPx } = rebaseIndexByCycles(current);
     if (rebasedIndex !== current) {
-      currentXRef.current += shiftPx;
-      targetXRef.current += shiftPx;
-      dragBaseXRef.current += shiftPx;
-      applyTrackTransform(currentXRef.current, false);
+      // Invisible rebase: shift mapping origin only (do not jump translateX)
+      xOriginRef.current += shiftPx;
 
       currentIndexRef.current = rebasedIndex;
       setCurrentIndex(rebasedIndex);
@@ -433,7 +439,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     lastSettledIndexRef.current = currentIndexRef.current;
     updateCardEffectsAtX(currentXRef.current, false);
-  }, [applyTrackTransform, rebaseIndexByCycles, updateCardEffectsAtX]);
+    targetXRef.current = currentXRef.current;
+  }, [rebaseIndexByCycles, updateCardEffectsAtX]);
 
   const startSpring = useCallback(() => {
     if (cardWidth === 0) return;
@@ -520,6 +527,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     cancelSpring();
     dragOffsetRef.current = 0;
+    xOriginRef.current = 0;
     const x = getPositionForIndex(currentIndexRef.current);
     currentXRef.current = x;
     targetXRef.current = x;
@@ -670,8 +678,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Keep inside safe clone window (index shift + matching X shift so visuals don't jump)
     const rebased = rebaseIndexByCycles(desiredIndex);
     if (rebased.shiftPx !== 0) {
-      releaseX += rebased.shiftPx;
-      dragBaseXRef.current += rebased.shiftPx;
+      // Invisible rebase: shift mapping origin only (do not jump releaseX)
+      xOriginRef.current += rebased.shiftPx;
     }
     desiredIndex = rebased.index;
 
@@ -716,10 +724,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       let nextIndex = currentIndexRef.current + (direction * step);
       const rebased = rebaseIndexByCycles(nextIndex);
       if (rebased.shiftPx !== 0) {
-        currentXRef.current += rebased.shiftPx;
-        targetXRef.current += rebased.shiftPx;
-        dragBaseXRef.current += rebased.shiftPx;
-        applyTrackTransform(currentXRef.current, false);
+        // Invisible rebase: shift mapping origin only (do not jump translateX)
+        xOriginRef.current += rebased.shiftPx;
       }
       nextIndex = rebased.index;
       currentIndexRef.current = nextIndex;
