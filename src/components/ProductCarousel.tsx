@@ -818,15 +818,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         
         style={{
             touchAction: 'pan-y',
-            // OPTIMALIZACE: Jednodušší maskImage na mobilech, komplexnější na desktopu
-            ...(layoutMode === 'desktop' ? {
-              maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)'
-            } : {
-              // Na mobilech bez maskImage - lepší výkon
-            })
+            // NOTE: Avoid CSS maskImage here. On some GPUs it can cause a brief full-row flash
+            // when we do an infinite rebase (large translateX adjustment). We use overlay gradients instead.
         }}
       >
+        {/* Desktop fade edges (replacement for maskImage to prevent occasional flash) */}
+        {layoutMode === 'desktop' && (
+          <>
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-background to-transparent z-10" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-background to-transparent z-10" />
+          </>
+        )}
         <div
             ref={trackRef}
             className="flex flex-row carousel-force-no-animate"
