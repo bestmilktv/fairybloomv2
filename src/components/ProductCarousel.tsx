@@ -216,6 +216,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return (centerOffset - x) / totalCardWidth;
   }, [GAP, cardWidth, getCenterOffsetPx]);
 
+  // Convert *physical* translateX (which can be shifted by infinite rebase) back into the
+  // same coordinate space as `getPositionForIndex(index)`, so nearest-index snapping is stable.
+  const getIndexFloatFromPhysicalX = useCallback((physicalX: number) => {
+    const baseShift = currentXRef.current - getPositionForIndex(currentIndexRef.current);
+    return estimateIndexFloatFromX(physicalX - baseShift);
+  }, [estimateIndexFloatFromX, getPositionForIndex]);
+
   // Keep indices always inside a safe window of our cloned slide list to guarantee infinite loop.
   // This prevents drifting outside `allSlides` length while keeping the same visual product (modulo).
   const rebaseToSafeIndex = useCallback((index: number) => {
@@ -267,13 +274,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (ts - lastRenderIdxTsRef.current < 50) return;
     lastRenderIdxTsRef.current = ts;
 
-    const idx = Math.round(estimateIndexFloatFromX(x));
+    const idx = Math.round(getIndexFloatFromPhysicalX(x));
+    // Keep inside rendered clone window bounds (safety); rebasing will keep it near the safe zone.
     const clamped = Math.max(0, Math.min(allSlides.length - 1, idx));
     if (clamped !== renderIndexRef.current) {
       renderIndexRef.current = clamped;
       setRenderIndex(clamped);
     }
-  }, [allSlides.length, estimateIndexFloatFromX]);
+  }, [allSlides.length, getIndexFloatFromPhysicalX]);
 
   // ============================================================================
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
@@ -338,7 +346,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const viewportCenter = viewportWidth / 2;
 
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
-    const anchorFloat = estimateIndexFloatFromX(x);
+    const anchorFloat = getIndexFloatFromPhysicalX(x);
     // Use floor/ceil around a *continuous* center so both sides update symmetrically.
     const anchorMin = Math.floor(anchorFloat);
     const anchorMax = Math.ceil(anchorFloat);
@@ -379,7 +387,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         ? 'none'
         : `transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 420ms cubic-bezier(0.16, 1, 0.3, 1)`;
     }
-  }, [GAP, allSlides.length, cardWidth, estimateIndexFloatFromX, layoutMode, viewportWidth]);
+  }, [GAP, allSlides.length, cardWidth, getIndexFloatFromPhysicalX, layoutMode, viewportWidth]);
 
   const cancelSpring = useCallback(() => {
     if (animRafRef.current !== null) {
@@ -518,6 +526,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (trackRef.current) {
         trackRef.current.style.willChange = '';
       }
+      // Cancel any pending drag RAF from a previous gesture so it can't overwrite transforms.
+      if (dragRafRef.current !== null) {
+        cancelAnimationFrame(dragRafRef.current);
+        dragRafRef.current = null;
+      }
 
       // Reset velocity tracking
       lastDragX.current = e.clientX;
@@ -605,6 +618,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
   const handlePointerUp = (e: React.PointerEvent) => {
       if (activePointerId.current !== e.pointerId) return;
+
+      // IMPORTANT: cancel pending drag RAF BEFORE stopDrag(), otherwise a late RAF can
+      // overwrite the spring start position and cause an instant "snap back".
+      if (dragRafRef.current !== null) {
+        cancelAnimationFrame(dragRafRef.current);
+        dragRafRef.current = null;
+      }
       
       if (isDraggingRef.current) {
           const element = e.target as HTMLElement;
@@ -633,8 +653,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     dragOffsetRef.current = 0;
 
     // Find the nearest index to the current visual center
-    let desiredIndex = Math.round(estimateIndexFloatFromX(releaseX));
-    desiredIndex = Math.max(0, Math.min(allSlides.length - 1, desiredIndex));
+    let desiredIndex = Math.round(getIndexFloatFromPhysicalX(releaseX));
 
     // Keep inside safe clone window, shifting X by whole cycles invisibly if needed
     const rebased = rebaseIndexByCycles(desiredIndex);
@@ -662,7 +681,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsDragging(false);
     isDraggingRef.current = false;
     startSpring();
-  }, [allSlides.length, applyTrackTransform, estimateIndexFloatFromX, getPositionForIndex, rebaseIndexByCycles, startSpring]);
+  }, [applyTrackTransform, getIndexFloatFromPhysicalX, getPositionForIndex, rebaseIndexByCycles, startSpring]);
 
   const moveSlide = (direction: number) => {
       if (isDraggingRef.current) return;
@@ -749,6 +768,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             
             wheelTimeoutRef.current = setTimeout(() => {
                 isWheelingRef.current = false;
+                // Cancel any pending drag RAF before snapping, to avoid a late overwrite.
+                if (dragRafRef.current !== null) {
+                  cancelAnimationFrame(dragRafRef.current);
+                  dragRafRef.current = null;
+                }
                 stopDrag('mouse'); // Wheel považujeme za mouse/touchpad
             }, 60); 
         }
