@@ -54,8 +54,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // Spring tuning (Apple-like: fast start, smooth settle, no "snap" or jank).
   // Units are px and seconds.
   // Slower, more premium glide (less acceleration, longer settle).
-  const SPRING_STIFFNESS = 190; // k
-  const SPRING_DAMPING = 38; // c
+  const SPRING_STIFFNESS = 145; // k (~-25%)
+  const SPRING_DAMPING = 33; // c (scaled to keep similar damping ratio)
   const SETTLE_DISTANCE_PX = 0.75;
   const SETTLE_VELOCITY_PX_PER_S = 18;
   const MAX_DT_MS = 32;
@@ -203,13 +203,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return layoutMode === 'mobile' ? GAP + 10 : (viewportWidth - cardWidth) / 2;
   }, [GAP, cardWidth, layoutMode, viewportWidth]);
 
-  const estimateIndexFromX = useCallback((x: number) => {
+  const estimateIndexFloatFromX = useCallback((x: number) => {
     if (cardWidth === 0) return currentIndexRef.current;
     const totalCardWidth = cardWidth + GAP;
     const centerOffset = getCenterOffsetPx();
     // x = -(index*tw) + centerOffset  => index = (centerOffset - x) / tw
-    const idxFloat = (centerOffset - x) / totalCardWidth;
-    return Math.round(idxFloat);
+    return (centerOffset - x) / totalCardWidth;
   }, [GAP, cardWidth, getCenterOffsetPx]);
 
   // Keep indices always inside a safe window of our cloned slide list to guarantee infinite loop.
@@ -320,9 +319,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const viewportCenter = viewportWidth / 2;
 
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
-    const anchorIndex = estimateIndexFromX(x);
-    const startIndex = Math.max(0, anchorIndex - visibleCount - 6);
-    const endIndex = Math.min(allSlides.length - 1, anchorIndex + visibleCount + 6);
+    const anchorFloat = estimateIndexFloatFromX(x);
+    // Use floor/ceil around a *continuous* center so both sides update symmetrically.
+    const anchorMin = Math.floor(anchorFloat);
+    const anchorMax = Math.ceil(anchorFloat);
+    const startIndex = Math.max(0, anchorMin - visibleCount - 8);
+    const endIndex = Math.min(allSlides.length - 1, anchorMax + visibleCount + 8);
 
     for (let i = startIndex; i <= endIndex; i++) {
       const card = cardRefs.current[i];
@@ -358,7 +360,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         ? 'none'
         : `transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 420ms cubic-bezier(0.16, 1, 0.3, 1)`;
     }
-  }, [GAP, allSlides.length, cardWidth, estimateIndexFromX, layoutMode, viewportWidth]);
+  }, [GAP, allSlides.length, cardWidth, estimateIndexFloatFromX, layoutMode, viewportWidth]);
 
   const cancelSpring = useCallback(() => {
     if (animRafRef.current !== null) {
@@ -640,7 +642,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     // Inject initial velocity from gesture (px/ms -> px/s), clamped for stability
     // Slightly reduce injected swipe velocity so the snap feels heavier/premium.
-    const injected = Math.max(-2200, Math.min(2200, velocity * 1000 * 0.7));
+    const injected = Math.max(-1650, Math.min(1650, velocity * 1000 * 0.525));
     velocityXRef.current = injected;
 
     setIsDragging(false);
