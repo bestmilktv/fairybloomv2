@@ -53,8 +53,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const GAP = 16;
   // Arrow click should feel "premium": slightly slower, smoother glide.
   // (Swipe/drag uses dynamic durations set in `stopDrag()`.)
-  const ARROW_ANIMATION_DURATION = 850;
-  const LOCK_DURATION = 850;
+  const ARROW_ANIMATION_DURATION = 1275; // ~+50%
+  const LOCK_DURATION = 1275;
   // "Luxusní" easing: very smooth glide with a soft, premium stop (slightly more refined than easeOutCubic).
   // Chosen to avoid "snap" at the end while still feeling responsive.
   const TRACK_EASING_CURVE = 'cubic-bezier(0.16, 1, 0.3, 1)';
