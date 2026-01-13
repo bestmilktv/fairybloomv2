@@ -225,6 +225,27 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return START_INDEX + originalIndex;
   }, [START_INDEX, products.length]);
 
+  // Rebase index back into the safe clone window by shifting whole product cycles.
+  // Returns both the rebased index and the pixel shift needed to keep the visual position identical.
+  const rebaseIndexByCycles = useCallback((index: number) => {
+    if (cardWidth === 0) return { index, shiftPx: 0 };
+    const len = products.length;
+    const tw = cardWidth + GAP;
+
+    let next = index;
+    let shiftPx = 0;
+
+    while (next > SAFE_ZONE_END) {
+      next -= len;
+      shiftPx += len * tw;
+    }
+    while (next < SAFE_ZONE_START) {
+      next += len;
+      shiftPx -= len * tw;
+    }
+    return { index: next, shiftPx };
+  }, [GAP, SAFE_ZONE_END, SAFE_ZONE_START, cardWidth, products.length]);
+
   // ============================================================================
   // TRACKING INDICATOR (INFOGRAFIKA)
   // ============================================================================
@@ -394,21 +415,25 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Mark settled
     setIsTransitioning(false);
 
-    // Keep the "logical" index anchored in the central safe window without changing physical X.
-    // This avoids large instantaneous translate shifts that can cause a full-row flash on some GPUs.
-    const physicalX = currentXRef.current;
-    const idx = Math.round(estimateIndexFloatFromX(physicalX));
-    const safeIdx = rebaseToSafeIndex(idx);
-    if (safeIdx !== currentIndexRef.current) {
-      currentIndexRef.current = safeIdx;
-      setCurrentIndex(safeIdx);
-      renderIndexRef.current = safeIdx;
-      setRenderIndex(safeIdx);
+    // If we drifted outside the safe clone window, rebase by whole cycles *while keeping the same
+    // visual position* (index and X are shifted together).
+    const current = currentIndexRef.current;
+    const { index: rebasedIndex, shiftPx } = rebaseIndexByCycles(current);
+    if (rebasedIndex !== current) {
+      currentXRef.current += shiftPx;
+      targetXRef.current += shiftPx;
+      dragBaseXRef.current += shiftPx;
+      applyTrackTransform(currentXRef.current, false);
+
+      currentIndexRef.current = rebasedIndex;
+      setCurrentIndex(rebasedIndex);
+      renderIndexRef.current = rebasedIndex;
+      setRenderIndex(rebasedIndex);
     }
 
     lastSettledIndexRef.current = currentIndexRef.current;
     updateCardEffectsAtX(currentXRef.current, false);
-  }, [estimateIndexFloatFromX, rebaseToSafeIndex, updateCardEffectsAtX]);
+  }, [applyTrackTransform, rebaseIndexByCycles, updateCardEffectsAtX]);
 
   const startSpring = useCallback(() => {
     if (cardWidth === 0) return;
@@ -641,8 +666,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     // Find the nearest index to the current visual center
     let desiredIndex = Math.round(estimateIndexFloatFromX(releaseX));
-    // Keep the logical index inside the central safe window (no physical shift needed).
-    desiredIndex = rebaseToSafeIndex(desiredIndex);
+
+    // Keep inside safe clone window (index shift + matching X shift so visuals don't jump)
+    const rebased = rebaseIndexByCycles(desiredIndex);
+    if (rebased.shiftPx !== 0) {
+      releaseX += rebased.shiftPx;
+      dragBaseXRef.current += rebased.shiftPx;
+    }
+    desiredIndex = rebased.index;
+
     currentXRef.current = releaseX;
     applyTrackTransform(currentXRef.current, false);
     currentIndexRef.current = desiredIndex;
@@ -661,7 +693,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsDragging(false);
     isDraggingRef.current = false;
     startSpring();
-  }, [applyTrackTransform, estimateIndexFloatFromX, getClosestCongruentTargetX, rebaseToSafeIndex, startSpring]);
+  }, [applyTrackTransform, estimateIndexFloatFromX, getClosestCongruentTargetX, rebaseIndexByCycles, startSpring]);
 
   const moveSlide = (direction: number) => {
       if (isDraggingRef.current) return;
@@ -681,8 +713,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       setIsTransitioning(true);
       const step = layoutMode === 'desktop' ? 3 : 1;
-      const rawNext = currentIndexRef.current + (direction * step);
-      const nextIndex = rebaseToSafeIndex(rawNext);
+      let nextIndex = currentIndexRef.current + (direction * step);
+      const rebased = rebaseIndexByCycles(nextIndex);
+      if (rebased.shiftPx !== 0) {
+        currentXRef.current += rebased.shiftPx;
+        targetXRef.current += rebased.shiftPx;
+        dragBaseXRef.current += rebased.shiftPx;
+        applyTrackTransform(currentXRef.current, false);
+      }
+      nextIndex = rebased.index;
       currentIndexRef.current = nextIndex;
       setCurrentIndex(nextIndex);
       renderIndexRef.current = nextIndex;
