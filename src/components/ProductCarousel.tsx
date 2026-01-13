@@ -51,14 +51,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // KONFIGURACE
   // ============================================================================
   const GAP = 16;
-  // Arrow click should feel "premium": slightly slower, smoother glide.
-  // (Swipe/drag uses dynamic durations set in `stopDrag()`.)
-  const ARROW_ANIMATION_DURATION = 1275; // ~+50%
-  const LOCK_DURATION = 1275;
-  // "Luxusní" easing: very smooth glide with a soft, premium stop (slightly more refined than easeOutCubic).
-  // Chosen to avoid "snap" at the end while still feeling responsive.
-  const TRACK_EASING_CURVE = 'cubic-bezier(0.16, 1, 0.3, 1)';
-  const EASING_CURVE = TRACK_EASING_CURVE;
+  // Spring tuning (Apple-like: fast start, smooth settle, no "snap" or jank).
+  // Units are px and seconds.
+  const SPRING_STIFFNESS = 320; // k
+  const SPRING_DAMPING = 42; // c (near/over critical: no bounce, premium stop)
+  const SETTLE_DISTANCE_PX = 0.75;
+  const SETTLE_VELOCITY_PX_PER_S = 18;
+  const MAX_DT_MS = 32;
 
   // BUFFER_SETS = 2 pro všechna zařízení - zajišťuje funkční infinite loop
   // S ProductCardLight (bez context hooks) je 20 karet OK i pro mobily
@@ -106,7 +105,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const lastDragX = useRef(0);
   const lastDragTime = useRef(0);
   const velocityRef = useRef(0);
-  const dynamicDurationRef = useRef(ARROW_ANIMATION_DURATION);
   
   const activePointerId = useRef<number | null>(null);
 
@@ -115,17 +113,25 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   
   const isResettingRef = useRef(false);
-  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // OPTIMALIZACE: Refs pro throttling a virtualizaci
-  const rafRef = useRef<number | null>(null);
-  const pendingUpdateRef = useRef(false);
+  // RAF refs
+  const dragRafRef = useRef<number | null>(null);
   const resizeRafRef = useRef<number | null>(null);
   const prefetchImagesRef = useRef<HTMLImageElement[]>([]);
   
   // Trackpad support refs
   const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isWheelingRef = useRef(false);
+
+  // Spring animation state (single-writer: track transform only)
+  const animRafRef = useRef<number | null>(null);
+  const lastFrameTimeRef = useRef<number | null>(null);
+  const currentXRef = useRef(0);
+  const targetXRef = useRef(0);
+  const velocityXRef = useRef(0);
+  const isSpringAnimatingRef = useRef(false);
+  const lastSettledIndexRef = useRef(START_INDEX);
+  const dragBaseXRef = useRef(0);
 
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
@@ -190,6 +196,15 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return -(index * totalCardWidth) + centerOffset;
   }, [cardWidth, viewportWidth, layoutMode]);
 
+  // Keep indices always inside a safe window of our cloned slide list to guarantee infinite loop.
+  // This prevents drifting outside `allSlides` length while keeping the same visual product (modulo).
+  const rebaseToSafeIndex = useCallback((index: number) => {
+    const len = products.length;
+    // START_INDEX corresponds to originalIndex = 0
+    const originalIndex = ((index - START_INDEX) % len + len) % len;
+    return START_INDEX + originalIndex;
+  }, [START_INDEX, products.length]);
+
   // ============================================================================
   // TRACKING INDICATOR (INFOGRAFIKA)
   // ============================================================================
@@ -240,122 +255,154 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [currentIndex, allSlides]);
 
   // ============================================================================
-  // VISUAL UPDATE ENGINE
+  // SPRING VISUAL ENGINE (single RAF writer)
   // ============================================================================
-  // OPTIMALIZACE: Interní funkce pro skutečný update (bez throttlingu)
-  const updateVisualsInternal = useCallback((instant = false, overrideIndex?: number) => {
-    if (!trackRef.current || cardWidth === 0) return;
+  const applyTrackTransform = useCallback((x: number, isAnimating: boolean) => {
+    if (!trackRef.current) return;
+    const el = trackRef.current;
+    // We do not use CSS transitions for motion; the spring drives the value.
+    el.style.transition = 'none';
+    el.style.willChange = isAnimating ? 'transform' : '';
+    el.style.transform = `translate3d(${x}px, 0, 0)`;
+  }, []);
 
-    const targetIndex = overrideIndex !== undefined ? overrideIndex : currentIndexRef.current;
-    const currentDrag = instant ? dragOffsetRef.current : 0; 
-    
+  const updateCardsAtRest = useCallback((x: number) => {
+    // Desktop/tablet only: avoid per-frame card work during motion for smoothness.
+    if (layoutMode === 'mobile') return;
+    if (cardWidth === 0 || viewportWidth === 0) return;
+
     const totalCardWidth = cardWidth + GAP;
     const viewportCenter = viewportWidth / 2;
 
-    const basePos = getPositionForIndex(targetIndex);
-    const finalPos = basePos + currentDrag;
-
-    // Použijeme dynamickou duration pro dojezd po swipnutí, jinak standardní
-    const duration = (instant || isDraggingRef.current) ? 0 : dynamicDurationRef.current;
-    
-    // IMPORTANT: set transition BEFORE transform to avoid "jump" at animation start
-    // (common when switching from `transition: none` after drag/teleport).
-    const el = trackRef.current;
-    const shouldAnimate = !(instant || isDraggingRef.current);
-    const nextTransition = shouldAnimate ? `transform ${duration}ms ${TRACK_EASING_CURVE}` : 'none';
-    const wasTransitionNone = el.style.transition === '' || el.style.transition === 'none';
-
-    el.style.transition = nextTransition;
-    // Promote only during glide (helps the first frames feel "Apple smooth")
-    el.style.willChange = shouldAnimate ? 'transform' : '';
-
-    // If we just switched from none -> animated, force a reflow so transform change animates
-    if (shouldAnimate && wasTransitionNone) {
-      void el.offsetWidth;
-    }
-
-    el.style.transform = `translate3d(${finalPos}px, 0, 0)`;
-
-    // PERFORMANCE: On mobile we intentionally skip per-card style updates (scale/opacity/transition).
-    // During scroll/drag we want to touch *only* the track transform to avoid main-thread jank.
-    if (layoutMode === 'mobile') {
-      return;
-    }
-
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
-    const startIndex = Math.max(0, targetIndex - visibleCount);
-    const endIndex = Math.min(allSlides.length - 1, targetIndex + visibleCount);
+    const anchorIndex = currentIndexRef.current;
+    const startIndex = Math.max(0, anchorIndex - visibleCount);
+    const endIndex = Math.min(allSlides.length - 1, anchorIndex + visibleCount);
 
     for (let i = startIndex; i <= endIndex; i++) {
-        const card = cardRefs.current[i];
-        if (!card) continue;
+      const card = cardRefs.current[i];
+      if (!card) continue;
 
-        const cardTrackPos = finalPos + (i * totalCardWidth);  
-        const cardCenter = cardTrackPos + (cardWidth / 2);
-        const dist = Math.abs(viewportCenter - cardCenter);
+      const cardTrackPos = x + (i * totalCardWidth);
+      const cardCenter = cardTrackPos + (cardWidth / 2);
+      const dist = Math.abs(viewportCenter - cardCenter);
 
-        let scale = 1;
-        let opacity = 1;
+      let scale = 1;
+      let opacity = 1;
 
-        if (layoutMode === 'desktop') {
-            const mainZone = totalCardWidth * 1.5; 
-            if (dist > mainZone) {
-                const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
-                scale = 1 - (factor * 0.15);
-                opacity = 1 - (factor * 0.5);
-            }
-        } else if (layoutMode === 'tablet') {
-            const mainZone = totalCardWidth * 0.5;
-            if (dist > mainZone) {
-                 const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
-                 scale = 1 - (factor * 0.15);
-                 opacity = 1 - (factor * 0.5);
-            }
+      if (layoutMode === 'desktop') {
+        const mainZone = totalCardWidth * 1.5;
+        if (dist > mainZone) {
+          const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
+          scale = 1 - (factor * 0.15);
+          opacity = 1 - (factor * 0.5);
         }
-        // Na mobilech bez škálování a opacity změn pro maximální výkon a "flat" vzhled
-
-        // OPTIMALIZACE: Aplikace stylů přímo na kartu bez querySelector
-        // Odstraněn querySelector('img') z loopu - eliminuje DOM queries
-        const transitionValue = (isDraggingRef.current || instant) 
-            ? 'none' 
-            : `transform ${duration}ms ${EASING_CURVE}, opacity ${duration}ms ${EASING_CURVE}`;
-        
-        card.style.width = `${cardWidth}px`;
-        card.style.transform = `scale(${scale}) translateZ(0)`;
-        card.style.opacity = `${opacity}`;
-        card.style.transition = transitionValue;
-    }
-  }, [cardWidth, layoutMode, viewportWidth, getPositionForIndex, allSlides.length]);
-
-  // OPTIMALIZACE: Throttled wrapper pro updateVisuals
-  const updateVisuals = useCallback((instant = false, overrideIndex?: number) => {
-    // Pokud je instant nebo dragging, aktualizuj okamžitě
-    if (instant || isDraggingRef.current) {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
+      } else if (layoutMode === 'tablet') {
+        const mainZone = totalCardWidth * 0.5;
+        if (dist > mainZone) {
+          const factor = Math.min(1, (dist - mainZone) / totalCardWidth);
+          scale = 1 - (factor * 0.15);
+          opacity = 1 - (factor * 0.5);
+        }
       }
-      updateVisualsInternal(instant, overrideIndex);
-      return;
-    }
 
-    // Pro normální updates použij throttling
-    if (rafRef.current !== null) {
-      pendingUpdateRef.current = true;
-      return;
+      // Small, premium settling animation for card effects (not for the track movement).
+      card.style.transform = `scale(${scale}) translateZ(0)`;
+      card.style.opacity = `${opacity}`;
+      card.style.transition = `transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 420ms cubic-bezier(0.16, 1, 0.3, 1)`;
     }
+  }, [allSlides.length, cardWidth, GAP, layoutMode, viewportWidth]);
 
-    rafRef.current = requestAnimationFrame(() => {
-      updateVisualsInternal(instant, overrideIndex);
-      rafRef.current = null;
-      
-      // Pokud je pending update, spusť další
-      if (pendingUpdateRef.current) {
-        pendingUpdateRef.current = false;
-        updateVisuals(false);
+  const cancelSpring = useCallback(() => {
+    if (animRafRef.current !== null) {
+      cancelAnimationFrame(animRafRef.current);
+      animRafRef.current = null;
+    }
+    lastFrameTimeRef.current = null;
+    isSpringAnimatingRef.current = false;
+  }, []);
+
+  const settleAndRebaseIfNeeded = useCallback(() => {
+    // Mark settled
+    setIsTransitioning(false);
+    lastSettledIndexRef.current = currentIndexRef.current;
+
+    // If out of safe zone, teleport to equivalent index AFTER settle (invisible because slide is the same).
+    const current = currentIndexRef.current;
+    if (current < SAFE_ZONE_START || current > SAFE_ZONE_END) {
+      const rebasedIndex = rebaseToSafeIndex(current);
+      currentIndexRef.current = rebasedIndex;
+      setCurrentIndex(rebasedIndex);
+      const x = getPositionForIndex(rebasedIndex);
+      currentXRef.current = x;
+      targetXRef.current = x;
+      velocityXRef.current = 0;
+      applyTrackTransform(x, false);
+      updateCardsAtRest(x);
+    } else {
+      updateCardsAtRest(currentXRef.current);
+    }
+  }, [SAFE_ZONE_START, SAFE_ZONE_END, applyTrackTransform, getPositionForIndex, rebaseToSafeIndex, updateCardsAtRest]);
+
+  const startSpring = useCallback(() => {
+    if (cardWidth === 0) return;
+    if (isDraggingRef.current) return;
+
+    if (animRafRef.current !== null) return; // already running
+    isSpringAnimatingRef.current = true;
+    setIsTransitioning(true);
+
+    const step = (ts: number) => {
+      if (!isSpringAnimatingRef.current) {
+        animRafRef.current = null;
+        return;
       }
-    });
-  }, [updateVisualsInternal]);
+
+      const last = lastFrameTimeRef.current ?? ts;
+      const dtMs = Math.min(MAX_DT_MS, Math.max(0, ts - last));
+      lastFrameTimeRef.current = ts;
+      const dt = dtMs / 1000;
+
+      const x = currentXRef.current;
+      const v = velocityXRef.current;
+      const target = targetXRef.current;
+
+      // Damped spring: a = k*(target-x) - c*v
+      const a = (SPRING_STIFFNESS * (target - x)) - (SPRING_DAMPING * v);
+      const nextV = v + (a * dt);
+      const nextX = x + (nextV * dt);
+
+      currentXRef.current = nextX;
+      velocityXRef.current = nextV;
+      applyTrackTransform(nextX, true);
+
+      const dist = Math.abs(target - nextX);
+      const vel = Math.abs(nextV);
+      if (dist < SETTLE_DISTANCE_PX && vel < SETTLE_VELOCITY_PX_PER_S) {
+        // Snap to exact target and stop
+        currentXRef.current = target;
+        velocityXRef.current = 0;
+        applyTrackTransform(target, false);
+        cancelSpring();
+        settleAndRebaseIfNeeded();
+        return;
+      }
+
+      animRafRef.current = requestAnimationFrame(step);
+    };
+
+    animRafRef.current = requestAnimationFrame(step);
+  }, [
+    MAX_DT_MS,
+    SPRING_DAMPING,
+    SPRING_STIFFNESS,
+    SETTLE_DISTANCE_PX,
+    SETTLE_VELOCITY_PX_PER_S,
+    applyTrackTransform,
+    cancelSpring,
+    cardWidth,
+    settleAndRebaseIfNeeded,
+  ]);
 
   // OPTIMALIZACE: Vypočítat viditelný rozsah pro virtualizaci
   const getVisibleRange = useCallback(() => {
@@ -364,41 +411,41 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }
     const totalCardWidth = cardWidth + GAP;
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth);
-    const startIndex = Math.max(0, currentIndex - VISIBLE_BUFFER);
-    const endIndex = Math.min(allSlides.length - 1, currentIndex + visibleCount + VISIBLE_BUFFER);
+    const minIndex = Math.min(currentIndex, lastSettledIndexRef.current);
+    const maxIndex = Math.max(currentIndex, lastSettledIndexRef.current);
+    const startIndex = Math.max(0, minIndex - VISIBLE_BUFFER);
+    const endIndex = Math.min(allSlides.length - 1, maxIndex + visibleCount + VISIBLE_BUFFER);
     return { startIndex, endIndex };
-  }, [currentIndex, cardWidth, viewportWidth, allSlides.length]);
+  }, [GAP, VISIBLE_BUFFER, currentIndex, cardWidth, viewportWidth, allSlides.length]);
 
+  // Keep spring positions in sync when layout metrics change (resize / responsive breakpoint)
   useLayoutEffect(() => {
-    updateVisuals(isResettingRef.current);
-  }, [updateVisuals, currentIndex]); 
+    if (!isInitialized) return;
+    if (cardWidth === 0) return;
+
+    cancelSpring();
+    dragOffsetRef.current = 0;
+    const x = getPositionForIndex(currentIndexRef.current);
+    currentXRef.current = x;
+    targetXRef.current = x;
+    velocityXRef.current = 0;
+    applyTrackTransform(x, false);
+    updateCardsAtRest(x);
+  }, [applyTrackTransform, cancelSpring, cardWidth, getPositionForIndex, isInitialized, layoutMode, updateCardsAtRest, viewportWidth]);
 
   // ============================================================================
   // POINTER EVENTS LOGIC
   // ============================================================================
-  
-  const checkBoundsAndTeleport = useCallback(() => {
-      const current = currentIndexRef.current;
-      if (current < SAFE_ZONE_START || current > SAFE_ZONE_END) {
-          const slideData = allSlides[current];
-          if (!slideData) return;
-          const targetIndex = START_INDEX + slideData.originalIndex;
-          currentIndexRef.current = targetIndex;
-          setCurrentIndex(targetIndex);
-          if (trackRef.current) {
-              trackRef.current.style.willChange = '';
-              trackRef.current.style.transition = 'none';
-              const newPos = getPositionForIndex(targetIndex);
-              trackRef.current.style.transform = `translate3d(${newPos}px, 0, 0)`;
-              void trackRef.current.offsetHeight;
-          }
-          updateVisuals(true, targetIndex);
-      }
-  }, [allSlides, SAFE_ZONE_START, SAFE_ZONE_END, START_INDEX, getPositionForIndex, updateVisuals]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
       if (e.button !== 0 || activePointerId.current !== null) return;
       activePointerId.current = e.pointerId;
+
+      // Stop spring immediately when user starts interacting
+      cancelSpring();
+      if (trackRef.current) {
+        trackRef.current.style.willChange = '';
+      }
 
       // Reset velocity tracking
       lastDragX.current = e.clientX;
@@ -413,21 +460,17 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       isWheelingRef.current = false;
 
       if (isResettingRef.current) return;
-      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-
-      checkBoundsAndTeleport();
 
       dragStartX.current = e.clientX;
       dragStartY.current = e.clientY;
       dragOffsetRef.current = 0;
+      dragBaseXRef.current = currentXRef.current; // direct manipulation starts from current visual position
       isClickBlockedRef.current = false;
       isDraggingRef.current = false;
       setIsTransitioning(false);
       
-      if (trackRef.current) {
-          trackRef.current.style.willChange = '';
-          trackRef.current.style.transition = 'none';
-      }
+      targetXRef.current = currentXRef.current;
+      velocityXRef.current = 0;
 
       if (e.pointerType === 'mouse') {
           e.preventDefault();
@@ -474,12 +517,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           dragOffsetRef.current = diffX;
           if (Math.abs(diffX) > 5) isClickBlockedRef.current = true;
           
-          // OPTIMALIZACE: Použití requestAnimationFrame místo přímého volání
-          if (rafRef.current === null) {
-              rafRef.current = requestAnimationFrame(() => {
-                  updateVisualsInternal(true);
-                  rafRef.current = null;
-              });
+          // During direct manipulation: only update track transform (no card effects).
+          if (dragRafRef.current === null) {
+            dragRafRef.current = requestAnimationFrame(() => {
+              const x = dragBaseXRef.current + dragOffsetRef.current;
+              currentXRef.current = x;
+              applyTrackTransform(x, false);
+              dragRafRef.current = null;
+            });
           }
       }
   };
@@ -526,66 +571,31 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         }
     }
 
-    // VŽDY použijeme plynulou, delší animaci pro Apple-like feel
-    // Minimální duration je 650ms pro plynulost, maximální 800ms
-    const targetIndex = currentIndexRef.current + indexDiff;
-    const targetPos = getPositionForIndex(targetIndex);
-    const currentPos = getPositionForIndex(currentIndexRef.current) + currentOffset;
-    const remainingDistance = Math.abs(targetPos - currentPos);
-    
-    // Pro Apple-like plynulost: delší animace, která se přizpůsobí vzdálenosti
-    // Ale vždy minimálně 650ms pro smooth feel
-    let duration = 650; // Základní plynulá délka
-    
-    if (remainingDistance > 0) {
-        // Čím větší vzdálenost, tím delší animace (ale max 800ms)
-        const distanceFactor = Math.min(1.2, remainingDistance / totalCardWidth);
-        duration = Math.min(800, Math.max(650, 650 * distanceFactor));
+    let newIndex = currentIndexRef.current + indexDiff;
+    if (newIndex < SAFE_ZONE_START || newIndex > SAFE_ZONE_END) {
+      newIndex = rebaseToSafeIndex(newIndex);
     }
-    
-    // Pro rychlé swipy můžeme trochu zkrátit, ale ne moc
-    if (isSwipe && Math.abs(velocity) > 1.0) {
-        duration = Math.max(550, duration * 0.85);
-    }
-    
-    dynamicDurationRef.current = duration;
-
-    const newIndex = currentIndexRef.current + indexDiff;
     setIsTransitioning(true);
+    // Ensure spring starts from the exact visual position at release
+    currentXRef.current = dragBaseXRef.current + currentOffset;
     dragOffsetRef.current = 0; 
     setCurrentIndex(newIndex);
     currentIndexRef.current = newIndex;
 
-    // DŮLEŽITÉ: Musíme zajistit, že se animace spustí až po resetu dragOffset
-    // Použijeme dvojitý RAF pro zajištění správného načasování
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            updateVisuals(false); 
-        });
-    });
+    // Spring target
+    targetXRef.current = getPositionForIndex(newIndex);
 
-    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-    transitionTimeoutRef.current = setTimeout(() => {
-        if (isResettingRef.current) return;
-        setIsTransitioning(false);
-        setIsDragging(false);
-        // Reset duration back to default for arrows
-        dynamicDurationRef.current = ARROW_ANIMATION_DURATION;
-    }, duration + 100); // Timeout delší než animace
-  }, [cardWidth, GAP, updateVisuals, getPositionForIndex, ARROW_ANIMATION_DURATION]);
+    // Inject initial velocity from gesture (px/ms -> px/s), clamped for stability
+    const injected = Math.max(-2800, Math.min(2800, velocity * 1000 * 0.9));
+    velocityXRef.current = injected;
 
-  const handleTransitionEnd = () => {
-    if (!trackRef.current || isDraggingRef.current) return;
-    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-    trackRef.current.style.willChange = '';
-    setIsTransitioning(false);
-  };
+    setIsDragging(false);
+    isDraggingRef.current = false;
+    startSpring();
+  }, [SAFE_ZONE_START, SAFE_ZONE_END, cardWidth, GAP, getPositionForIndex, rebaseToSafeIndex, startSpring]);
 
   const moveSlide = (direction: number) => {
-      if (isTransitioning) return;
-
-      // Reset duration to standard for arrow clicks
-      dynamicDurationRef.current = ARROW_ANIMATION_DURATION;
+      if (isDraggingRef.current) return;
 
       // Pokud ještě dobíhá setrvačnost z touchpadu/kolečka, zastavíme ji
       if (isWheelingRef.current) {
@@ -600,18 +610,16 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
           dragOffsetRef.current = 0;
       }
 
-      checkBoundsAndTeleport();
-      requestAnimationFrame(() => {
-          setIsTransitioning(true);
-          const step = layoutMode === 'desktop' ? 3 : 1;
-          currentIndexRef.current += (direction * step);
-          setCurrentIndex(currentIndexRef.current);
-          updateVisuals(false); 
-          if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-          transitionTimeoutRef.current = setTimeout(() => {
-              setIsTransitioning(false);
-          }, LOCK_DURATION);
-      });
+      setIsTransitioning(true);
+      const step = layoutMode === 'desktop' ? 3 : 1;
+      let nextIndex = currentIndexRef.current + (direction * step);
+      if (nextIndex < SAFE_ZONE_START || nextIndex > SAFE_ZONE_END) {
+        nextIndex = rebaseToSafeIndex(nextIndex);
+      }
+      currentIndexRef.current = nextIndex;
+      setCurrentIndex(nextIndex);
+      targetXRef.current = getPositionForIndex(nextIndex);
+      startSpring();
   };
 
   // ============================================================================
@@ -635,16 +643,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 isWheelingRef.current = true;
                 isDraggingRef.current = true;
                 setIsDragging(true);
-                
-                checkBoundsAndTeleport();
-                
+
+                cancelSpring();
                 dragOffsetRef.current = 0;
+                dragBaseXRef.current = currentXRef.current;
                 isClickBlockedRef.current = true;
-                
-                if (trackRef.current) {
-                    trackRef.current.style.willChange = '';
-                    trackRef.current.style.transition = 'none';
-                }
             }
 
             // Accumulate movement
@@ -652,11 +655,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
             dragOffsetRef.current -= e.deltaX;
 
             // Visual update via RAF
-            if (rafRef.current === null) {
-                rafRef.current = requestAnimationFrame(() => {
-                    updateVisualsInternal(true);
-                    rafRef.current = null;
-                });
+            if (dragRafRef.current === null) {
+              dragRafRef.current = requestAnimationFrame(() => {
+                const x = dragBaseXRef.current + dragOffsetRef.current;
+                currentXRef.current = x;
+                applyTrackTransform(x, false);
+                dragRafRef.current = null;
+              });
             }
 
             // Debounce stop
@@ -675,7 +680,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         element.removeEventListener('wheel', handleWheel);
         if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current);
     };
-  }, [updateVisualsInternal, checkBoundsAndTeleport, stopDrag]);
+  }, [applyTrackTransform, cancelSpring, getPositionForIndex, stopDrag]);
 
   // ============================================================================
   // JSX
@@ -715,7 +720,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 marginTop: '-20px',
                 marginBottom: '-20px'
             }}
-            onTransitionEnd={handleTransitionEnd}
         >
             {(() => {
                 // OPTIMALIZACE: Virtualizace - renderovat jen viditelné karty + buffer
