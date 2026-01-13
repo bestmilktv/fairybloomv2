@@ -53,8 +53,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const GAP = 16;
   // Spring tuning (Apple-like: fast start, smooth settle, no "snap" or jank).
   // Units are px and seconds.
-  const SPRING_STIFFNESS = 320; // k
-  const SPRING_DAMPING = 42; // c (near/over critical: no bounce, premium stop)
+  // Slower, more premium glide (less acceleration, longer settle).
+  const SPRING_STIFFNESS = 190; // k
+  const SPRING_DAMPING = 38; // c
   const SETTLE_DISTANCE_PX = 0.75;
   const SETTLE_VELOCITY_PX_PER_S = 18;
   const MAX_DT_MS = 32;
@@ -638,7 +639,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     targetXRef.current = getPositionForIndex(newIndex);
 
     // Inject initial velocity from gesture (px/ms -> px/s), clamped for stability
-    const injected = Math.max(-2800, Math.min(2800, velocity * 1000 * 0.9));
+    // Slightly reduce injected swipe velocity so the snap feels heavier/premium.
+    const injected = Math.max(-2200, Math.min(2200, velocity * 1000 * 0.7));
     velocityXRef.current = injected;
 
     setIsDragging(false);
