@@ -132,6 +132,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const isSpringAnimatingRef = useRef(false);
   const lastSettledIndexRef = useRef(START_INDEX);
   const dragBaseXRef = useRef(0);
+  // When we rebase the index back into the safe clone window, we adjust this offset so that
+  // the *physical* translateX stays continuous (no visible jump).
+  const positionOffsetRef = useRef(0);
+  const lastCardFxTsRef = useRef<number>(0);
 
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
@@ -196,6 +200,24 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     return -(index * totalCardWidth) + centerOffset;
   }, [cardWidth, viewportWidth, layoutMode]);
 
+  const getXForIndex = useCallback((index: number) => {
+    return getPositionForIndex(index) + positionOffsetRef.current;
+  }, [getPositionForIndex]);
+
+  const getCenterOffsetPx = useCallback(() => {
+    // Must mirror `getPositionForIndex`’s center offset logic
+    return layoutMode === 'mobile' ? GAP + 10 : (viewportWidth - cardWidth) / 2;
+  }, [GAP, cardWidth, layoutMode, viewportWidth]);
+
+  const estimateIndexFromX = useCallback((x: number) => {
+    if (cardWidth === 0) return currentIndexRef.current;
+    const totalCardWidth = cardWidth + GAP;
+    const centerOffset = getCenterOffsetPx();
+    // x = -(index*tw) + centerOffset + positionOffset  => index = (centerOffset + positionOffset - x) / tw
+    const idxFloat = (centerOffset + positionOffsetRef.current - x) / totalCardWidth;
+    return Math.round(idxFloat);
+  }, [GAP, cardWidth, getCenterOffsetPx]);
+
   // Keep indices always inside a safe window of our cloned slide list to guarantee infinite loop.
   // This prevents drifting outside `allSlides` length while keeping the same visual product (modulo).
   const rebaseToSafeIndex = useCallback((index: number) => {
@@ -204,6 +226,23 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const originalIndex = ((index - START_INDEX) % len + len) % len;
     return START_INDEX + originalIndex;
   }, [START_INDEX, products.length]);
+
+  const maybeRebaseIndexInPlace = useCallback((index: number) => {
+    if (cardWidth === 0) return index;
+    const len = products.length;
+    const tw = cardWidth + GAP;
+
+    if (index >= SAFE_ZONE_START && index <= SAFE_ZONE_END) return index;
+
+    const rebased = rebaseToSafeIndex(index);
+    const shiftSlides = rebased - index; // multiple of len
+    // Adjust offset so physical x stays identical: x = getPos(index)+offset
+    // After changing index -> rebased, we need offset' so that:
+    // getPos(index)+offset == getPos(rebased)+offset'
+    // => offset' = offset + (getPos(index) - getPos(rebased)) = offset + shiftSlides*tw
+    positionOffsetRef.current = positionOffsetRef.current + (shiftSlides * tw);
+    return rebased;
+  }, [GAP, SAFE_ZONE_END, SAFE_ZONE_START, cardWidth, products.length, rebaseToSafeIndex]);
 
   // ============================================================================
   // TRACKING INDICATOR (INFOGRAFIKA)
@@ -266,16 +305,23 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     el.style.transform = `translate3d(${x}px, 0, 0)`;
   }, []);
 
-  const updateCardsAtRest = useCallback((x: number) => {
-    // Desktop/tablet only: avoid per-frame card work during motion for smoothness.
+  const updateCardEffectsAtX = useCallback((x: number, isAnimating: boolean, nowTs?: number) => {
+    // Desktop/tablet only
     if (layoutMode === 'mobile') return;
     if (cardWidth === 0 || viewportWidth === 0) return;
+
+    // Throttle while animating to keep CPU low but visuals responsive.
+    const ts = nowTs ?? performance.now();
+    if (isAnimating) {
+      if (ts - lastCardFxTsRef.current < 50) return; // ~20fps updates
+      lastCardFxTsRef.current = ts;
+    }
 
     const totalCardWidth = cardWidth + GAP;
     const viewportCenter = viewportWidth / 2;
 
     const visibleCount = Math.ceil(viewportWidth / totalCardWidth) + 2;
-    const anchorIndex = currentIndexRef.current;
+    const anchorIndex = estimateIndexFromX(x);
     const startIndex = Math.max(0, anchorIndex - visibleCount);
     const endIndex = Math.min(allSlides.length - 1, anchorIndex + visibleCount);
 
@@ -306,12 +352,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         }
       }
 
-      // Small, premium settling animation for card effects (not for the track movement).
+      // During motion: keep effects responsive (short transition), at rest: premium settle.
       card.style.transform = `scale(${scale}) translateZ(0)`;
       card.style.opacity = `${opacity}`;
-      card.style.transition = `transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 420ms cubic-bezier(0.16, 1, 0.3, 1)`;
+      card.style.transition = isAnimating
+        ? 'transform 90ms linear, opacity 90ms linear'
+        : `transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 420ms cubic-bezier(0.16, 1, 0.3, 1)`;
     }
-  }, [allSlides.length, cardWidth, GAP, layoutMode, viewportWidth]);
+  }, [GAP, allSlides.length, cardWidth, estimateIndexFromX, layoutMode, viewportWidth]);
 
   const cancelSpring = useCallback(() => {
     if (animRafRef.current !== null) {
@@ -330,19 +378,20 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // If out of safe zone, teleport to equivalent index AFTER settle (invisible because slide is the same).
     const current = currentIndexRef.current;
     if (current < SAFE_ZONE_START || current > SAFE_ZONE_END) {
-      const rebasedIndex = rebaseToSafeIndex(current);
+      const rebasedIndex = maybeRebaseIndexInPlace(current);
       currentIndexRef.current = rebasedIndex;
       setCurrentIndex(rebasedIndex);
-      const x = getPositionForIndex(rebasedIndex);
+      const x = getXForIndex(rebasedIndex);
+      // snap engine to the exact mapping (after offset change)
       currentXRef.current = x;
       targetXRef.current = x;
       velocityXRef.current = 0;
       applyTrackTransform(x, false);
-      updateCardsAtRest(x);
+      updateCardEffectsAtX(x, false);
     } else {
-      updateCardsAtRest(currentXRef.current);
+      updateCardEffectsAtX(currentXRef.current, false);
     }
-  }, [SAFE_ZONE_START, SAFE_ZONE_END, applyTrackTransform, getPositionForIndex, rebaseToSafeIndex, updateCardsAtRest]);
+  }, [SAFE_ZONE_END, SAFE_ZONE_START, applyTrackTransform, getXForIndex, maybeRebaseIndexInPlace, updateCardEffectsAtX]);
 
   const startSpring = useCallback(() => {
     if (cardWidth === 0) return;
@@ -375,6 +424,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       currentXRef.current = nextX;
       velocityXRef.current = nextV;
       applyTrackTransform(nextX, true);
+      updateCardEffectsAtX(nextX, true, ts);
 
       const dist = Math.abs(target - nextX);
       const vel = Math.abs(nextV);
@@ -425,13 +475,13 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     cancelSpring();
     dragOffsetRef.current = 0;
-    const x = getPositionForIndex(currentIndexRef.current);
+    const x = getXForIndex(currentIndexRef.current);
     currentXRef.current = x;
     targetXRef.current = x;
     velocityXRef.current = 0;
     applyTrackTransform(x, false);
-    updateCardsAtRest(x);
-  }, [applyTrackTransform, cancelSpring, cardWidth, getPositionForIndex, isInitialized, layoutMode, updateCardsAtRest, viewportWidth]);
+    updateCardEffectsAtX(x, false);
+  }, [applyTrackTransform, cancelSpring, cardWidth, getXForIndex, isInitialized, layoutMode, updateCardEffectsAtX, viewportWidth]);
 
   // ============================================================================
   // POINTER EVENTS LOGIC
@@ -523,6 +573,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
               const x = dragBaseXRef.current + dragOffsetRef.current;
               currentXRef.current = x;
               applyTrackTransform(x, false);
+              updateCardEffectsAtX(x, true);
               dragRafRef.current = null;
             });
           }
@@ -572,9 +623,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     }
 
     let newIndex = currentIndexRef.current + indexDiff;
-    if (newIndex < SAFE_ZONE_START || newIndex > SAFE_ZONE_END) {
-      newIndex = rebaseToSafeIndex(newIndex);
-    }
+    newIndex = maybeRebaseIndexInPlace(newIndex);
     setIsTransitioning(true);
     // Ensure spring starts from the exact visual position at release
     currentXRef.current = dragBaseXRef.current + currentOffset;
@@ -583,7 +632,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     currentIndexRef.current = newIndex;
 
     // Spring target
-    targetXRef.current = getPositionForIndex(newIndex);
+    targetXRef.current = getXForIndex(newIndex);
 
     // Inject initial velocity from gesture (px/ms -> px/s), clamped for stability
     const injected = Math.max(-2800, Math.min(2800, velocity * 1000 * 0.9));
@@ -592,7 +641,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsDragging(false);
     isDraggingRef.current = false;
     startSpring();
-  }, [SAFE_ZONE_START, SAFE_ZONE_END, cardWidth, GAP, getPositionForIndex, rebaseToSafeIndex, startSpring]);
+  }, [cardWidth, GAP, getXForIndex, maybeRebaseIndexInPlace, startSpring]);
 
   const moveSlide = (direction: number) => {
       if (isDraggingRef.current) return;
@@ -613,12 +662,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       setIsTransitioning(true);
       const step = layoutMode === 'desktop' ? 3 : 1;
       let nextIndex = currentIndexRef.current + (direction * step);
-      if (nextIndex < SAFE_ZONE_START || nextIndex > SAFE_ZONE_END) {
-        nextIndex = rebaseToSafeIndex(nextIndex);
-      }
+      nextIndex = maybeRebaseIndexInPlace(nextIndex);
       currentIndexRef.current = nextIndex;
       setCurrentIndex(nextIndex);
-      targetXRef.current = getPositionForIndex(nextIndex);
+      targetXRef.current = getXForIndex(nextIndex);
       startSpring();
   };
 
@@ -660,6 +707,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
                 const x = dragBaseXRef.current + dragOffsetRef.current;
                 currentXRef.current = x;
                 applyTrackTransform(x, false);
+                updateCardEffectsAtX(x, true);
                 dragRafRef.current = null;
               });
             }
