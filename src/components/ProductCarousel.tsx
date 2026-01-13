@@ -139,6 +139,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const dragBaseXRef = useRef(0);
   const lastCardFxTsRef = useRef<number>(0);
   const lastRenderIdxTsRef = useRef<number>(0);
+  // When we "rebase" the index back into the central clone window, we adjust this origin (in px)
+  // so the physical translateX does NOT jump (prevents full-row flash) and positions stay consistent.
+  const trackOriginXRef = useRef(0);
 
   const [viewportWidth, setViewportWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
@@ -212,9 +215,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (cardWidth === 0) return currentIndexRef.current;
     const totalCardWidth = cardWidth + GAP;
     const centerOffset = getCenterOffsetPx();
-    // x = -(index*tw) + centerOffset  => index = (centerOffset - x) / tw
-    return (centerOffset - x) / totalCardWidth;
+    // With origin:
+    // x = -(index*tw) + centerOffset + origin  => index = (centerOffset + origin - x) / tw
+    return (centerOffset + trackOriginXRef.current - x) / totalCardWidth;
   }, [GAP, cardWidth, getCenterOffsetPx]);
+
+  const getTrackXForIndex = useCallback((index: number) => {
+    return getPositionForIndex(index) + trackOriginXRef.current;
+  }, [getPositionForIndex]);
 
   // Keep indices always inside a safe window of our cloned slide list to guarantee infinite loop.
   // This prevents drifting outside `allSlides` length while keeping the same visual product (modulo).
@@ -277,24 +285,11 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   }, [allSlides.length, estimateIndexFloatFromX]);
 
   const getClosestCongruentTargetX = useCallback((index: number, fromX: number) => {
-    const totalCardWidth = cardWidth + GAP;
-    const cyclePx = products.length * totalCardWidth;
-    const base = getPositionForIndex(index);
-    if (!Number.isFinite(cyclePx) || cyclePx === 0) return base;
-    // IMPORTANT: Keep targets within physically rendered clone sets (prevents drifting into blank space).
-    // With BUFFER_SETS=N we have clones for ±N cycles around the original set.
-    let best = base;
-    let bestDist = Infinity;
-    for (let n = -BUFFER_SETS; n <= BUFFER_SETS; n++) {
-      const candidate = base + (n * cyclePx);
-      const d = Math.abs(fromX - candidate);
-      if (d < bestDist) {
-        bestDist = d;
-        best = candidate;
-      }
-    }
-    return best;
-  }, [BUFFER_SETS, GAP, cardWidth, getPositionForIndex, products.length]);
+    // In the clone-window approach, index itself walks through clones. We keep the motion stable by
+    // using the current origin, so the target is simply the position for that index in this origin.
+    // (No need for additional congruency search, which can drift.)
+    return getTrackXForIndex(index);
+  }, [getTrackXForIndex]);
 
   // ============================================================================
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
@@ -420,13 +415,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     const current = currentIndexRef.current;
     const { index: rebasedIndex, shiftPx } = rebaseIndexByCycles(current);
     if (rebasedIndex !== current) {
-      // Rebase by shifting physical X to keep translateX bounded. To prevent the occasional
-      // full-row flash, keep the element on the compositor during this adjustment.
-      currentXRef.current += shiftPx;
-      targetXRef.current += shiftPx;
-      dragBaseXRef.current += shiftPx;
-      applyTrackTransform(currentXRef.current, true);
-      requestAnimationFrame(() => applyTrackTransform(currentXRef.current, false));
+      // Invisible rebase: keep physical translateX unchanged, shift the origin instead.
+      // This prevents the full-row flash and keeps us inside the clone window logically.
+      trackOriginXRef.current -= shiftPx;
 
       currentIndexRef.current = rebasedIndex;
       setCurrentIndex(rebasedIndex);
@@ -436,7 +427,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     lastSettledIndexRef.current = currentIndexRef.current;
     updateCardEffectsAtX(currentXRef.current, false);
-  }, [applyTrackTransform, rebaseIndexByCycles, updateCardEffectsAtX]);
+    targetXRef.current = currentXRef.current;
+  }, [rebaseIndexByCycles, updateCardEffectsAtX]);
 
   const startSpring = useCallback(() => {
     if (cardWidth === 0) return;
@@ -523,13 +515,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     cancelSpring();
     dragOffsetRef.current = 0;
-    const x = getPositionForIndex(currentIndexRef.current);
+    trackOriginXRef.current = 0;
+    const x = getTrackXForIndex(currentIndexRef.current);
     currentXRef.current = x;
     targetXRef.current = x;
     velocityXRef.current = 0;
     applyTrackTransform(x, false);
     updateCardEffectsAtX(x, false);
-  }, [applyTrackTransform, cancelSpring, cardWidth, getPositionForIndex, isInitialized, layoutMode, updateCardEffectsAtX, viewportWidth]);
+  }, [applyTrackTransform, cancelSpring, cardWidth, getTrackXForIndex, isInitialized, layoutMode, updateCardEffectsAtX, viewportWidth]);
 
   // ============================================================================
   // POINTER EVENTS LOGIC
@@ -673,8 +666,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     // Keep inside safe clone window (index shift + matching X shift so visuals don't jump)
     const rebased = rebaseIndexByCycles(desiredIndex);
     if (rebased.shiftPx !== 0) {
-      releaseX += rebased.shiftPx;
-      dragBaseXRef.current += rebased.shiftPx;
+      // Invisible rebase: keep physical X unchanged, shift origin.
+      trackOriginXRef.current -= rebased.shiftPx;
     }
     desiredIndex = rebased.index;
 
@@ -688,7 +681,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
     setIsTransitioning(true);
     // Target should be the closest congruent position for this index (modulo one product cycle)
-    targetXRef.current = getClosestCongruentTargetX(desiredIndex, releaseX);
+    targetXRef.current = getTrackXForIndex(desiredIndex);
 
     // No injected velocity: premium snap is determined by position only (predictable, no pops).
     velocityXRef.current = 0;
@@ -696,7 +689,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsDragging(false);
     isDraggingRef.current = false;
     startSpring();
-  }, [applyTrackTransform, estimateIndexFloatFromX, getClosestCongruentTargetX, rebaseIndexByCycles, startSpring]);
+  }, [applyTrackTransform, estimateIndexFloatFromX, getTrackXForIndex, rebaseIndexByCycles, startSpring]);
 
   const moveSlide = (direction: number) => {
       if (isDraggingRef.current) return;
@@ -719,11 +712,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       let nextIndex = currentIndexRef.current + (direction * step);
       const rebased = rebaseIndexByCycles(nextIndex);
       if (rebased.shiftPx !== 0) {
-        currentXRef.current += rebased.shiftPx;
-        targetXRef.current += rebased.shiftPx;
-        dragBaseXRef.current += rebased.shiftPx;
-        applyTrackTransform(currentXRef.current, true);
-        requestAnimationFrame(() => applyTrackTransform(currentXRef.current, false));
+        // Invisible rebase: keep physical translateX unchanged, shift origin.
+        trackOriginXRef.current -= rebased.shiftPx;
       }
       nextIndex = rebased.index;
       currentIndexRef.current = nextIndex;
@@ -731,7 +721,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       renderIndexRef.current = nextIndex;
       setRenderIndex(nextIndex);
       // Always travel to the nearest congruent position (true infinite, no teleport / blank)
-      targetXRef.current = getClosestCongruentTargetX(nextIndex, currentXRef.current);
+      targetXRef.current = getTrackXForIndex(nextIndex);
       startSpring();
   };
 
