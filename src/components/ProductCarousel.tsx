@@ -598,57 +598,41 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (!isClickBlockedRef.current) setIsDragging(false);
   };
 
-  const stopDrag = useCallback((pointerType: string = 'mouse') => {
+  const stopDrag = useCallback((_pointerType: string = 'mouse') => {
+    // Always snap to the nearest centered position (no threshold-based "pop").
     const currentOffset = dragOffsetRef.current;
-    const totalCardWidth = cardWidth + GAP;
-    const movedCards = -currentOffset / totalCardWidth;
-    let indexDiff = Math.round(movedCards);
+    const releaseX = dragBaseXRef.current + currentOffset;
 
-    // Velocity boost - pokud je švihnutí rychlé, posuneme i při menším pohybu
-    const velocity = velocityRef.current;
-    const isSwipe = Math.abs(velocity) > 0.5; // > 0.5px/ms je rozumný švih
-    
-    // Pokud je swipe ve směru pohybu, vynutíme posun
-    if (isSwipe) {
-        if (velocity < 0 && indexDiff === 0) indexDiff = 1; // Swipe doleva -> další slide
-        if (velocity > 0 && indexDiff === 0) indexDiff = -1; // Swipe doprava -> předchozí slide
-    } else {
-        // Pro touch: pokud je posun větší než 30% karty, posuneme se
-        // Toto zajistí, že i při malém posunu se animace spustí
-        const threshold = pointerType === 'touch' ? 0.3 : 0.25;
-        if (Math.abs(movedCards) > threshold || Math.abs(currentOffset) > (totalCardWidth * 0.3)) {
-            if (movedCards > 0 && indexDiff === 0) indexDiff = 1;
-            if (movedCards < 0 && indexDiff === 0) indexDiff = -1;
-        }
-    }
+    // Start the spring from the exact visual position at release
+    currentXRef.current = releaseX;
+    dragOffsetRef.current = 0;
 
-    let newIndex = currentIndexRef.current + indexDiff;
-    const rebased = rebaseIndexByCycles(newIndex);
+    // Find the nearest index to the current visual center
+    let desiredIndex = Math.round(estimateIndexFloatFromX(releaseX));
+    desiredIndex = Math.max(0, Math.min(allSlides.length - 1, desiredIndex));
+
+    // Keep inside safe clone window, shifting X by whole cycles invisibly if needed
+    const rebased = rebaseIndexByCycles(desiredIndex);
     if (rebased.shiftPx !== 0) {
-      // Keep motion continuous while keeping translateX bounded inside clone window.
       currentXRef.current += rebased.shiftPx;
       dragBaseXRef.current += rebased.shiftPx;
+      applyTrackTransform(currentXRef.current, false);
     }
-    newIndex = rebased.index;
+
+    desiredIndex = rebased.index;
+    currentIndexRef.current = desiredIndex;
+    setCurrentIndex(desiredIndex);
+
     setIsTransitioning(true);
-    // Ensure spring starts from the exact visual position at release
-    currentXRef.current = dragBaseXRef.current + currentOffset;
-    dragOffsetRef.current = 0; 
-    setCurrentIndex(newIndex);
-    currentIndexRef.current = newIndex;
+    targetXRef.current = getPositionForIndex(desiredIndex);
 
-    // Spring target
-    targetXRef.current = getPositionForIndex(newIndex);
-
-    // Inject initial velocity from gesture (px/ms -> px/s), clamped for stability
-    // Slightly reduce injected swipe velocity so the snap feels heavier/premium.
-    const injected = Math.max(-1650, Math.min(1650, velocity * 1000 * 0.525));
-    velocityXRef.current = injected;
+    // No injected velocity: premium snap is determined by position only (predictable, no pops).
+    velocityXRef.current = 0;
 
     setIsDragging(false);
     isDraggingRef.current = false;
     startSpring();
-  }, [cardWidth, GAP, getPositionForIndex, rebaseIndexByCycles, startSpring]);
+  }, [allSlides.length, applyTrackTransform, estimateIndexFloatFromX, getPositionForIndex, rebaseIndexByCycles, startSpring]);
 
   const moveSlide = (direction: number) => {
       if (isDraggingRef.current) return;
