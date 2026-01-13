@@ -267,13 +267,24 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     if (ts - lastRenderIdxTsRef.current < 50) return;
     lastRenderIdxTsRef.current = ts;
 
+    // IMPORTANT: do NOT "rebase" here (that can jump the virtualized window and cause a flash).
+    // We only need the nearest visible index for the *current physical X*.
     const idx = Math.round(estimateIndexFloatFromX(x));
-    const safeIdx = rebaseToSafeIndex(idx);
-    if (safeIdx !== renderIndexRef.current) {
-      renderIndexRef.current = safeIdx;
-      setRenderIndex(safeIdx);
+    const clamped = Math.max(0, Math.min(allSlides.length - 1, idx));
+    if (clamped !== renderIndexRef.current) {
+      renderIndexRef.current = clamped;
+      setRenderIndex(clamped);
     }
-  }, [estimateIndexFloatFromX, rebaseToSafeIndex]);
+  }, [allSlides.length, estimateIndexFloatFromX]);
+
+  const getClosestCongruentTargetX = useCallback((index: number, fromX: number) => {
+    const totalCardWidth = cardWidth + GAP;
+    const cyclePx = products.length * totalCardWidth;
+    const base = getPositionForIndex(index);
+    if (!Number.isFinite(cyclePx) || cyclePx === 0) return base;
+    const k = Math.round((fromX - base) / cyclePx);
+    return base + (k * cyclePx);
+  }, [GAP, cardWidth, getPositionForIndex, products.length]);
 
   // ============================================================================
   // PREFETCH OBRÁZKŮ PRO PLYNULÉ NAČÍTÁNÍ
@@ -393,7 +404,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const settleAndRebaseIfNeeded = useCallback(() => {
     // Mark settled
     setIsTransitioning(false);
-    lastSettledIndexRef.current = currentIndexRef.current;
 
     // If out of safe zone, teleport to equivalent index AFTER settle (invisible because slide is the same).
     const current = currentIndexRef.current;
@@ -406,9 +416,12 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
 
       currentIndexRef.current = rebasedIndex;
       setCurrentIndex(rebasedIndex);
+      renderIndexRef.current = rebasedIndex;
+      setRenderIndex(rebasedIndex);
       applyTrackTransform(currentXRef.current, false);
     }
 
+    lastSettledIndexRef.current = currentIndexRef.current;
     updateCardEffectsAtX(currentXRef.current, false);
   }, [applyTrackTransform, rebaseIndexByCycles, updateCardEffectsAtX]);
 
@@ -661,13 +674,8 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setRenderIndex(desiredIndex);
 
     setIsTransitioning(true);
-    // Target should be the closest congruent position for this index (modulo one product cycle),
-    // so the snap always travels the shortest smooth distance and never "jumps back".
-    const totalCardWidth = cardWidth + GAP;
-    const cyclePx = products.length * totalCardWidth;
-    const base = getPositionForIndex(desiredIndex);
-    const k = cyclePx === 0 ? 0 : Math.round((releaseX - base) / cyclePx);
-    targetXRef.current = base + (k * cyclePx);
+    // Target should be the closest congruent position for this index (modulo one product cycle)
+    targetXRef.current = getClosestCongruentTargetX(desiredIndex, releaseX);
 
     // No injected velocity: premium snap is determined by position only (predictable, no pops).
     velocityXRef.current = 0;
@@ -675,7 +683,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
     setIsDragging(false);
     isDraggingRef.current = false;
     startSpring();
-  }, [GAP, applyTrackTransform, cardWidth, estimateIndexFloatFromX, getPositionForIndex, products.length, rebaseIndexByCycles, startSpring]);
+  }, [applyTrackTransform, estimateIndexFloatFromX, getClosestCongruentTargetX, getPositionForIndex, rebaseIndexByCycles, startSpring]);
 
   const moveSlide = (direction: number) => {
       if (isDraggingRef.current) return;
@@ -694,8 +702,6 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       }
 
       setIsTransitioning(true);
-      // Keep targetX in the same coordinate space as currentX
-      let baseShift = currentXRef.current - getPositionForIndex(currentIndexRef.current);
       const step = layoutMode === 'desktop' ? 3 : 1;
       let nextIndex = currentIndexRef.current + (direction * step);
       const rebased = rebaseIndexByCycles(nextIndex);
@@ -704,12 +710,14 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         targetXRef.current += rebased.shiftPx;
         dragBaseXRef.current += rebased.shiftPx;
         applyTrackTransform(currentXRef.current, false);
-        baseShift += rebased.shiftPx;
       }
       nextIndex = rebased.index;
       currentIndexRef.current = nextIndex;
       setCurrentIndex(nextIndex);
-      targetXRef.current = getPositionForIndex(nextIndex) + baseShift;
+      renderIndexRef.current = nextIndex;
+      setRenderIndex(nextIndex);
+      // Always travel to the nearest congruent position (true infinite, no teleport / blank)
+      targetXRef.current = getClosestCongruentTargetX(nextIndex, currentXRef.current);
       startSpring();
   };
 
