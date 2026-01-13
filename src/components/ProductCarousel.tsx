@@ -51,8 +51,10 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   // KONFIGURACE
   // ============================================================================
   const GAP = 16;
-  const ANIMATION_DURATION = 600;
-  const LOCK_DURATION = 600;
+  // Arrow click should feel "premium": slightly slower, smoother glide.
+  // (Swipe/drag uses dynamic durations set in `stopDrag()`.)
+  const ARROW_ANIMATION_DURATION = 850;
+  const LOCK_DURATION = 850;
   const EASING_CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 
   // BUFFER_SETS = 2 pro všechna zařízení - zajišťuje funkční infinite loop
@@ -101,7 +103,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
   const lastDragX = useRef(0);
   const lastDragTime = useRef(0);
   const velocityRef = useRef(0);
-  const dynamicDurationRef = useRef(ANIMATION_DURATION);
+  const dynamicDurationRef = useRef(ARROW_ANIMATION_DURATION);
   
   const activePointerId = useRef<number | null>(null);
 
@@ -301,7 +303,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         // Odstraněn querySelector('img') z loopu - eliminuje DOM queries
         const transitionValue = (isDraggingRef.current || instant) 
             ? 'none' 
-            : `transform ${ANIMATION_DURATION}ms ${EASING_CURVE}, opacity ${ANIMATION_DURATION}ms ${EASING_CURVE}`;
+            : `transform ${duration}ms ${EASING_CURVE}, opacity ${duration}ms ${EASING_CURVE}`;
         
         card.style.width = `${cardWidth}px`;
         card.style.transform = `scale(${scale}) translateZ(0)`;
@@ -551,9 +553,9 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
         setIsTransitioning(false);
         setIsDragging(false);
         // Reset duration back to default for arrows
-        dynamicDurationRef.current = ANIMATION_DURATION;
+        dynamicDurationRef.current = ARROW_ANIMATION_DURATION;
     }, duration + 100); // Timeout delší než animace
-  }, [cardWidth, GAP, updateVisuals, getPositionForIndex, ANIMATION_DURATION]);
+  }, [cardWidth, GAP, updateVisuals, getPositionForIndex, ARROW_ANIMATION_DURATION]);
 
   const handleTransitionEnd = () => {
     if (!trackRef.current || isDraggingRef.current) return;
@@ -565,7 +567,7 @@ const ProductCarousel = ({ products }: ProductCarouselProps) => {
       if (isTransitioning) return;
 
       // Reset duration to standard for arrow clicks
-      dynamicDurationRef.current = ANIMATION_DURATION;
+      dynamicDurationRef.current = ARROW_ANIMATION_DURATION;
 
       // Pokud ještě dobíhá setrvačnost z touchpadu/kolečka, zastavíme ji
       if (isWheelingRef.current) {
